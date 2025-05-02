@@ -1,53 +1,47 @@
 import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions } from 'react-native';
 import { ThemedText } from './ThemedText';
-import Svg, { Path, Circle, G, Line, Text as SvgText, Rect } from 'react-native-svg';
+import Svg, { Path, Circle, G, Line, Text as SvgText } from 'react-native-svg';
 
-type EconomicGaugeIndexProps = {
+type PriceIndexGaugeProps = {
   value?: number;
 };
 
-const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) => {
-  const [index, setIndex] = useState(value);
-  const [indexText, setIndexText] = useState('');
-  const [indexColor, setIndexColor] = useState('#4CAF50');
-  const [activeSection, setActiveSection] = useState(3);
+const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
+  const [rate, setRate] = useState(value);
+  const [rateText, setRateText] = useState('');
+  const [rateColor, setRateColor] = useState('#FFC107');
+  const [activeSection, setActiveSection] = useState(1);
   
   useEffect(() => {
-    if (index <= 25) {
-      setIndexText('극심한 경기침체');
-      setIndexColor('#D32F2F');
+    if (rate <= 2) {
+      setRateText('안정적');
+      setRateColor('#4CAF50');
       setActiveSection(0);
-    } else if (index <= 45) {
-      setIndexText('경기침체');
-      setIndexColor('#F57C00');
+    } else if (rate <= 4) {
+      setRateText('주의');
+      setRateColor('#FFC107');
       setActiveSection(1);
-    } else if (index <= 55) {
-      setIndexText('중립');
-      setIndexColor('#FFC107');
-      setActiveSection(2);
-    } else if (index <= 75) {
-      setIndexText('경기확장');
-      setIndexColor('#4CAF50');
-      setActiveSection(3);
     } else {
-      setIndexText('경기과열');
-      setIndexColor('#1976D2');
-      setActiveSection(4);
+      setRateText('높음');
+      setRateColor('#F44336');
+      setActiveSection(2);
     }
-  }, [index]);
+  }, [rate]);
 
   const screenWidth = Dimensions.get('window').width;
   const size = screenWidth - 64;
   const center = size / 2;
   const radius = size * 0.4;
-  const strokeWidth = 8;
   
-  // 각도 계산 (0~100% → -40~220도, 총 260도 범위)
+  // 각도 계산 (0~8% → -40~220도, 총 260도 범위)
   const startAngle = -40;
   const endAngle = 220;
   const totalAngle = endAngle - startAngle;
-  const needleAngle = startAngle + (index / 100) * totalAngle;
+  
+  // 물가상승률 범위는 0%~8%로 가정
+  const maxRate = 8;
+  const needleAngle = startAngle + (rate / maxRate) * totalAngle;
   const needleRad = needleAngle * Math.PI / 180;
   
   // 바늘 끝점 계산
@@ -57,17 +51,18 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
   
   // 섹션 색상 및 범위
   const sections = [
-    { name: '극심한 경기침체', color: '#FFCDD2', textColor: '#D32F2F', start: 0, end: 25 },
-    { name: '경기침체', color: '#FFE0B2', textColor: '#F57C00', start: 25, end: 45 },
-    { name: '중립', color: '#FFF9C4', textColor: '#FFC107', start: 45, end: 55 },
-    { name: '경기확장', color: '#C8E6C9', textColor: '#4CAF50', start: 55, end: 75 },
-    { name: '경기과열', color: '#BBDEFB', textColor: '#1976D2', start: 75, end: 100 }
+    { name: '안정적', color: '#C8E6C9', textColor: '#4CAF50', start: 0, end: 2 },
+    { name: '주의', color: '#FFF9C4', textColor: '#FFC107', start: 2, end: 4 },
+    { name: '높음', color: '#FFCDD2', textColor: '#F44336', start: 4, end: 8 }
   ];
   
   // 섹션별 경로 생성
   const createSectionPath = (startPercent: number, endPercent: number, sectionRadius: number) => {
-    const sectionStartAngle = startAngle + (startPercent / 100) * totalAngle;
-    const sectionEndAngle = startAngle + (endPercent / 100) * totalAngle;
+    const scaledStart = (startPercent / maxRate) * 100;
+    const scaledEnd = (endPercent / maxRate) * 100;
+    
+    const sectionStartAngle = startAngle + (scaledStart / 100) * totalAngle;
+    const sectionEndAngle = startAngle + (scaledEnd / 100) * totalAngle;
     const startRad = sectionStartAngle * Math.PI / 180;
     const endRad = sectionEndAngle * Math.PI / 180;
     
@@ -82,7 +77,8 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
   };
   
   // 눈금 위치 생성
-  const createTick = (percent: number, tickRadius: number, length: number) => {
+  const createTick = (rateValue: number, tickRadius: number, length: number) => {
+    const percent = (rateValue / maxRate) * 100;
     const tickAngle = startAngle + (percent / 100) * totalAngle;
     const tickRad = tickAngle * Math.PI / 180;
     
@@ -95,7 +91,8 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
   };
   
   // 라벨 위치 생성
-  const createLabel = (percent: number, labelRadius: number, offset: number) => {
+  const createLabel = (rateValue: number, labelRadius: number, offset: number) => {
+    const percent = (rateValue / maxRate) * 100;
     const labelAngle = startAngle + (percent / 100) * totalAngle;
     const labelRad = labelAngle * Math.PI / 180;
     
@@ -107,7 +104,7 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
 
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.title}>경제 심리 지수</ThemedText>
+      <ThemedText style={styles.title}>소비자 물가 상승률</ThemedText>
       <View style={styles.gaugeContainer}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {/* 배경 원 */}
@@ -133,7 +130,7 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
           })}
           
           {/* 눈금 그리기 - 주요 눈금 */}
-          {[0, 25, 50, 75, 100].map((tick, idx) => {
+          {[0, 1, 2, 3, 4, 5, 6, 7, 8].map((tick, idx) => {
             const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 10);
             const label = createLabel(tick, radius, -25);
             
@@ -155,14 +152,14 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
                   textAnchor="middle"
                   alignmentBaseline="middle"
                 >
-                  {tick}
+                  {tick}%
                 </SvgText>
               </G>
             );
           })}
           
           {/* 눈금 그리기 - 작은 눈금 */}
-          {Array.from({ length: 20 }, (_, i) => i * 5).filter(tick => tick % 25 !== 0).map((tick, idx) => {
+          {Array.from({ length: 8 }, (_, i) => (i + 1) * 0.5).filter(tick => Number.isInteger(tick) === false && tick <= 8).map((tick, idx) => {
             const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 5);
             return (
               <Line
@@ -180,7 +177,6 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
           {/* 섹션 이름 표시 - 각 칸 안쪽에 배치 */}
           {sections.map((section, idx) => {
             const midPoint = (section.start + section.end) / 2;
-            // radius * 0.7로 변경하여 텍스트를 섹션 내부로 이동
             const label = createLabel(midPoint, radius * 0.7, 0);
             
             return (
@@ -199,19 +195,21 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
             );
           })}
           
-          {/* 중앙 수치 표시 */}
-          <Circle cx={center} cy={center} r={30} fill="#FFF" stroke="#DDD" strokeWidth={1} />
+          {/* 현재 물가 상승률을 상단 여유 공간에 크게 표시 */}
           <SvgText 
             x={center} 
-            y={center}
-            fontSize="24" 
+            y={center - radius * 0.4}
+            fontSize="28" 
             fontWeight="bold" 
-            fill="#333" 
+            fill={rateColor} 
             textAnchor="middle"
             alignmentBaseline="middle"
           >
-            {index}
+            {rate}%
           </SvgText>
+          
+          {/* 중앙 원은 유지하되 숫자 제거 */}
+          <Circle cx={center} cy={center} r={30} fill="#FFF" stroke="#DDD" strokeWidth={1} />
           
           {/* 바늘 */}
           <Line
@@ -228,13 +226,13 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
           <Circle cx={center} cy={center} r={6} fill="#666" />
         </Svg>
       </View>
-      <View style={styles.indexTextContainer}>
-        <ThemedText style={[styles.indexText, { color: indexColor }]}>{indexText}</ThemedText>
+      <View style={styles.infoContainer}>
+        <ThemedText style={[styles.infoText, { color: rateColor }]}>{rateText}</ThemedText>
+        <ThemedText style={styles.description}>
+          현재 물가 상승률은 {rate}%입니다.
+          물가 상승률이 높을수록 화폐 가치가 떨어지고 소비자의 구매력이 감소합니다.
+        </ThemedText>
       </View>
-      <ThemedText style={styles.description}>
-        금리, 환율, 물가지수를 종합적으로 고려한 경제 심리 지수입니다.
-        25 이하(극심한 경기침체), 25-45(경기침체), 45-55(중립), 55-75(경기확장), 75 이상(경기과열)
-      </ThemedText>
     </View>
   );
 };
@@ -264,22 +262,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginVertical: 8,
+    height: 200,
   },
-  indexTextContainer: {
+  infoContainer: {
     alignItems: 'center',
     marginTop: 8,
   },
-  indexText: {
+  infoText: {
     fontSize: 20,
     fontWeight: 'bold',
+    marginBottom: 8,
   },
   description: {
     fontSize: 12,
     color: '#666',
     textAlign: 'center',
-    marginTop: 16,
     lineHeight: 18,
   },
 });
 
-export default EconomicGaugeIndex; 
+export default PriceIndexGauge; 
