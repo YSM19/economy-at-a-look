@@ -7,6 +7,11 @@ type PriceIndexGaugeProps = {
   value?: number;
 };
 
+// 숫자와 단위를 붙여서 표시하는 함수
+const formatNumberWithUnit = (value: number | string, unit: string): string => {
+  return `${value}${unit}`;
+};
+
 const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
   const [rate, setRate] = useState(value);
   const [rateText, setRateText] = useState('');
@@ -34,13 +39,14 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
   const center = size / 2;
   const radius = size * 0.4;
   
-  // 각도 계산 (0~8% → -40~220도, 총 260도 범위)
-  const startAngle = -40;
-  const endAngle = 220;
-  const totalAngle = endAngle - startAngle;
+  // 각도 계산 (0~8% → 8시~4시 방향, 총 180도 범위)
+  const startAngle = 150; // 8시 방향(150도)
+  const endAngle = 30;   // 4시 방향(30도)
+  const totalAngle = 240; // 시계 방향으로 이동하는 각도
   
   // 물가상승률 범위는 0%~8%로 가정
   const maxRate = 8;
+  // 각도 계산 - 시계 방향으로 움직이도록
   const needleAngle = startAngle + (rate / maxRate) * totalAngle;
   const needleRad = needleAngle * Math.PI / 180;
   
@@ -152,7 +158,7 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
                   textAnchor="middle"
                   alignmentBaseline="middle"
                 >
-                  {tick}%
+                  {formatNumberWithUnit(tick, '%')}
                 </SvgText>
               </G>
             );
@@ -177,7 +183,7 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
           {/* 섹션 이름 표시 - 각 칸 안쪽에 배치 */}
           {sections.map((section, idx) => {
             const midPoint = (section.start + section.end) / 2;
-            const label = createLabel(midPoint, radius * 0.7, 0);
+            const label = createLabel(midPoint, radius * 0.5, 0);
             
             return (
               <SvgText
@@ -195,17 +201,17 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
             );
           })}
           
-          {/* 현재 물가 상승률을 상단 여유 공간에 크게 표시 */}
+          {/* 현재 물가 상승률을 하단 여유 공간에 크게 표시 */}
           <SvgText 
             x={center} 
-            y={center - radius * 0.4}
-            fontSize="28" 
+            y={center + radius * 0.6}
+            fontSize="26" 
             fontWeight="bold" 
             fill={rateColor} 
             textAnchor="middle"
             alignmentBaseline="middle"
           >
-            {rate}%
+            {formatNumberWithUnit(rate, '%')}
           </SvgText>
           
           {/* 중앙 원은 유지하되 숫자 제거 */}
@@ -229,7 +235,7 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
       <View style={styles.infoContainer}>
         <ThemedText style={[styles.infoText, { color: rateColor }]}>{rateText}</ThemedText>
         <ThemedText style={styles.description}>
-          현재 물가 상승률은 {rate}%입니다.
+          현재 물가 상승률은 {formatNumberWithUnit(rate, '%')}입니다.
           물가 상승률이 높을수록 화폐 가치가 떨어지고 소비자의 구매력이 감소합니다.
         </ThemedText>
       </View>

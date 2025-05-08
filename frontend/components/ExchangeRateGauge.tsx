@@ -1,17 +1,84 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { ThemedText } from './ThemedText';
 import Svg, { Path, Circle, G, Line, Text as SvgText, Rect } from 'react-native-svg';
+import axios from 'axios';
 
 type ExchangeRateGaugeProps = {
   value?: number;
 };
 
-const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value = 1350 }) => {
-  const [rate, setRate] = useState(value);
+// 천 단위 콤마와 단위를 붙여서 표시하는 함수
+const formatNumberWithUnit = (value: number | string, unit: string): string => {
+  const formattedNumber = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return `${formattedNumber}${unit}`;
+};
+
+const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value }) => {
+  const [rate, setRate] = useState(value || 1350);
   const [rateText, setRateText] = useState('');
   const [rateColor, setRateColor] = useState('#FFC107');
   const [activeSection, setActiveSection] = useState(1);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  useEffect(() => {
+    fetchExchangeRateData();
+  }, []);
+  
+  // 백엔드에서 환율 데이터 가져오기
+  const fetchExchangeRateData = async () => {
+    setLoading(true);
+    setError(null);
+    
+    try {
+      // 경제 지표 API에서 최신 환율 정보 가져오기
+      const response = await axios.get('http://192.168.0.2:8080/api/economic/exchange-rate');
+      
+      // ApiResponse 형식으로 래핑된 데이터에서 usdRate 필드 가져오기
+      if (response.data && response.data.success && response.data.data) {
+        const exchangeData = response.data.data;
+        
+        // usdRate 필드에서 환율 데이터 가져오기
+        if (exchangeData.usdRate) {
+          setRate(exchangeData.usdRate);
+        } else {
+          // history 배열에서 USD 데이터 찾기
+          const usdHistory = exchangeData.history?.find((item: any) => item.curUnit === 'USD');
+          if (usdHistory) {
+            setRate(parseFloat(usdHistory.dealBasRate) || 1350);
+          }
+        }
+      } else {
+        // 대체 API: 환율 목록 API 사용
+        const fallbackResponse = await axios.get('http://192.168.0.2:8080/api/exchange-rates/today');
+        
+        // 기존 API 형식 처리
+        if (Array.isArray(fallbackResponse.data)) {
+          // 달러 환율 찾기 (USD)
+          const usdRate = fallbackResponse.data.find((item: any) => item.curUnit === 'USD');
+          
+          if (usdRate) {
+            // dealBasRate 필드 사용 (dealBasR가 아님)
+            const rateValue = typeof usdRate.dealBasRate === 'number' 
+              ? usdRate.dealBasRate 
+              : parseFloat(String(usdRate.dealBasRate).replace(',', ''));
+              
+            setRate(rateValue);
+          } else {
+            throw new Error('USD 환율 데이터를 찾을 수 없습니다.');
+          }
+        } else {
+          throw new Error('API 응답 형식이 예상과 다릅니다.');
+        }
+      }
+    } catch (err) {
+      console.error('환율 데이터를 가져오는 중 오류 발생:', err);
+      setError('환율 데이터를 가져오는데 실패했습니다.');
+    } finally {
+      setLoading(false);
+    }
+  };
   
   useEffect(() => {
     if (rate <= 1200) {
@@ -34,16 +101,17 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value = 1350 }) =
   const center = size / 2;
   const radius = size * 0.4;
   
-  // 각도 계산 (1000~1600원 → -40~220도, 총 260도 범위)
-  const startAngle = -40;
-  const endAngle = 220;
-  const totalAngle = endAngle - startAngle;
+  // 각도 계산 (1000~1600원 → 8시~4시 방향, 총 180도 범위)
+  const startAngle = 150; // 8시 방향(150도)
+  const endAngle = 30;   // 4시 방향(30도)
+  const totalAngle = 240; // 시계 방향으로 이동하는 각도
   
   // 환율 범위는 1000원~1600원으로 가정
   const minRate = 1000;
   const maxRate = 1600;
   const rateRange = maxRate - minRate;
   
+  // 각도 계산 - 시계 방향으로 움직이도록
   const needleAngle = startAngle + ((rate - minRate) / rateRange) * totalAngle;
   const needleRad = needleAngle * Math.PI / 180;
   
@@ -108,134 +176,148 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value = 1350 }) =
   return (
     <View style={styles.container}>
       <ThemedText style={styles.title}>환율 (USD/KRW)</ThemedText>
-      <View style={styles.gaugeContainer}>
-        <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* 배경 원 */}
-          <Circle 
-            cx={center} 
-            cy={center} 
-            r={radius + 20} 
-            fill="#F5F5F5" 
-          />
-          
-          {/* 섹션 그리기 */}
-          {sections.map((section, idx) => {
-            const isActive = idx === activeSection;
-            return (
-              <Path
-                key={`section-${idx}`}
-                d={createSectionPath(section.start, section.end, radius)}
-                fill={isActive ? section.color : '#F9F9F9'}
-                stroke="#E0E0E0"
-                strokeWidth={1}
+      
+      {loading ? (
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#0066CC" />
+          <ThemedText style={styles.loadingText}>환율 데이터를 불러오는 중...</ThemedText>
+        </View>
+      ) : error ? (
+        <View style={styles.errorContainer}>
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+        </View>
+      ) : (
+        <>
+          <View style={styles.gaugeContainer}>
+            <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+              {/* 배경 원 */}
+              <Circle 
+                cx={center} 
+                cy={center} 
+                r={radius + 20} 
+                fill="#F5F5F5" 
               />
-            );
-          })}
-          
-          {/* 눈금 그리기 - 주요 눈금 */}
-          {[1000, 1100, 1200, 1300, 1400, 1500, 1600].map((tick, idx) => {
-            const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 10);
-            const label = createLabel(tick, radius, -25);
-            
-            return (
-              <G key={`major-tick-${idx}`}>
-                <Line
-                  x1={innerX}
-                  y1={innerY}
-                  x2={outerX}
-                  y2={outerY}
-                  stroke="#666"
-                  strokeWidth={2}
-                />
-                <SvgText
-                  x={label.x}
-                  y={label.y}
-                  fontSize="11"
-                  fill="#666"
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                >
-                  {tick}
-                </SvgText>
-              </G>
-            );
-          })}
-          
-          {/* 눈금 그리기 - 작은 눈금 */}
-          {Array.from({ length: 12 }, (_, i) => 1000 + i * 50).filter(tick => tick % 100 !== 0).map((tick, idx) => {
-            const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 5);
-            return (
-              <Line
-                key={`minor-tick-${idx}`}
-                x1={innerX}
-                y1={innerY}
-                x2={outerX}
-                y2={outerY}
-                stroke="#AAA"
-                strokeWidth={1}
-              />
-            );
-          })}
-          
-          {/* 섹션 이름 표시 - 각 칸 안쪽에 배치 */}
-          {sections.map((section, idx) => {
-            const midPoint = (section.start + section.end) / 2;
-            const label = createLabel(midPoint, radius * 0.7, 0);
-            
-            return (
-              <SvgText
-                key={`label-${idx}`}
-                x={label.x}
-                y={label.y}
-                fontSize="12"
-                fontWeight="bold"
-                fill={section.textColor}
+              
+              {/* 섹션 그리기 */}
+              {sections.map((section, idx) => {
+                const isActive = idx === activeSection;
+                return (
+                  <Path
+                    key={`section-${idx}`}
+                    d={createSectionPath(section.start, section.end, radius)}
+                    fill={isActive ? section.color : '#F9F9F9'}
+                    stroke="#E0E0E0"
+                    strokeWidth={1}
+                  />
+                );
+              })}
+              
+              {/* 눈금 그리기 - 주요 눈금 */}
+              {[1000, 1100, 1200, 1300, 1400, 1500, 1600].map((tick, idx) => {
+                const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 10);
+                const label = createLabel(tick, radius, -25);
+                
+                return (
+                  <G key={`major-tick-${idx}`}>
+                    <Line
+                      x1={innerX}
+                      y1={innerY}
+                      x2={outerX}
+                      y2={outerY}
+                      stroke="#666"
+                      strokeWidth={2}
+                    />
+                    <SvgText
+                      x={label.x}
+                      y={label.y}
+                      fontSize="11"
+                      fill="#666"
+                      textAnchor="middle"
+                      alignmentBaseline="middle"
+                    >
+                      {tick.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    </SvgText>
+                  </G>
+                );
+              })}
+              
+              {/* 눈금 그리기 - 작은 눈금 */}
+              {Array.from({ length: 12 }, (_, i) => 1000 + i * 50).filter(tick => tick % 100 !== 0).map((tick, idx) => {
+                const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 5);
+                return (
+                  <Line
+                    key={`minor-tick-${idx}`}
+                    x1={innerX}
+                    y1={innerY}
+                    x2={outerX}
+                    y2={outerY}
+                    stroke="#AAA"
+                    strokeWidth={1}
+                  />
+                );
+              })}
+              
+              {/* 섹션 이름 표시 - 각 칸 안쪽에 배치 */}
+              {sections.map((section, idx) => {
+                const midPoint = (section.start + section.end) / 2;
+                const label = createLabel(midPoint, radius * 0.5, 0);
+                
+                return (
+                  <SvgText
+                    key={`label-${idx}`}
+                    x={label.x}
+                    y={label.y}
+                    fontSize="12"
+                    fontWeight="bold"
+                    fill={section.textColor}
+                    textAnchor="middle"
+                    alignmentBaseline="middle"
+                  >
+                    {section.name}
+                  </SvgText>
+                );
+              })}
+              
+              {/* 현재 환율 값을 하단 여유 공간에 크게 표시 */}
+              <SvgText 
+                x={center} 
+                y={center + radius * 0.6}
+                fontSize="26" 
+                fontWeight="bold" 
+                fill={rateColor} 
                 textAnchor="middle"
                 alignmentBaseline="middle"
               >
-                {section.name}
+                {formatNumberWithUnit(rate, '원')}
               </SvgText>
-            );
-          })}
-          
-          {/* 현재 환율 값을 상단 여유 공간에 크게 표시 */}
-          <SvgText 
-            x={center} 
-            y={center - radius * 0.4}
-            fontSize="26" 
-            fontWeight="bold" 
-            fill={rateColor} 
-            textAnchor="middle"
-            alignmentBaseline="middle"
-          >
-            {rate}원
-          </SvgText>
-          
-          {/* 중앙 원은 유지하되 숫자 제거 */}
-          <Circle cx={center} cy={center} r={30} fill="#FFF" stroke="#DDD" strokeWidth={1} />
-          
-          {/* 바늘 */}
-          <Line
-            x1={center}
-            y1={center}
-            x2={needleX}
-            y2={needleY}
-            stroke="#333"
-            strokeWidth={3}
-            strokeLinecap="round"
-          />
-          
-          {/* 바늘 중심점 */}
-          <Circle cx={center} cy={center} r={6} fill="#666" />
-        </Svg>
-      </View>
-      <View style={styles.infoContainer}>
-        <ThemedText style={[styles.infoText, { color: rateColor }]}>{rateText}</ThemedText>
-        <ThemedText style={styles.description}>
-          현재 달러/원 환율은 {rate}원입니다.
-          환율이 낮을수록 원화가 강세이고, 높을수록 원화가 약세입니다.
-        </ThemedText>
-      </View>
+              
+              {/* 중앙 원은 유지하되 숫자 제거 */}
+              <Circle cx={center} cy={center} r={30} fill="#FFF" stroke="#DDD" strokeWidth={1} />
+              
+              {/* 바늘 */}
+              <Line
+                x1={center}
+                y1={center}
+                x2={needleX}
+                y2={needleY}
+                stroke="#333"
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+              
+              {/* 바늘 중심점 */}
+              <Circle cx={center} cy={center} r={6} fill="#666" />
+            </Svg>
+          </View>
+          <View style={styles.infoContainer}>
+            <ThemedText style={[styles.infoText, { color: rateColor }]}>{rateText}</ThemedText>
+            <ThemedText style={styles.description}>
+              현재 달러/원 환율은 {formatNumberWithUnit(rate, '원')}입니다.
+              환율이 낮을수록 원화가 강세이고, 높을수록 원화가 약세입니다.
+            </ThemedText>
+          </View>
+        </>
+      )}
     </View>
   );
 };
@@ -281,6 +363,26 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 200,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 14,
+    color: '#666',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 200,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#F44336',
+    textAlign: 'center',
   },
 });
 

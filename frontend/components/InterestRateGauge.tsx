@@ -7,6 +7,11 @@ type InterestRateGaugeProps = {
   value?: number;
 };
 
+// 숫자와 단위를 붙여서 표시하는 함수
+const formatNumberWithUnit = (value: number | string, unit: string): string => {
+  return `${value}${unit}`;
+};
+
 const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) => {
   const [rate, setRate] = useState(value);
   const [rateText, setRateText] = useState('');
@@ -15,15 +20,15 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
   
   useEffect(() => {
     if (rate <= 2) {
-      setRateText('낮은 금리');
+      setRateText('저금리');
       setRateColor('#4CAF50');
       setActiveSection(0);
-    } else if (rate <= 5) {
-      setRateText('보통 금리');
+    } else if (rate <= 4) {
+      setRateText('보통');
       setRateColor('#FFC107');
       setActiveSection(1);
     } else {
-      setRateText('높은 금리');
+      setRateText('고금리');
       setRateColor('#F44336');
       setActiveSection(2);
     }
@@ -34,14 +39,17 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
   const center = size / 2;
   const radius = size * 0.4;
   
-  // 각도 계산 (0~10% → -40~220도, 총 260도 범위)
-  const startAngle = -40;
-  const endAngle = 220;
-  const totalAngle = endAngle - startAngle;
-  // 금리 범위는 0%~10%로 가정
-  const maxRate = 10;
-  const needleAngle = startAngle + (rate / maxRate) * totalAngle;
-  const needleRad = needleAngle * Math.PI / 180;
+  // 각도 계산 - SVG 좌표계 기준으로 8시(약 150도)에서 4시(약 30도)까지
+  const startAngle = 150; // 8시 방향
+  const endAngle = 30;   // 4시 방향
+  const totalAngle = 240; // 시계 방향으로 이동하는 각도
+  
+  // 금리 범위는 0%~6%로 가정
+  const maxRate = 6;
+  
+  // 시계 방향으로 움직이도록 각도 계산
+  const angle = startAngle + (rate / maxRate) * totalAngle;
+  const needleRad = angle * Math.PI / 180;
   
   // 바늘 끝점 계산
   const needleLength = radius * 0.85;
@@ -50,9 +58,9 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
   
   // 섹션 색상 및 범위
   const sections = [
-    { name: '낮은 금리', color: '#C8E6C9', textColor: '#4CAF50', start: 0, end: 2 },
-    { name: '보통 금리', color: '#FFF9C4', textColor: '#FFC107', start: 2, end: 5 },
-    { name: '높은 금리', color: '#FFCDD2', textColor: '#F44336', start: 5, end: 10 }
+    { name: '저금리', color: '#C8E6C9', textColor: '#4CAF50', start: 0, end: 2 },
+    { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 2, end: 4 },
+    { name: '고금리', color: '#FFCDD2', textColor: '#F44336', start: 4, end: 6 }
   ];
   
   // 섹션별 경로 생성
@@ -129,7 +137,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
           })}
           
           {/* 눈금 그리기 - 주요 눈금 */}
-          {[0, 2, 5, 7, 10].map((tick, idx) => {
+          {[0, 1, 2, 3, 4, 5, 6].map((tick, idx) => {
             const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 10);
             const label = createLabel(tick, radius, -25);
             
@@ -151,14 +159,14 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
                   textAnchor="middle"
                   alignmentBaseline="middle"
                 >
-                  {tick}%
+                  {formatNumberWithUnit(tick, '%')}
                 </SvgText>
               </G>
             );
           })}
           
           {/* 눈금 그리기 - 작은 눈금 */}
-          {Array.from({ length: 20 }, (_, i) => i * 0.5).filter(tick => tick % 1 !== 0 && tick <= 10).map((tick, idx) => {
+          {Array.from({ length: 12 }, (_, i) => i * 0.5).filter(tick => tick % 1 !== 0 && tick <= 6).map((tick, idx) => {
             const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 5);
             return (
               <Line
@@ -176,7 +184,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
           {/* 섹션 이름 표시 - 각 칸 안쪽에 배치 */}
           {sections.map((section, idx) => {
             const midPoint = (section.start + section.end) / 2;
-            const label = createLabel(midPoint, radius * 0.7, 0);
+            const label = createLabel(midPoint, radius * 0.5, 0);
             
             return (
               <SvgText
@@ -194,17 +202,17 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
             );
           })}
           
-          {/* 현재 금리 값을 상단 여유 공간에 크게 표시 */}
+          {/* 현재 금리 값을 하단 여유 공간에 크게 표시 */}
           <SvgText 
             x={center} 
-            y={center - radius * 0.4}
-            fontSize="28" 
+            y={center + radius * 0.6}
+            fontSize="26" 
             fontWeight="bold" 
             fill={rateColor} 
             textAnchor="middle"
             alignmentBaseline="middle"
           >
-            {rate}%
+            {formatNumberWithUnit(rate, '%')}
           </SvgText>
           
           {/* 중앙 원은 유지하되 숫자 제거 */}
@@ -228,7 +236,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
       <View style={styles.infoContainer}>
         <ThemedText style={[styles.infoText, { color: rateColor }]}>{rateText}</ThemedText>
         <ThemedText style={styles.description}>
-          현재 정책금리는 {rate}%입니다.
+          현재 정책금리는 {formatNumberWithUnit(rate, '%')}입니다.
           금리가 낮을수록 대출 비용이 낮아지고, 높을수록 물가 상승을 억제합니다.
         </ThemedText>
       </View>

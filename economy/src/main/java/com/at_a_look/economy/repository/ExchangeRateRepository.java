@@ -2,7 +2,6 @@ package com.at_a_look.economy.repository;
 
 import com.at_a_look.economy.entity.ExchangeRate;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
@@ -11,11 +10,23 @@ import java.util.Optional;
 
 @Repository
 public interface ExchangeRateRepository extends JpaRepository<ExchangeRate, Long> {
-
-    Optional<ExchangeRate> findTopByOrderByDateDesc();
-
-    List<ExchangeRate> findTop6ByOrderByDateDesc();
-
-    @Query("SELECT e FROM ExchangeRate e WHERE e.date BETWEEN :startDate AND :endDate ORDER BY e.date")
-    List<ExchangeRate> findByDateBetween(LocalDate startDate, LocalDate endDate);
+    
+    List<ExchangeRate> findBySearchDate(LocalDate searchDate);
+    
+    Optional<ExchangeRate> findBySearchDateAndCurUnit(LocalDate searchDate, String curUnit);
+    
+    boolean existsBySearchDateAndCurUnit(LocalDate searchDate, String curUnit);
+    
+    List<ExchangeRate> findTop30ByOrderBySearchDateDesc();
+    
+    List<ExchangeRate> findByCurUnitOrderBySearchDateDesc(String curUnit);
+    
+    /**
+     * 지정된 날짜 범위 내의 모든 환율 데이터를 조회합니다.
+     * 
+     * @param startDate 조회 시작 날짜 (포함)
+     * @param endDate 조회 종료 날짜 (포함)
+     * @return 날짜 범위 내의 환율 데이터 목록 (날짜 오름차순 정렬)
+     */
+    List<ExchangeRate> findBySearchDateBetweenOrderBySearchDateAsc(LocalDate startDate, LocalDate endDate);
 } 

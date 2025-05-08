@@ -35,11 +35,26 @@ dependencies {
 	implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
 	implementation 'com.fasterxml.jackson.core:jackson-databind'
 	
-	compileOnly 'org.projectlombok:lombok'
+	// Database - MySQL
 	runtimeOnly 'com.mysql:mysql-connector-j'
+	
+	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+// 프로필에 따른 빌드 설정
+def activeProfile = findProperty('profile') ?: 'dev'
+
+bootJar {
+    manifest {
+        attributes(
+            'Implementation-Title': project.name,
+            'Implementation-Version': project.version,
+            'Spring-Boot-Profile': activeProfile
+        )
+    }
 }
 
 tasks.named('test') {

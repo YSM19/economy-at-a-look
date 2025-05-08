@@ -11,7 +11,7 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('interest');
+  const [activeTab, setActiveTab] = useState('exchange');
 
   const renderTabContent = () => {
     switch (activeTab) {
@@ -22,7 +22,7 @@ export default function HomeScreen() {
       case 'price':
         return <PriceIndexGauge />;
       default:
-        return <InterestRateGauge />;
+        return <ExchangeRateGauge />;
     }
   }
 
@@ -42,20 +42,6 @@ export default function HomeScreen() {
         {/* 탭 내비게이션 */}
         <View style={styles.tabContainer}>
           <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'interest' && styles.activeTabButton]} 
-            onPress={() => setActiveTab('interest')}
-          >
-            <MaterialCommunityIcons 
-              name="trending-up" 
-              size={22} 
-              color={activeTab === 'interest' ? '#1976D2' : '#666'} 
-            />
-            <ThemedText style={[styles.tabText, activeTab === 'interest' && styles.activeTabText]}>
-              금리
-            </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
             style={[styles.tabButton, activeTab === 'exchange' && styles.activeTabButton]} 
             onPress={() => setActiveTab('exchange')}
           >
@@ -66,6 +52,20 @@ export default function HomeScreen() {
             />
             <ThemedText style={[styles.tabText, activeTab === 'exchange' && styles.activeTabText]}>
               환율
+            </ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.tabButton, activeTab === 'interest' && styles.activeTabButton]} 
+            onPress={() => setActiveTab('interest')}
+          >
+            <MaterialCommunityIcons 
+              name="trending-up" 
+              size={22} 
+              color={activeTab === 'interest' ? '#1976D2' : '#666'} 
+            />
+            <ThemedText style={[styles.tabText, activeTab === 'interest' && styles.activeTabText]}>
+              금리
             </ThemedText>
           </TouchableOpacity>
           
