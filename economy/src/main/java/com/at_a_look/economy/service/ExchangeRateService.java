@@ -50,10 +50,10 @@ public class ExchangeRateService {
     private static final List<String> MAJOR_CURRENCIES = Arrays.asList("USD", "EUR", "JPY");
 
     /**
-     * 매일 오전 10시 30분에 환율 데이터를 자동으로 가져옵니다.
+     * 매일 오전 11시 30분에 환율 데이터를 자동으로 가져옵니다.
      * 운영 환경에서만 실행됩니다.
      */
-    @Scheduled(cron = "0 30 10 * * ?")
+    @Scheduled(cron = "0 30 11 * * ?")
     @Transactional
     @Profile("prod")
     public void fetchDailyExchangeRates() {

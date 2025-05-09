@@ -31,6 +31,17 @@ export default function HomeScreen() {
       <Stack.Screen 
         options={{
           title: "경제 한눈에 보기",
+          headerRight: () => (
+            Platform.OS === 'web' ? (
+              <TouchableOpacity 
+                onPress={() => router.push('/admin/login')}
+                style={styles.adminButton}
+              >
+                <MaterialCommunityIcons name="shield-account" size={22} color="#0066CC" />
+                <ThemedText style={styles.adminButtonText}>관리자</ThemedText>
+              </TouchableOpacity>
+            ) : null
+          )
         }} 
       />
       <StatusBar style="auto" />
@@ -250,5 +261,19 @@ const styles = StyleSheet.create({
   cardSubtitle: {
     fontSize: 14,
     color: '#666',
+  },
+  adminButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#E3F2FD',
+    marginRight: 8,
+  },
+  adminButtonText: {
+    fontSize: 12,
+    color: '#0066CC',
+    fontWeight: 'bold',
+    marginLeft: 4,
   },
 }); 
