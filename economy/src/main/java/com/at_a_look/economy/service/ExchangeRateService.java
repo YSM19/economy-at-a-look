@@ -50,7 +50,7 @@ public class ExchangeRateService {
     private static final List<String> MAJOR_CURRENCIES = Arrays.asList("USD", "EUR", "JPY");
 
     /**
-     * 매일 오전 11시 30분에 환율 데이터를 자동으로 가져옵니다.
+     * 매일 오전 11npm 시 30분에 환율 데이터를 자동으로 가져옵니다.
      * 운영 환경에서만 실행됩니다.
      */
     @Scheduled(cron = "0 30 11 * * ?")
@@ -260,6 +260,7 @@ public class ExchangeRateService {
 
     /**
      * 특정 날짜의 환율 데이터를 조회하거나 없으면 API에서 가져옵니다.
+     * API에서 데이터를 가져오는 데 실패하면 가장 최근에 저장된 데이터를 사용합니다.
      */
     private List<ExchangeRateResponseDTO> getOrFetchRatesByDate(LocalDate date) {
         List<ExchangeRate> rates = exchangeRateRepository.findBySearchDate(date);
@@ -271,7 +272,15 @@ public class ExchangeRateService {
                 rates = exchangeRateRepository.findBySearchDate(date);
             } catch (Exception e) {
                 log.error("환율 데이터 가져오기 실패: {}", e.getMessage());
-                // 기존 빈 목록 반환
+                // 최근 저장된 데이터 조회 (가장 최근 날짜의 데이터)
+                List<ExchangeRate> latestRates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
+                if (!latestRates.isEmpty()) {
+                    // 가장 최근 날짜 확인
+                    LocalDate latestDate = latestRates.get(0).getSearchDate();
+                    // 해당 날짜의 모든 통화 데이터 조회
+                    rates = exchangeRateRepository.findBySearchDate(latestDate);
+                    log.info("요청한 날짜({})의 환율 데이터를 찾을 수 없어 {} 날짜의 데이터를 사용합니다.", date, latestDate);
+                }
             }
         }
         
@@ -346,18 +355,27 @@ public class ExchangeRateService {
     
     /**
      * 최신 환율 데이터를 가져오거나 없으면 API에서 가져옵니다.
+     * API에서 데이터를 가져오는 데 실패하면 가장 최근에 저장된 데이터를 사용합니다.
      */
     private List<ExchangeRate> getLatestRatesOrFetch(LocalDate date) {
         List<ExchangeRate> rates = exchangeRateRepository.findBySearchDate(date);
         
-        // 오늘 데이터가 없으면 가장 최근 데이터 조회
+        // 오늘 데이터가 없으면 API에서 가져오기 시도
         if (rates.isEmpty()) {
             try {
                 fetchExchangeRates(date);
                 rates = exchangeRateRepository.findBySearchDate(date);
             } catch (Exception e) {
                 log.error("오늘 환율 데이터 가져오기 실패: {}", e.getMessage());
-                rates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
+                // 최근 저장된 데이터 조회 (가장 최근 날짜의 데이터)
+                List<ExchangeRate> latestRates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
+                if (!latestRates.isEmpty()) {
+                    // 가장 최근 날짜 확인
+                    LocalDate latestDate = latestRates.get(0).getSearchDate();
+                    // 해당 날짜의 모든 통화 데이터 조회
+                    rates = exchangeRateRepository.findBySearchDate(latestDate);
+                    log.info("최신 환율 데이터를 찾을 수 없어 {} 날짜의 데이터를 사용합니다.", latestDate);
+                }
             }
         }
         
@@ -377,15 +395,30 @@ public class ExchangeRateService {
     
     /**
      * 가장 최근의 달러 환율 정보를 단일 객체로 반환합니다.
+     * 데이터가 없으면 API에서 가져오기 시도하고, 실패하면 가장 최근 저장된 데이터를 사용합니다.
      * 
      * @return 달러 환율 DTO (Optional)
      */
     @Transactional(readOnly = true)
     public Optional<ExchangeRateDto> getLatestExchangeRate() {
-        List<ExchangeRate> rates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
+        LocalDate today = LocalDate.now();
+        List<ExchangeRate> rates = exchangeRateRepository.findBySearchDate(today);
         
+        // 오늘 데이터가 없으면 API에서 가져오기 시도
         if (rates.isEmpty()) {
-            return Optional.empty();
+            try {
+                fetchExchangeRates(today);
+                rates = exchangeRateRepository.findBySearchDate(today);
+            } catch (Exception e) {
+                log.error("오늘 환율 데이터 가져오기 실패: {}", e.getMessage());
+                // 최근 저장된 데이터 조회
+                rates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
+                if (rates.isEmpty()) {
+                    log.warn("저장된 환율 데이터가 없습니다.");
+                    return Optional.empty();
+                }
+                log.info("최신 환율 데이터를 찾을 수 없어 {} 날짜의 데이터를 사용합니다.", rates.get(0).getSearchDate());
+            }
         }
         
         // USD 환율 찾기

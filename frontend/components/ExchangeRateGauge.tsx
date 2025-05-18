@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { ThemedText } from './ThemedText';
 import Svg, { Path, Circle, G, Line, Text as SvgText, Rect } from 'react-native-svg';
-import axios from 'axios';
+import { economicIndexApi } from '../services/api';
 
 type ExchangeRateGaugeProps = {
   value?: number;
@@ -33,7 +33,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value }) => {
     
     try {
       // 경제 지표 API에서 최신 환율 정보 가져오기
-      const response = await axios.get('http://192.168.0.2:8080/api/economic/exchange-rate');
+      const response = await economicIndexApi.getExchangeRate();
       
       // ApiResponse 형식으로 래핑된 데이터에서 usdRate 필드 가져오기
       if (response.data && response.data.success && response.data.data) {
@@ -50,31 +50,11 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value }) => {
           }
         }
       } else {
-        // 대체 API: 환율 목록 API 사용
-        const fallbackResponse = await axios.get('http://192.168.0.2:8080/api/exchange-rates/today');
-        
-        // 기존 API 형식 처리
-        if (Array.isArray(fallbackResponse.data)) {
-          // 달러 환율 찾기 (USD)
-          const usdRate = fallbackResponse.data.find((item: any) => item.curUnit === 'USD');
-          
-          if (usdRate) {
-            // dealBasRate 필드 사용 (dealBasR가 아님)
-            const rateValue = typeof usdRate.dealBasRate === 'number' 
-              ? usdRate.dealBasRate 
-              : parseFloat(String(usdRate.dealBasRate).replace(',', ''));
-              
-            setRate(rateValue);
-          } else {
-            throw new Error('USD 환율 데이터를 찾을 수 없습니다.');
-          }
-        } else {
-          throw new Error('API 응답 형식이 예상과 다릅니다.');
-        }
+        throw new Error('API 응답 형식이 예상과 다릅니다.');
       }
     } catch (err) {
       console.error('환율 데이터를 가져오는 중 오류 발생:', err);
-      setError('환율 데이터를 가져오는데 실패했습니다.');
+      setError('환율 데이터를 가져오는데 실패했습니다. 마지막으로 저장된 환율 데이터를 표시합니다.');
     } finally {
       setLoading(false);
     }

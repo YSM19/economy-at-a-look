@@ -107,7 +107,7 @@ const withRetry = async <T>(apiCall: () => Promise<AxiosResponse<T>>, mockData?:
       
       // 모든 시도 실패 후 모의 데이터가 있다면 사용
       if (attempt === maxRetries - 1 && mockData) {
-        console.log('🧪 API 호출 실패 후 모의 데이터로 대체');
+        console.log('🧪 API 호출 실패 후 모의 데이터로 대체 (혹은 마지막으로 저장된 데이터 사용)');
         return createMockResponse(mockData);
       }
       
