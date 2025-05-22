@@ -154,7 +154,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
                 <SvgText
                   x={label.x}
                   y={label.y}
-                  fontSize="12"
+                  fontSize="13"
                   fill="#666"
                   textAnchor="middle"
                   alignmentBaseline="middle"
@@ -191,7 +191,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
                 key={`label-${idx}`}
                 x={label.x}
                 y={label.y}
-                fontSize="12"
+                fontSize="16"
                 fontWeight="bold"
                 fill={section.textColor}
                 textAnchor="middle"
@@ -248,7 +248,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     marginVertical: 8,
     shadowColor: "#000",
     shadowOffset: {
@@ -268,15 +268,18 @@ const styles = StyleSheet.create({
   gaugeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 8,
-    height: 200,
+    marginTop: 30,
+    marginBottom: 16,
+    height: 270,
+    width: '100%',
+    paddingHorizontal: 10,
   },
   infoContainer: {
     alignItems: 'center',
     marginTop: 8,
   },
   infoText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 8,
   },

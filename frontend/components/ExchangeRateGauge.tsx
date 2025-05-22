@@ -62,7 +62,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value }) => {
   
   useEffect(() => {
     if (rate <= 1200) {
-      setRateText('원화 강세');
+      setRateText('달러 약세');
       setRateColor('#4CAF50');
       setActiveSection(0);
     } else if (rate <= 1400) {
@@ -70,7 +70,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value }) => {
       setRateColor('#FFC107');
       setActiveSection(1);
     } else {
-      setRateText('원화 약세');
+      setRateText('달러 강세');
       setRateColor('#F44336');
       setActiveSection(2);
     }
@@ -102,9 +102,9 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value }) => {
   
   // 섹션 색상 및 범위
   const sections = [
-    { name: '원화 강세', color: '#C8E6C9', textColor: '#4CAF50', start: 1000, end: 1200 },
+    { name: '달러 약세', color: '#C8E6C9', textColor: '#4CAF50', start: 1000, end: 1200 },
     { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 1200, end: 1400 },
-    { name: '원화 약세', color: '#FFCDD2', textColor: '#F44336', start: 1400, end: 1600 }
+    { name: '달러 강세', color: '#FFCDD2', textColor: '#F44336', start: 1400, end: 1600 }
   ];
   
   // 섹션별 경로 생성
@@ -210,7 +210,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value }) => {
                     <SvgText
                       x={label.x}
                       y={label.y}
-                      fontSize="11"
+                      fontSize="13"
                       fill="#666"
                       textAnchor="middle"
                       alignmentBaseline="middle"
@@ -247,7 +247,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value }) => {
                     key={`label-${idx}`}
                     x={label.x}
                     y={label.y}
-                    fontSize="12"
+                    fontSize="16"
                     fontWeight="bold"
                     fill={section.textColor}
                     textAnchor="middle"
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     marginVertical: 8,
     shadowColor: "#000",
     shadowOffset: {
@@ -326,15 +326,18 @@ const styles = StyleSheet.create({
   gaugeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 8,
-    height: 200,
+    marginTop: 30,
+    marginBottom: 16,
+    height: 270,
+    width: '100%',
+    paddingHorizontal: 10,
   },
   infoContainer: {
     alignItems: 'center',
     marginTop: 8,
   },
   infoText: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 8,
   },

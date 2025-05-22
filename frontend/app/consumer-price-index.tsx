@@ -109,18 +109,23 @@ export default function ConsumerPriceIndexScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    paddingTop: 60,
   },
   scrollView: {
     flex: 1,
     padding: 16,
+    paddingTop: 30,
   },
   header: {
     marginBottom: 24,
+    marginTop: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 8,
+    paddingTop: 0,
+    lineHeight: 32,
   },
   subtitle: {
     fontSize: 14,

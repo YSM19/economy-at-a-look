@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, ScrollView, SafeAreaView, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { ThemedText } from '../components/ThemedText';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import InterestRateGauge from '../components/InterestRateGauge';
 import ExchangeRateGauge from '../components/ExchangeRateGauge';
@@ -11,18 +11,77 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('exchange');
+  const params = useLocalSearchParams();
+  // URL 파라미터로 전달된 탭 정보를 받아오거나, 기본값으로 'exchange' 사용
+  const [activeTab, setActiveTab] = useState(
+    typeof params.tab === 'string' ? params.tab : 'exchange'
+  );
+  
+  // params.tab이 변경되면 activeTab도 업데이트
+  useEffect(() => {
+    if (params.tab && typeof params.tab === 'string') {
+      setActiveTab(params.tab);
+    }
+  }, [params.tab]);
 
   const renderTabContent = () => {
     switch (activeTab) {
       case 'interest':
-        return <InterestRateGauge />;
+        return (
+          <>
+            <ThemedText style={styles.gaugeLabel}>오늘의 금리</ThemedText>
+            <InterestRateGauge />
+          </>
+        );
       case 'exchange':
-        return <ExchangeRateGauge />;
+        return (
+          <>
+            <ThemedText style={styles.gaugeLabel}>오늘의 환율</ThemedText>
+            <ExchangeRateGauge />
+          </>
+        );
       case 'price':
-        return <PriceIndexGauge />;
+        return (
+          <>
+            <ThemedText style={styles.gaugeLabel}>오늘의 물가</ThemedText>
+            <PriceIndexGauge />
+          </>
+        );
       default:
-        return <ExchangeRateGauge />;
+        return (
+          <>
+            <ThemedText style={styles.gaugeLabel}>오늘의 환율</ThemedText>
+            <ExchangeRateGauge />
+          </>
+        );
+    }
+  }
+
+  // 현재 탭에 따라 타이틀 결정
+  const getTabTitle = () => {
+    switch (activeTab) {
+      case 'interest':
+        return "금리 정보";
+      case 'exchange':
+        return "환율 정보";
+      case 'price':
+        return "물가 정보";
+      default:
+        return "환율 정보";
+    }
+  }
+  
+  // 현재 탭에 따라 서브타이틀 결정
+  const getTabSubtitle = () => {
+    switch (activeTab) {
+      case 'interest':
+        return "금리 한눈에";
+      case 'exchange':
+        return "환율 한눈에";
+      case 'price':
+        return "물가 한눈에";
+      default:
+        return "환율 한눈에";
     }
   }
 
@@ -30,7 +89,7 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.container}>
       <Stack.Screen 
         options={{
-          title: "경제 한눈에 보기",
+          title: getTabTitle(),
           headerRight: () => (
             Platform.OS === 'web' ? (
               <TouchableOpacity 
@@ -47,52 +106,7 @@ export default function HomeScreen() {
       <StatusBar style="auto" />
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
         <View style={styles.header}>
-          <ThemedText style={styles.subtitle}>오늘의 경제 지표</ThemedText>
-        </View>
-        
-        {/* 탭 내비게이션 */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'exchange' && styles.activeTabButton]} 
-            onPress={() => setActiveTab('exchange')}
-          >
-            <MaterialCommunityIcons 
-              name="currency-usd" 
-              size={22} 
-              color={activeTab === 'exchange' ? '#1976D2' : '#666'} 
-            />
-            <ThemedText style={[styles.tabText, activeTab === 'exchange' && styles.activeTabText]}>
-              환율
-            </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'interest' && styles.activeTabButton]} 
-            onPress={() => setActiveTab('interest')}
-          >
-            <MaterialCommunityIcons 
-              name="trending-up" 
-              size={22} 
-              color={activeTab === 'interest' ? '#1976D2' : '#666'} 
-            />
-            <ThemedText style={[styles.tabText, activeTab === 'interest' && styles.activeTabText]}>
-              금리
-            </ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={[styles.tabButton, activeTab === 'price' && styles.activeTabButton]} 
-            onPress={() => setActiveTab('price')}
-          >
-            <MaterialCommunityIcons 
-              name="shopping" 
-              size={22} 
-              color={activeTab === 'price' ? '#1976D2' : '#666'} 
-            />
-            <ThemedText style={[styles.tabText, activeTab === 'price' && styles.activeTabText]}>
-              물가
-            </ThemedText>
-          </TouchableOpacity>
+          <ThemedText style={styles.subtitle}>{getTabSubtitle()}</ThemedText>
         </View>
         
         {/* 선택된 탭 내용 */}
@@ -171,49 +185,19 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
-    marginBottom: 10,
-    marginTop: 0,
-    paddingTop: 0,
+    marginBottom: 20,
+    marginTop: 40,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 10,
   },
   subtitle: {
-    fontSize: 16,
-    opacity: 0.7,
-    lineHeight: 24,
-  },
-  tabContainer: {
-    flexDirection: 'row',
-    marginBottom: 16,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 4,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  tabButton: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderRadius: 8,
-    flexDirection: 'column',
-    justifyContent: 'center',
-  },
-  activeTabButton: {
-    backgroundColor: '#E3F2FD',
-  },
-  tabText: {
-    fontSize: 12,
-    color: '#666',
-    marginTop: 4,
-  },
-  activeTabText: {
-    color: '#1976D2',
+    fontSize: 18,
     fontWeight: 'bold',
+    opacity: 0.8,
+    lineHeight: 24,
+    textAlign: 'center',
   },
   sectionTitle: {
     marginTop: 24,
@@ -275,5 +259,12 @@ const styles = StyleSheet.create({
     color: '#0066CC',
     fontWeight: 'bold',
     marginLeft: 4,
+  },
+  gaugeLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    marginLeft: 5,
+    color: '#333',
   },
 }); 
