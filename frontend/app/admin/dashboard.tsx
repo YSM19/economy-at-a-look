@@ -45,24 +45,116 @@ export default function AdminDashboardScreen() {
     }
   };
 
-  // 환율 데이터 API 요청
+  // 오늘의 환율 데이터 조회
   const fetchExchangeRates = async () => {
     setIsLoading(true);
     setErrorMessage(null);
     setApiResult(null);
     
     try {
+      console.log('🎯 관리자 대시보드: 오늘 환율 데이터 조회 시작');
+      const response = await axios.get(`${Config.apiUrl}/api/exchange-rates/today`);
+      setApiResult({
+        success: true,
+        message: '오늘의 환율 데이터 조회 성공',
+        data: response.data
+      });
+      
+      console.log('✅ 오늘 환율 데이터 조회 성공:', response.data);
+      Alert.alert('조회 성공', `오늘의 환율 데이터 ${response.data.length}개를 확인했습니다.`);
+      
+    } catch (error) {
+      console.error('💥 오늘 환율 데이터 조회 에러:', error);
+      
+      let userMessage = '오늘의 환율 데이터를 조회하는 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          if (status === 404) {
+            userMessage = '오늘의 환율 데이터가 아직 저장되지 않았습니다.\n"외부 API에서 환율 데이터 가져오기" 버튼을 사용해주세요.';
+          } else {
+            userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          }
+          
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else if (error.request) {
+          userMessage = '서버에 연결할 수 없습니다.\n인터넷 연결을 확인하고 다시 시도해주세요.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        } else {
+          userMessage = '요청 처리 중 오류가 발생했습니다.';
+          setErrorMessage(`요청 오류: ${error.message}`);
+        }
+      } else {
+        userMessage = '예상치 못한 오류가 발생했습니다.';
+        setErrorMessage('예상치 못한 오류가 발생했습니다.');
+      }
+      
+      Alert.alert('조회 실패', userMessage);
+      
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // 외부 API에서 새로운 환율 데이터 가져오기
+  const fetchNewExchangeRates = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('🌐 관리자 대시보드: 외부 API에서 환율 데이터 가져오기 시작');
       const response = await axios.post(`${Config.apiUrl}/api/exchange-rates/fetch`);
       setApiResult(response.data);
-      Alert.alert('성공', '환율 데이터를 성공적으로 불러와 데이터베이스에 저장했습니다.');
-    } catch (error) {
-      console.error('환율 API 요청 에러:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        setErrorMessage(`오류: ${error.response.status} - ${error.response.statusText}`);
+      
+      if (response.data?.success) {
+        console.log('✅ 외부 API 환율 데이터 가져오기 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '환율 데이터를 성공적으로 불러와 데이터베이스에 저장했습니다.');
       } else {
-        setErrorMessage('환율 데이터를 가져오는 중 오류가 발생했습니다.');
+        console.warn('⚠️ 외부 API 환율 데이터 가져오기 부분 실패:', response.data.message);
+        Alert.alert('알림', response.data.message || '환율 데이터를 일부만 가져왔습니다.');
       }
-      Alert.alert('오류', '환율 데이터를 가져오는 중 오류가 발생했습니다.');
+      
+    } catch (error) {
+      console.error('💥 외부 API 환율 데이터 가져오기 에러:', error);
+      
+      let userMessage = '외부 API에서 환율 데이터를 가져오는 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          
+          switch (status) {
+            case 503:
+              userMessage = '외부 환율 서비스가 일시적으로 사용 불가능합니다.\n5-10분 후 다시 시도해주세요.';
+              break;
+            case 502:
+              userMessage = '외부 서비스와의 연결에 문제가 있습니다.\n잠시 후 다시 시도해주세요.';
+              break;
+            default:
+              userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+              break;
+          }
+          
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else if (error.request) {
+          userMessage = '서버에 연결할 수 없습니다.\n인터넷 연결을 확인하고 다시 시도해주세요.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        } else {
+          userMessage = '요청 처리 중 오류가 발생했습니다.';
+          setErrorMessage(`요청 오류: ${error.message}`);
+        }
+      } else {
+        userMessage = '예상치 못한 오류가 발생했습니다.';
+        setErrorMessage('예상치 못한 오류가 발생했습니다.');
+      }
+      
+      Alert.alert('오류', userMessage);
+      
     } finally {
       setIsLoading(false);
     }
@@ -143,7 +235,7 @@ export default function AdminDashboardScreen() {
         </View>
         
         <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>환율 데이터 업데이트</ThemedText>
+          <ThemedText style={styles.sectionTitle}>환율 데이터 관리</ThemedText>
           
           <TouchableOpacity 
             style={[styles.button, isLoading && styles.disabledButton]}
@@ -151,7 +243,17 @@ export default function AdminDashboardScreen() {
             disabled={isLoading}
           >
             <ThemedText style={styles.buttonText}>
-              {isLoading ? '요청 중...' : '오늘 환율 데이터 가져오기'}
+              {isLoading ? '조회 중...' : '📊 오늘 환율 데이터 조회'}
+            </ThemedText>
+          </TouchableOpacity>
+          
+          <TouchableOpacity 
+            style={[styles.button, styles.secondaryButton, isLoading && styles.disabledButton]}
+            onPress={fetchNewExchangeRates}
+            disabled={isLoading}
+          >
+            <ThemedText style={styles.buttonText}>
+              {isLoading ? '가져오는 중...' : '🌐 외부 API에서 환율 데이터 가져오기'}
             </ThemedText>
           </TouchableOpacity>
           
@@ -169,7 +271,7 @@ export default function AdminDashboardScreen() {
               disabled={isLoading}
             >
               <ThemedText style={styles.buttonText}>
-                {isLoading ? '요청 중...' : '조회'}
+                {isLoading ? '요청 중...' : '날짜별 조회'}
               </ThemedText>
             </TouchableOpacity>
           </View>

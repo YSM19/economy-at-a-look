@@ -6,6 +6,7 @@ import com.at_a_look.economy.service.ExchangeRateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,16 +31,26 @@ public class ExchangeRateController {
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         
         LocalDate targetDate = date != null ? date : LocalDate.now();
-        log.info("환율 데이터 수동 가져오기 요청: 날짜 = {}", targetDate);
+        log.info("🎯 [관리자 대시보드] 환율 데이터 수동 가져오기 요청: 날짜 = {}", targetDate);
         
         try {
             int count = exchangeRateService.fetchExchangeRates(targetDate);
-            String message = String.format("환율 데이터를 성공적으로 가져왔습니다. %d개의 데이터가 저장되었습니다.", count);
-            log.info(message);
-            return ResponseEntity.ok(ApiResponse.success(message, message));
+            
+            if (count > 0) {
+                String message = String.format("✅ 환율 데이터를 성공적으로 가져왔습니다. %d개의 데이터가 저장되었습니다.", count);
+                log.info("🎉 [관리자 대시보드] {}", message);
+                return ResponseEntity.ok(ApiResponse.success(message, message));
+            } else {
+                String message = String.format("⚠️ %s일 환율 데이터가 외부 API에 없습니다. (주말이거나 공휴일일 수 있습니다)", targetDate);
+                log.warn("📅 [관리자 대시보드] {}", message);
+                return ResponseEntity.ok(ApiResponse.success(message, message));
+            }
+            
         } catch (Exception e) {
-            // GlobalExceptionHandler에서 처리되므로 여기서는 로그만 남김
-            log.error("환율 데이터 가져오기 실패: {}", e.getMessage());
+            log.error("💥 [관리자 대시보드] 환율 데이터 가져오기 실패: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+            log.error("📋 [관리자 대시보드] 오류 상세 정보:", e);
+            
+            // GlobalExceptionHandler에서 처리되도록 예외를 다시 던집니다
             throw e;
         }
     }

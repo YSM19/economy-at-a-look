@@ -17,8 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.net.ProtocolException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -76,15 +78,11 @@ public class ExchangeRateService {
      */
     @Transactional
     public int fetchExchangeRates(LocalDate date) {
-        if (useMock) {
-            log.info("테스트/개발 환경: 모의 환율 데이터 사용");
-            return saveMockExchangeRates(date);
-        }
+        log.info("📊 환율 데이터 가져오기 시작: 날짜 = {}", date);
         
         String formattedDate = date.format(DateTimeFormatter.BASIC_ISO_DATE);
         
         // API URL 생성
-        // 한국수출입은행 API는 웹 브라우저 환경에서 작동하므로 쿼리 파라미터를 통해 사용자 에이전트 정보를 추가
         String url = UriComponentsBuilder.fromHttpUrl(API_URL)
                 .queryParam("authkey", authKey)
                 .queryParam("searchdate", formattedDate)
@@ -92,58 +90,62 @@ public class ExchangeRateService {
                 .build()
                 .toUriString();
         
-        log.info("환율 API 호출: {}", url);
+        log.info("🌐 환율 API 호출: {}", url);
         
         try {
             // API 호출 전 로그 추가
-            log.debug("API 호출 시도 - URL: {}, 날짜: {}", API_URL, formattedDate);
+            log.debug("🔄 API 호출 시도 - URL: {}, 날짜: {}", API_URL, formattedDate);
             
             // API 호출
             ExchangeRateApiResponse[] response = restTemplate.getForObject(url, ExchangeRateApiResponse[].class);
             
             if (response == null || response.length == 0) {
-                log.warn("환율 데이터가 없습니다. 날짜: {}", date);
-                
-                // 데이터가 없으면 모의 데이터 생성 (테스트 및 개발 환경에서만)
-                if (isDevelopmentEnvironment()) {
-                    log.info("모의 환율 데이터를 생성합니다. 날짜: {}", date);
-                    return saveMockExchangeRates(date);
-                }
-                
+                log.warn("📭 외부 API에서 {}일 환율 데이터를 제공하지 않습니다. (주말, 공휴일 등)", date);
                 return 0;
             }
             
-            log.info("환율 데이터 {}개 조회 완료. 날짜: {}", response.length, date);
+            log.info("✅ 환율 데이터 {}개 조회 완료. 날짜: {}", response.length, date);
             
             return processAndSaveExchangeRates(response, date);
             
-        } catch (HttpClientErrorException e) {
-            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
-                log.error("API 인증 오류: 인증키를 확인하세요. 상태 코드: {}", e.getStatusCode());
+        } catch (ResourceAccessException e) {
+            // 리디렉션 루프나 네트워크 연결 문제 등
+            log.error("🚫 API 리소스 접근 오류 발생: {}", e.getMessage());
+            
+            // 리디렉션 루프 오류인지 확인
+            if (e.getCause() != null && e.getCause() instanceof ProtocolException && 
+                e.getCause().getMessage().contains("redirected too many times")) {
+                log.error("🔄 [리디렉션 루프 감지] 외부 API에서 리디렉션 루프 발생: {}", e.getCause().getMessage());
+                log.warn("💡 [API 실패] 외부 API 문제로 새로운 데이터를 가져올 수 없습니다.");
             } else {
-                log.error("API 호출 오류: 상태 코드: {}, 메시지: {}", e.getStatusCode(), e.getMessage());
+                log.error("🌐 [네트워크 오류] API 연결 문제: {}", e.getMessage());
             }
             
-            // 개발 환경에서는 인증 오류 시 모의 데이터 사용
-            if (isDevelopmentEnvironment()) {
-                log.info("API 오류로 인해 모의 환율 데이터를 사용합니다.");
-                return saveMockExchangeRates(date);
-            }
-            
+            // 예외를 다시 던져서 컨트롤러에서 적절히 처리하도록 함
             throw e;
-        } catch (Exception e) {
-            log.error("환율 데이터 처리 중 오류 발생: {}", e.getMessage(), e);
             
-            // 개발 환경에서는 오류 시 모의 데이터 사용
-            if (isDevelopmentEnvironment()) {
-                log.info("API 오류로 인해 모의 환율 데이터를 사용합니다.");
-                return saveMockExchangeRates(date);
+        } catch (HttpClientErrorException e) {
+            log.error("❌ HTTP 클라이언트 오류 발생");
+            
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                log.error("🔑 API 인증 오류: 인증키를 확인하세요. 상태 코드: {}", e.getStatusCode());
+            } else if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE) {
+                log.error("🚫 외부 API 서비스 일시 중단: 상태 코드: {}", e.getStatusCode());
+            } else {
+                log.error("🌐 API 호출 오류: 상태 코드: {}, 메시지: {}", e.getStatusCode(), e.getMessage());
             }
             
+            // 예외를 다시 던져서 컨트롤러에서 적절히 처리하도록 함
+            throw e;
+            
+        } catch (Exception e) {
+            log.error("💥 환율 데이터 처리 중 예상치 못한 오류 발생: {} - {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            
+            // 예외를 다시 던져서 컨트롤러에서 적절히 처리하도록 함
             throw e;
         }
     }
-    
+
     /**
      * API에서 받아온 환율 데이터를 처리하고 저장합니다.
      */
@@ -186,47 +188,24 @@ public class ExchangeRateService {
      * 현재 개발 환경인지 확인합니다.
      */
     private boolean isDevelopmentEnvironment() {
-        return Arrays.asList(
-                System.getProperty("spring.profiles.active", ""),
-                System.getenv("SPRING_PROFILES_ACTIVE")
-        ).contains("dev");
-    }
-    
-    /**
-     * 테스트 환경용 모의 환율 데이터를 생성하고 저장합니다.
-     */
-    private int saveMockExchangeRates(LocalDate date) {
-        // 이미 해당 날짜에 데이터가 있는지 확인
-        List<ExchangeRate> existingRates = exchangeRateRepository.findBySearchDate(date);
-        if (!existingRates.isEmpty()) {
-            log.debug("이미 저장된 모의 환율 데이터가 있습니다. 날짜: {}", date);
-            return 0;
+        // 1. useMock 설정이 true이면 개발 환경으로 간주
+        if (useMock) {
+            return true;
         }
         
-        // 주요 통화 모의 데이터 생성
-        Object[][] mockCurrencies = {
-            {"USD", "미국 달러", 1350.50, 1377.51, 1364.00},
-            {"EUR", "유럽연합 유로", 1455.25, 1484.36, 1470.00},
-            {"JPY", "일본 엔", 9.0134, 9.1937, 9.10}
-        };
+        // 2. Spring Profiles 확인
+        String activeProfiles = System.getProperty("spring.profiles.active", "");
+        String envProfiles = System.getenv("SPRING_PROFILES_ACTIVE");
         
-        List<ExchangeRate> savedEntities = new ArrayList<>();
+        boolean isDev = activeProfiles.contains("dev") || 
+                       (envProfiles != null && envProfiles.contains("dev")) ||
+                       activeProfiles.contains("local") || 
+                       (envProfiles != null && envProfiles.contains("local"));
         
-        for (Object[] currencyData : mockCurrencies) {
-            ExchangeRate entity = ExchangeRate.builder()
-                    .curUnit((String) currencyData[0])
-                    .curNm((String) currencyData[1])
-                    .ttb((Double) currencyData[2])
-                    .tts((Double) currencyData[3])
-                    .dealBasRate((Double) currencyData[4])
-                    .searchDate(date)
-                    .build();
-                    
-            savedEntities.add(exchangeRateRepository.save(entity));
-        }
+        log.debug("🔍 환경 감지: spring.profiles.active={}, SPRING_PROFILES_ACTIVE={}, useMock={}, isDev={}", 
+                  activeProfiles, envProfiles, useMock, isDev);
         
-        log.info("{}개의 모의 환율 데이터 저장 완료. 날짜: {}", savedEntities.size(), date);
-        return savedEntities.size();
+        return isDev;
     }
     
     /**
@@ -255,7 +234,20 @@ public class ExchangeRateService {
      */
     @Transactional(readOnly = true)
     public List<ExchangeRateResponseDTO> getTodayExchangeRates() {
-        return getOrFetchRatesByDate(LocalDate.now());
+        LocalDate today = LocalDate.now();
+        log.info("오늘({}) 환율 데이터 조회 시작", today);
+        
+        List<ExchangeRateResponseDTO> rates = getOrFetchRatesByDate(today);
+        
+        // 데이터가 없으면 빈 목록 반환
+        if (rates.isEmpty()) {
+            log.warn("⚠️ [환율 데이터 없음] 오늘({}) 환율 데이터가 없습니다.", today);
+            log.info("💡 기존에 저장된 최근 환율 데이터를 확인하거나, 수동으로 환율 데이터를 가져와주세요.");
+            return new ArrayList<>();
+        }
+        
+        log.info("✅ 오늘({}) 환율 데이터 조회 성공 - {}개 통화", today, rates.size());
+        return rates;
     }
 
     /**
@@ -267,33 +259,67 @@ public class ExchangeRateService {
         
         // 데이터가 없으면 API에서 가져오기 시도
         if (rates.isEmpty()) {
+            log.warn("📊 {}일의 환율 데이터가 DB에 없습니다. API에서 가져오기를 시도합니다.", date);
+            
             try {
-                fetchExchangeRates(date);
+                int fetchedCount = fetchExchangeRates(date);
                 rates = exchangeRateRepository.findBySearchDate(date);
+                
+                if (!rates.isEmpty()) {
+                    log.info("✅ API에서 {}일 환율 데이터 {}개를 성공적으로 가져왔습니다.", date, fetchedCount);
+                } else {
+                    log.error("❌ API 호출은 성공했지만 {}일 환율 데이터가 저장되지 않았습니다.", date);
+                }
             } catch (Exception e) {
-                log.error("환율 데이터 가져오기 실패: {}", e.getMessage());
-                // 최근 저장된 데이터 조회 (가장 최근 날짜의 데이터)
-                List<ExchangeRate> latestRates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
-                if (!latestRates.isEmpty()) {
-                    // 가장 최근 날짜 확인
-                    LocalDate latestDate = latestRates.get(0).getSearchDate();
-                    // 해당 날짜의 모든 통화 데이터 조회
-                    rates = exchangeRateRepository.findBySearchDate(latestDate);
-                    log.info("요청한 날짜({})의 환율 데이터를 찾을 수 없어 {} 날짜의 데이터를 사용합니다.", date, latestDate);
+                log.error("❌ [API 호출 실패] {}일 환율 데이터 가져오기 실패: {}", date, e.getMessage());
+                log.info("🔄 최근 저장된 환율 데이터로 대체를 시도합니다.");
+                
+                // 가장 최근 날짜의 모든 환율 데이터 조회
+                rates = getLatestStoredRates();
+                if (!rates.isEmpty()) {
+                    LocalDate latestDate = rates.get(0).getSearchDate();
+                    log.info("📈 대체 데이터 사용: {}일 환율 데이터 {}개를 사용합니다.", latestDate, rates.size());
+                    log.warn("⚠️ 주의: 요청한 날짜({})가 아닌 {}일 데이터입니다.", date, latestDate);
+                } else {
+                    log.error("💥 [심각한 오류] 저장된 환율 데이터가 전혀 없습니다!");
                 }
             }
+        } else {
+            log.debug("✅ {}일 환율 데이터 {}개를 DB에서 조회했습니다.", date, rates.size());
         }
         
         return ExchangeRateResponseDTO.fromEntities(rates);
     }
 
     /**
+     * 가장 최근에 저장된 모든 환율 데이터를 조회합니다.
+     * 두 단계로 나누어 조회하여 성능과 안정성을 높입니다.
+     * 
+     * @return 가장 최근 날짜의 모든 환율 데이터 목록
+     */
+    private List<ExchangeRate> getLatestStoredRates() {
+        try {
+            Optional<LocalDate> latestDate = exchangeRateRepository.findLatestSearchDate();
+            if (latestDate.isPresent()) {
+                return exchangeRateRepository.findBySearchDateOrderByCurUnit(latestDate.get());
+            } else {
+                log.warn("저장된 환율 데이터가 전혀 없습니다.");
+                return new ArrayList<>();
+            }
+        } catch (Exception e) {
+            log.error("최근 환율 데이터 조회 중 오류 발생: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    /**
      * 가장 최근 저장된 환율 데이터를 조회합니다.
      * 
-     * @return 최근 환율 데이터 목록 (최대 30개)
+     * @return 최근 환율 데이터 목록 (최대 30개 레코드, 최근 날짜 우선)
      */
     @Transactional(readOnly = true)
     public List<ExchangeRateResponseDTO> getLatestExchangeRates() {
+        // 가장 최근 30개의 레코드 조회 (기존 방식 유지)
         List<ExchangeRate> rates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
         return ExchangeRateResponseDTO.fromEntities(rates);
     }
@@ -362,19 +388,25 @@ public class ExchangeRateService {
         
         // 오늘 데이터가 없으면 API에서 가져오기 시도
         if (rates.isEmpty()) {
+            log.warn("📊 {}일의 최신 환율 데이터가 없습니다. API 호출을 시도합니다.", date);
+            
             try {
                 fetchExchangeRates(date);
                 rates = exchangeRateRepository.findBySearchDate(date);
+                
+                if (!rates.isEmpty()) {
+                    log.info("✅ 최신 환율 데이터 API 호출 성공 - {}개 통화", rates.size());
+                }
             } catch (Exception e) {
-                log.error("오늘 환율 데이터 가져오기 실패: {}", e.getMessage());
-                // 최근 저장된 데이터 조회 (가장 최근 날짜의 데이터)
-                List<ExchangeRate> latestRates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
-                if (!latestRates.isEmpty()) {
-                    // 가장 최근 날짜 확인
-                    LocalDate latestDate = latestRates.get(0).getSearchDate();
-                    // 해당 날짜의 모든 통화 데이터 조회
-                    rates = exchangeRateRepository.findBySearchDate(latestDate);
-                    log.info("최신 환율 데이터를 찾을 수 없어 {} 날짜의 데이터를 사용합니다.", latestDate);
+                log.error("❌ [최신 환율 데이터 API 실패] {}일 데이터 가져오기 실패: {}", date, e.getMessage());
+                
+                // 가장 최근 날짜의 모든 환율 데이터 조회
+                rates = getLatestStoredRates();
+                if (!rates.isEmpty()) {
+                    LocalDate latestDate = rates.get(0).getSearchDate();
+                    log.info("📈 대체 데이터 사용: {}일 환율 데이터로 대체합니다.", latestDate);
+                } else {
+                    log.error("💥 [심각한 오류] 저장된 환율 데이터가 전혀 없습니다!");
                 }
             }
         }
@@ -402,22 +434,32 @@ public class ExchangeRateService {
     @Transactional(readOnly = true)
     public Optional<ExchangeRateDto> getLatestExchangeRate() {
         LocalDate today = LocalDate.now();
+        log.info("최신 환율 정보 조회 시작 (단일 객체)");
+        
         List<ExchangeRate> rates = exchangeRateRepository.findBySearchDate(today);
         
         // 오늘 데이터가 없으면 API에서 가져오기 시도
         if (rates.isEmpty()) {
+            log.warn("📊 {}일의 환율 데이터가 없습니다. API 호출을 시도합니다.", today);
+            
             try {
                 fetchExchangeRates(today);
                 rates = exchangeRateRepository.findBySearchDate(today);
+                
+                if (!rates.isEmpty()) {
+                    log.info("✅ API에서 오늘 환율 데이터를 성공적으로 가져왔습니다.");
+                }
             } catch (Exception e) {
-                log.error("오늘 환율 데이터 가져오기 실패: {}", e.getMessage());
-                // 최근 저장된 데이터 조회
-                rates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
+                log.error("❌ [환율 API 실패] {}일 환율 데이터 가져오기 실패: {}", today, e.getMessage());
+                
+                // 가장 최근 날짜의 모든 환율 데이터 조회
+                rates = getLatestStoredRates();
                 if (rates.isEmpty()) {
-                    log.warn("저장된 환율 데이터가 없습니다.");
+                    log.error("💥 [심각한 오류] 저장된 환율 데이터가 없어 빈 값을 반환합니다.");
                     return Optional.empty();
                 }
-                log.info("최신 환율 데이터를 찾을 수 없어 {} 날짜의 데이터를 사용합니다.", rates.get(0).getSearchDate());
+                LocalDate latestDate = rates.get(0).getSearchDate();
+                log.info("📈 대체 데이터 사용: {}일 환율 데이터를 사용합니다.", latestDate);
             }
         }
         
@@ -429,7 +471,21 @@ public class ExchangeRateService {
                 .orElse(null);
         
         if (usdRate == null) {
-            return Optional.empty();
+            log.warn("⚠️ USD 환율 데이터가 없습니다. 다른 주요 통화를 확인합니다.");
+            
+            // USD가 없으면 다른 주요 통화라도 반환하기 위해 재시도
+            Optional<ExchangeRate> anyMajorCurrency = rates.stream()
+                    .filter(rate -> MAJOR_CURRENCIES.contains(rate.getCurUnit()))
+                    .findFirst();
+            
+            if (anyMajorCurrency.isEmpty()) {
+                log.error("❌ 주요 통화(USD, EUR, JPY) 환율 데이터가 없습니다.");
+                return Optional.empty();
+            } else {
+                log.info("📈 USD 대신 {} 통화 데이터를 찾았습니다.", anyMajorCurrency.get().getCurUnit());
+            }
+        } else {
+            log.info("✅ USD 환율 정보 조회 성공: {}원", usdRate);
         }
         
         return Optional.of(ExchangeRateDto.builder()

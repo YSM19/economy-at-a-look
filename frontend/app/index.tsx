@@ -17,6 +17,9 @@ export default function HomeScreen() {
     typeof params.tab === 'string' ? params.tab : 'exchange'
   );
   
+  // 국가 탭 상태 추가
+  const [activeCountry, setActiveCountry] = useState('usa');
+  
   // params.tab이 변경되면 activeTab도 업데이트
   useEffect(() => {
     if (params.tab && typeof params.tab === 'string') {
@@ -37,7 +40,7 @@ export default function HomeScreen() {
         return (
           <>
             <ThemedText style={styles.gaugeLabel}>오늘의 환율</ThemedText>
-            <ExchangeRateGauge />
+            <ExchangeRateGauge country={activeCountry} />
           </>
         );
       case 'price':
@@ -85,6 +88,54 @@ export default function HomeScreen() {
     }
   }
 
+  // 현재 선택된 국가에 따른 환율 상세 정보 버튼 생성
+  const renderExchangeDetailButton = () => {
+    if (activeTab !== 'exchange') return null;
+    
+    let buttonTitle = "환율 상세 정보";
+    let subtitle = "주요국 통화별 환율 추이 확인";
+    let route = '/exchange-rate';
+    
+    switch(activeCountry) {
+      case 'usa':
+        buttonTitle = "미국 환율 상세 정보";
+        subtitle = "미국 달러/원화 환율 추이 확인";
+        route = '/exchange-rate?country=usa';
+        break;
+      case 'japan':
+        buttonTitle = "일본 환율 상세 정보";
+        subtitle = "일본 엔화/원화 환율 추이 확인";
+        route = '/exchange-rate?country=japan';
+        break;
+      case 'china':
+        buttonTitle = "중국 환율 상세 정보";
+        subtitle = "중국 위안/원화 환율 추이 확인";
+        route = '/exchange-rate?country=china';
+        break;
+      case 'europe':
+        buttonTitle = "유럽 환율 상세 정보";
+        subtitle = "유럽 유로/원화 환율 추이 확인";
+        route = '/exchange-rate?country=europe';
+        break;
+    }
+    
+    return (
+      <TouchableOpacity 
+        style={styles.cardItem}
+        onPress={() => router.push(route as any)}
+      >
+        <View style={[styles.iconContainer, { backgroundColor: '#E8F5E9' }]}>
+          <MaterialCommunityIcons name="currency-usd" size={24} color="#4CAF50" />
+        </View>
+        <View style={styles.cardTextContainer}>
+          <ThemedText style={styles.cardTitle}>{buttonTitle}</ThemedText>
+          <ThemedText style={styles.cardSubtitle}>{subtitle}</ThemedText>
+        </View>
+        <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+      </TouchableOpacity>
+    );
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <Stack.Screen 
@@ -104,69 +155,104 @@ export default function HomeScreen() {
         }} 
       />
       <StatusBar style="auto" />
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.header}>
-          <ThemedText style={styles.subtitle}>{getTabSubtitle()}</ThemedText>
-        </View>
-        
-        {/* 선택된 탭 내용 */}
-        {renderTabContent()}
-        
-        {/* 하단 카드 - 탭에 맞게 표시 */}
-        <View style={styles.sectionTitle}>
-          <ThemedText style={styles.sectionTitleText}>자세히 알아보기</ThemedText>
-        </View>
-        
-        <View style={styles.cardsContainer}>
-          {activeTab === 'interest' && (
-            <TouchableOpacity 
-              style={styles.cardItem}
-              onPress={() => router.push('/interest-rate' as any)}
-            >
-              <View style={[styles.iconContainer, { backgroundColor: '#E3F2FD' }]}>
-                <MaterialCommunityIcons name="trending-up" size={24} color="#1976D2" />
-              </View>
-              <View style={styles.cardTextContainer}>
-                <ThemedText style={styles.cardTitle}>금리 상세 정보</ThemedText>
-                <ThemedText style={styles.cardSubtitle}>정책금리, 시장금리, 대출금리 추이</ThemedText>
-              </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
-            </TouchableOpacity>
-          )}
+      <View style={styles.mainContainer}>
+        <ScrollView 
+          style={styles.scrollView} 
+          contentContainerStyle={[
+            styles.scrollViewContent,
+            activeTab === 'exchange' && { paddingBottom: 70 } // 국가 탭 높이만큼 여백 추가
+          ]}
+        >
+          <View style={styles.header}>
+            <ThemedText style={styles.subtitle}>{getTabSubtitle()}</ThemedText>
+          </View>
           
-          {activeTab === 'exchange' && (
-            <TouchableOpacity 
-              style={styles.cardItem}
-              onPress={() => router.push('/exchange-rate' as any)}
-            >
-              <View style={[styles.iconContainer, { backgroundColor: '#E8F5E9' }]}>
-                <MaterialCommunityIcons name="currency-usd" size={24} color="#4CAF50" />
-              </View>
-              <View style={styles.cardTextContainer}>
-                <ThemedText style={styles.cardTitle}>환율 상세 정보</ThemedText>
-                <ThemedText style={styles.cardSubtitle}>주요국 통화별 환율 추이 확인</ThemedText>
-              </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
-            </TouchableOpacity>
-          )}
+          {/* 선택된 탭 내용 */}
+          {renderTabContent()}
           
-          {activeTab === 'price' && (
+          {/* 하단 카드 - 탭에 맞게 표시 */}
+          <View style={styles.sectionTitle}>
+            <ThemedText style={styles.sectionTitleText}>자세히 알아보기</ThemedText>
+          </View>
+          
+          <View style={styles.cardsContainer}>
+            {activeTab === 'interest' && (
+              <TouchableOpacity 
+                style={styles.cardItem}
+                onPress={() => router.push('/interest-rate' as any)}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: '#E3F2FD' }]}>
+                  <MaterialCommunityIcons name="trending-up" size={24} color="#1976D2" />
+                </View>
+                <View style={styles.cardTextContainer}>
+                  <ThemedText style={styles.cardTitle}>금리 상세 정보</ThemedText>
+                  <ThemedText style={styles.cardSubtitle}>정책금리, 시장금리, 대출금리 추이</ThemedText>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+              </TouchableOpacity>
+            )}
+            
+            {activeTab === 'exchange' && renderExchangeDetailButton()}
+            
+            {activeTab === 'price' && (
+              <TouchableOpacity 
+                style={styles.cardItem}
+                onPress={() => router.push('/consumer-price-index' as any)}
+              >
+                <View style={[styles.iconContainer, { backgroundColor: '#FFF3E0' }]}>
+                  <MaterialCommunityIcons name="shopping" size={24} color="#FF9800" />
+                </View>
+                <View style={styles.cardTextContainer}>
+                  <ThemedText style={styles.cardTitle}>물가지수 상세 정보</ThemedText>
+                  <ThemedText style={styles.cardSubtitle}>품목별 물가 변동 추이 확인</ThemedText>
+                </View>
+                <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </ScrollView>
+        
+        {/* 국가 탭을 스크롤 영역 밖에 배치하여 고정 */}
+        {activeTab === 'exchange' && (
+          <View style={styles.fixedCountryTabContainer}>
             <TouchableOpacity 
-              style={styles.cardItem}
-              onPress={() => router.push('/consumer-price-index' as any)}
+              style={[styles.countryTab, activeCountry === 'usa' && styles.activeCountryTab]} 
+              onPress={() => setActiveCountry('usa')}
             >
-              <View style={[styles.iconContainer, { backgroundColor: '#FFF3E0' }]}>
-                <MaterialCommunityIcons name="shopping" size={24} color="#FF9800" />
-              </View>
-              <View style={styles.cardTextContainer}>
-                <ThemedText style={styles.cardTitle}>물가지수 상세 정보</ThemedText>
-                <ThemedText style={styles.cardSubtitle}>품목별 물가 변동 추이 확인</ThemedText>
-              </View>
-              <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
+              <ThemedText style={[styles.countryTabText, activeCountry === 'usa' && styles.activeCountryTabText]}>
+                미국
+              </ThemedText>
             </TouchableOpacity>
-          )}
-        </View>
-      </ScrollView>
+            
+            <TouchableOpacity 
+              style={[styles.countryTab, activeCountry === 'japan' && styles.activeCountryTab]} 
+              onPress={() => setActiveCountry('japan')}
+            >
+              <ThemedText style={[styles.countryTabText, activeCountry === 'japan' && styles.activeCountryTabText]}>
+                일본
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.countryTab, activeCountry === 'china' && styles.activeCountryTab]} 
+              onPress={() => setActiveCountry('china')}
+            >
+              <ThemedText style={[styles.countryTabText, activeCountry === 'china' && styles.activeCountryTabText]}>
+                중국
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.countryTab, activeCountry === 'europe' && styles.activeCountryTab]} 
+              onPress={() => setActiveCountry('europe')}
+            >
+              <ThemedText style={[styles.countryTabText, activeCountry === 'europe' && styles.activeCountryTabText]}>
+                유럽
+              </ThemedText>
+            </TouchableOpacity>
+          </View>
+        )}
+      </View>
     </SafeAreaView>
   );
 }
@@ -175,6 +261,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: Platform.OS === 'android' ? 10 : 0,
+  },
+  mainContainer: {
+    flex: 1,
+    position: 'relative',
   },
   scrollView: {
     flex: 1,
@@ -198,6 +288,53 @@ const styles = StyleSheet.create({
     opacity: 0.8,
     lineHeight: 24,
     textAlign: 'center',
+  },
+  gaugeLabel: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    marginLeft: 5,
+    color: '#333',
+  },
+  fixedCountryTabContainer: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    flexDirection: 'row',
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 10,
+    borderTopRightRadius: 10,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: -2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  countryTab: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeCountryTab: {
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+  },
+  countryTabText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  activeCountryTabText: {
+    color: '#1976D2',
+    fontWeight: 'bold',
   },
   sectionTitle: {
     marginTop: 24,
@@ -259,12 +396,5 @@ const styles = StyleSheet.create({
     color: '#0066CC',
     fontWeight: 'bold',
     marginLeft: 4,
-  },
-  gaugeLabel: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    marginLeft: 5,
-    color: '#333',
   },
 }); 
