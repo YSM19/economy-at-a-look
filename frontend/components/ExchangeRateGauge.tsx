@@ -614,7 +614,7 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     alignItems: 'center',
-    marginTop: -15,
+    marginTop: -20,
   },
   infoText: {
     fontSize: 22,
