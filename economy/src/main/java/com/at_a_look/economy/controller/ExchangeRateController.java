@@ -83,4 +83,36 @@ public class ExchangeRateController {
         List<ExchangeRateResponseDTO> rates = exchangeRateService.getExchangeRatesByCurrency(curUnit);
         return ResponseEntity.ok(rates);
     }
+
+    /**
+     * 특정 국가들의 최근 6개월 환율 데이터를 수동으로 가져와 저장합니다.
+     */
+    @PostMapping("/fetch-countries")
+    public ResponseEntity<ApiResponse<String>> fetchExchangeRatesByCountries(
+            @RequestParam List<String> countries) {
+        
+        log.info("🌍 [관리자 대시보드] 국가별 환율 데이터 수동 가져오기 요청: 국가 목록 = {}", countries);
+        
+        try {
+            int totalCount = exchangeRateService.fetchExchangeRatesForCountries(countries);
+            
+            if (totalCount > 0) {
+                String message = String.format("✅ %s 국가의 최근 6개월 환율 데이터를 성공적으로 가져왔습니다. 총 %d개의 데이터가 저장되었습니다.", 
+                    String.join(", ", countries), totalCount);
+                log.info("🎉 [관리자 대시보드] {}", message);
+                return ResponseEntity.ok(ApiResponse.success(message, message));
+            } else {
+                String message = String.format("⚠️ %s 국가의 환율 데이터를 가져오지 못했습니다.", String.join(", ", countries));
+                log.warn("📅 [관리자 대시보드] {}", message);
+                return ResponseEntity.ok(ApiResponse.success(message, message));
+            }
+            
+        } catch (Exception e) {
+            log.error("💥 [관리자 대시보드] 국가별 환율 데이터 가져오기 실패: {} - {}", e.getClass().getSimpleName(), e.getMessage());
+            log.error("📋 [관리자 대시보드] 오류 상세 정보:", e);
+            
+            // GlobalExceptionHandler에서 처리되도록 예외를 다시 던집니다
+            throw e;
+        }
+    }
 } 

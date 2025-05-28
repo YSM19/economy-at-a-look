@@ -562,4 +562,47 @@ public class ExchangeRateService {
                 .map(ExchangeRate::getDealBasRate)
                 .orElse(null);
     }
+
+    /**
+     * 특정 국가들의 최근 6개월 환율 데이터를 가져와 저장합니다.
+     * 
+     * @param countries 국가 목록 (예: ["usa", "japan", "china", "europe"])
+     * @return 저장된 총 환율 데이터 수
+     */
+    @Transactional
+    public int fetchExchangeRatesForCountries(List<String> countries) {
+        log.info("🌍 국가별 환율 데이터 가져오기 시작: 국가 목록 = {}", countries);
+        
+        int totalCount = 0;
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusMonths(6); // 6개월 전부터
+        
+        // 각 날짜별로 환율 데이터 가져오기
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            try {
+                log.info("📅 날짜별 환율 데이터 가져오기: {}", currentDate);
+                int dailyCount = fetchExchangeRates(currentDate);
+                totalCount += dailyCount;
+                
+                if (dailyCount > 0) {
+                    log.info("✅ {} 날짜 환율 데이터 {}개 저장", currentDate, dailyCount);
+                } else {
+                    log.debug("📭 {} 날짜 환율 데이터 없음 (주말/공휴일)", currentDate);
+                }
+                
+                // API 호출 간격 제어 (1초 대기)
+                Thread.sleep(1000);
+                
+            } catch (Exception e) {
+                log.warn("⚠️ {} 날짜 환율 데이터 가져오기 실패: {}", currentDate, e.getMessage());
+                // 개별 날짜 실패는 전체 프로세스를 중단하지 않음
+            }
+            
+            currentDate = currentDate.plusDays(1);
+        }
+        
+        log.info("🎉 국가별 환율 데이터 가져오기 완료: 총 {}개 데이터 저장", totalCount);
+        return totalCount;
+    }
 } 
