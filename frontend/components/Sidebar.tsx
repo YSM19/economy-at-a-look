@@ -11,7 +11,7 @@ interface SidebarProps {
 }
 
 const { width } = Dimensions.get('window');
-const SIDEBAR_WIDTH = width * 0.6;
+const SIDEBAR_WIDTH = width * 0.55;
 
 export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
   const router = useRouter();

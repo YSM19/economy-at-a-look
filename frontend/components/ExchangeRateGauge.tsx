@@ -11,7 +11,9 @@ type ExchangeRateGaugeProps = {
 
 // 천 단위 콤마와 단위를 붙여서 표시하는 함수
 const formatNumberWithUnit = (value: number | string, unit: string): string => {
-  const formattedNumber = value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  // 숫자로 변환하고 소수점 둘째자리에서 반올림하여 첫째자리까지 표시
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  const formattedNumber = numValue.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return `${formattedNumber}${unit}`;
 };
 
@@ -38,56 +40,66 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
       case 'usa':
         setCurrencyTitle('환율 (USD/KRW)');
         if (!value) setRate(1350);
-        setMinRate(1000);
-        setMaxRate(1600);
+        setMinRate(980);
+        setMaxRate(1580);
         setSections([
-          { name: '달러 약세', color: '#C8E6C9', textColor: '#4CAF50', start: 1000, end: 1200 },
-          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 1200, end: 1400 },
-          { name: '달러 강세', color: '#FFCDD2', textColor: '#F44336', start: 1400, end: 1600 }
+          { name: '매우 약세', color: '#A5D6A7', textColor: '#2E7D32', start: 980, end: 1100 },
+          { name: '약세', color: '#C8E6C9', textColor: '#4CAF50', start: 1100, end: 1220 },
+          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 1220, end: 1340 },
+          { name: '강세', color: '#FFCDD2', textColor: '#F44336', start: 1340, end: 1460 },
+          { name: '매우 강세', color: '#FFAB91', textColor: '#D84315', start: 1460, end: 1580 }
         ]);
         break;
       case 'japan':
         setCurrencyTitle('환율 (JPY/KRW)');
         if (!value) setRate(950);
-        setMinRate(800);
-        setMaxRate(1100);
+        setMinRate(810);
+        setMaxRate(1210);
         setSections([
-          { name: '엔화 약세', color: '#C8E6C9', textColor: '#4CAF50', start: 800, end: 900 },
-          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 900, end: 1000 },
-          { name: '엔화 강세', color: '#FFCDD2', textColor: '#F44336', start: 1000, end: 1100 }
+          { name: '매우 약세', color: '#A5D6A7', textColor: '#2E7D32', start: 810, end: 890 },
+          { name: '약세', color: '#C8E6C9', textColor: '#4CAF50', start: 890, end: 970 },
+          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 970, end: 1050 },
+          { name: '강세', color: '#FFCDD2', textColor: '#F44336', start: 1050, end: 1130 },
+          { name: '매우 강세', color: '#FFAB91', textColor: '#D84315', start: 1130, end: 1210 }
         ]);
         break;
       case 'china':
         setCurrencyTitle('환율 (CNY/KRW)');
         if (!value) setRate(190);
-        setMinRate(150);
-        setMaxRate(230);
+        setMinRate(154);
+        setMaxRate(214);
         setSections([
-          { name: '위안 약세', color: '#C8E6C9', textColor: '#4CAF50', start: 150, end: 175 },
-          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 175, end: 200 },
-          { name: '위안 강세', color: '#FFCDD2', textColor: '#F44336', start: 200, end: 230 }
+          { name: '매우 약세', color: '#A5D6A7', textColor: '#2E7D32', start: 154, end: 166 },
+          { name: '약세', color: '#C8E6C9', textColor: '#4CAF50', start: 166, end: 178 },
+          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 178, end: 190 },
+          { name: '강세', color: '#FFCDD2', textColor: '#F44336', start: 190, end: 202 },
+          { name: '매우 강세', color: '#FFAB91', textColor: '#D84315', start: 202, end: 214 }
         ]);
         break;
       case 'europe':
         setCurrencyTitle('환율 (EUR/KRW)');
         if (!value) setRate(1350);
-        setMinRate(1100);
-        setMaxRate(1700);
+        setMinRate(1120);
+        setMaxRate(1720);
         setSections([
-          { name: '유로 약세', color: '#C8E6C9', textColor: '#4CAF50', start: 1100, end: 1300 },
-          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 1300, end: 1500 },
-          { name: '유로 강세', color: '#FFCDD2', textColor: '#F44336', start: 1500, end: 1700 }
+          { name: '매우 약세', color: '#A5D6A7', textColor: '#2E7D32', start: 1120, end: 1240 },
+          { name: '약세', color: '#C8E6C9', textColor: '#4CAF50', start: 1240, end: 1360 },
+          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 1360, end: 1480 },
+          { name: '강세', color: '#FFCDD2', textColor: '#F44336', start: 1480, end: 1600 },
+          { name: '매우 강세', color: '#FFAB91', textColor: '#D84315', start: 1600, end: 1720 }
         ]);
         break;
       default:
         setCurrencyTitle('환율 (USD/KRW)');
         if (!value) setRate(1350);
-        setMinRate(1000);
-        setMaxRate(1600);
+        setMinRate(980);
+        setMaxRate(1580);
         setSections([
-          { name: '달러 약세', color: '#C8E6C9', textColor: '#4CAF50', start: 1000, end: 1200 },
-          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 1200, end: 1400 },
-          { name: '달러 강세', color: '#FFCDD2', textColor: '#F44336', start: 1400, end: 1600 }
+          { name: '매우 약세', color: '#A5D6A7', textColor: '#2E7D32', start: 980, end: 1100 },
+          { name: '약세', color: '#C8E6C9', textColor: '#4CAF50', start: 1100, end: 1220 },
+          { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 1220, end: 1340 },
+          { name: '강세', color: '#FFCDD2', textColor: '#F44336', start: 1340, end: 1460 },
+          { name: '매우 강세', color: '#FFAB91', textColor: '#D84315', start: 1460, end: 1580 }
         ]);
     }
     
@@ -123,7 +135,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
             if (exchangeData.jpyRate) {
               setRate(exchangeData.jpyRate);
             } else {
-              const jpyHistory = exchangeData.history?.find((item: any) => item.curUnit === 'JPY');
+              const jpyHistory = exchangeData.history?.find((item: any) => item.curUnit === 'JPY(100)');
               if (jpyHistory) {
                 setRate(parseFloat(jpyHistory.dealBasRate) || 950);
               }
@@ -133,7 +145,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
             if (exchangeData.cnyRate) {
               setRate(exchangeData.cnyRate);
             } else {
-              const cnyHistory = exchangeData.history?.find((item: any) => item.curUnit === 'CNY');
+              const cnyHistory = exchangeData.history?.find((item: any) => item.curUnit === 'CNH');
               if (cnyHistory) {
                 setRate(parseFloat(cnyHistory.dealBasRate) || 190);
               }
@@ -172,21 +184,98 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
   
   useEffect(() => {
     // 국가별 환율 범위에 따라 섹션 활성화 설정
-    const section1 = sections[0].end;
-    const section2 = sections[1].end;
-    
-    if (rate <= section1) {
-      setRateText(getCurrencyStrengthText(country, 'weak'));
-      setRateColor('#4CAF50');
-      setActiveSection(0);
-    } else if (rate <= section2) {
-      setRateText('보통');
-      setRateColor('#FFC107');
-      setActiveSection(1);
-    } else {
-      setRateText(getCurrencyStrengthText(country, 'strong'));
-      setRateColor('#F44336');
-      setActiveSection(2);
+    if (country === 'usa' || !country) {
+      // 5개 구간 설정 (980-1100-1220-1340-1460-1580)
+      if (rate <= 1100) {
+        setRateText('매우 약세');
+        setRateColor('#2E7D32');
+        setActiveSection(0);
+      } else if (rate <= 1220) {
+        setRateText('약세');
+        setRateColor('#4CAF50');
+        setActiveSection(1);
+      } else if (rate <= 1340) {
+        setRateText('보통');
+        setRateColor('#FFC107');
+        setActiveSection(2);
+      } else if (rate <= 1460) {
+        setRateText('강세');
+        setRateColor('#F44336');
+        setActiveSection(3);
+      } else {
+        setRateText('매우 강세');
+        setRateColor('#D84315');
+        setActiveSection(4);
+      }
+    } else if (country === 'japan') {
+      // 5개 구간 설정 (810-890-970-1050-1130-1210)
+      if (rate <= 890) {
+        setRateText('매우 약세');
+        setRateColor('#2E7D32');
+        setActiveSection(0);
+      } else if (rate <= 970) {
+        setRateText('약세');
+        setRateColor('#4CAF50');
+        setActiveSection(1);
+      } else if (rate <= 1050) {
+        setRateText('보통');
+        setRateColor('#FFC107');
+        setActiveSection(2);
+      } else if (rate <= 1130) {
+        setRateText('강세');
+        setRateColor('#F44336');
+        setActiveSection(3);
+      } else {
+        setRateText('매우 강세');
+        setRateColor('#D84315');
+        setActiveSection(4);
+      }
+    } else if (country === 'china') {
+      // 5개 구간 설정 (154-166-178-190-202-214)
+      if (rate <= 166) {
+        setRateText('매우 약세');
+        setRateColor('#2E7D32');
+        setActiveSection(0);
+      } else if (rate <= 178) {
+        setRateText('약세');
+        setRateColor('#4CAF50');
+        setActiveSection(1);
+      } else if (rate <= 190) {
+        setRateText('보통');
+        setRateColor('#FFC107');
+        setActiveSection(2);
+      } else if (rate <= 202) {
+        setRateText('강세');
+        setRateColor('#F44336');
+        setActiveSection(3);
+      } else {
+        setRateText('매우 강세');
+        setRateColor('#D84315');
+        setActiveSection(4);
+      }
+    } else if (country === 'europe') {
+      // 5개 구간 설정 (1120-1240-1360-1480-1600-1720)
+      if (rate <= 1240) {
+        setRateText('매우 약세');
+        setRateColor('#2E7D32');
+        setActiveSection(0);
+      } else if (rate <= 1360) {
+        setRateText('약세');
+        setRateColor('#4CAF50');
+        setActiveSection(1);
+      } else if (rate <= 1480) {
+        setRateText('보통');
+        setRateColor('#FFC107');
+        setActiveSection(2);
+      } else if (rate <= 1600) {
+        setRateText('강세');
+        setRateColor('#F44336');
+        setActiveSection(3);
+      } else {
+        setRateText('매우 강세');
+        setRateColor('#D84315');
+        setActiveSection(4);
+      }
     }
   }, [rate, sections, country]);
 
@@ -213,6 +302,27 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
   
   // 눈금 간격 계산
   const calculateTickValues = () => {
+    // 달러 계기판의 경우 고정된 구간 경계값 사용
+    if (country === 'usa' || !country) {
+      return [980, 1100, 1220, 1340, 1460, 1580];
+    }
+    
+    // 일본 계기판의 경우 고정된 구간 경계값 사용
+    if (country === 'japan') {
+      return [810, 890, 970, 1050, 1130, 1210];
+    }
+    
+    // 중국 계기판의 경우 고정된 구간 경계값 사용
+    if (country === 'china') {
+      return [154, 166, 178, 190, 202, 214];
+    }
+    
+    // 유럽 계기판의 경우 고정된 구간 경계값 사용
+    if (country === 'europe') {
+      return [1120, 1240, 1360, 1480, 1600, 1720];
+    }
+    
+    // 다른 국가들은 기존 로직 사용 (사용되지 않음)
     const range = maxRate - minRate;
     const step = Math.ceil(range / 6); // 약 6개의 주요 눈금
     

@@ -16,5 +16,6 @@ public class ExchangeRateResponse {
     private Double usdRate;
     private Double eurRate;
     private Double jpyRate;
+    private Double cnyRate;
     private List<ExchangeRateResponseDTO> history;
 } 

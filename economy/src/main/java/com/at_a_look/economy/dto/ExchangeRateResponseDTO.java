@@ -69,14 +69,16 @@ public class ExchangeRateResponseDTO {
         }
         
         // 통화별 포맷팅
-        if ("JPY".equals(curUnit)) {
-            return String.format("%.2f원/100엔", dealBasRate);
+        if ("JPY(100)".equals(curUnit)) {
+            return String.format("%.1f원/100엔", dealBasRate);
         } else if ("USD".equals(curUnit)) {
-            return String.format("%.2f원/달러", dealBasRate);
+            return String.format("%.1f원/달러", dealBasRate);
         } else if ("EUR".equals(curUnit)) {
-            return String.format("%.2f원/유로", dealBasRate);
+            return String.format("%.1f원/유로", dealBasRate);
+        } else if ("CNH".equals(curUnit)) {
+            return String.format("%.1f원/위안", dealBasRate);
         } else {
-            return String.format("%.2f원", dealBasRate);
+            return String.format("%.1f원", dealBasRate);
         }
     }
 } 

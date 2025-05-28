@@ -123,7 +123,7 @@ export default function ExchangeRateScreen() {
               <View style={styles.rateItem}>
                 <ThemedText style={styles.rateLabel}>{countryInfo.rateLabel}</ThemedText>
                 <ThemedText style={styles.rateValue}>
-                  {((exchangeRateData as any)[countryInfo.rateProp] as number)?.toFixed(2) || 'N/A'}
+                  {((exchangeRateData as any)[countryInfo.rateProp] as number)?.toFixed(1) || 'N/A'}
                 </ThemedText>
               </View>
             </View>

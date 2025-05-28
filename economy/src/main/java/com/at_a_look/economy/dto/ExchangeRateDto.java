@@ -22,6 +22,7 @@ public class ExchangeRateDto {
     private Double usdRate;    // 미국 달러 환율
     private Double eurRate;    // 유럽 유로 환율
     private Double jpyRate;    // 일본 엔화 환율
+    private Double cnyRate;    // 중국 위안화 환율
     
     /**
      * ExchangeRate 엔티티에서 DTO로 변환합니다.
@@ -43,27 +44,30 @@ public class ExchangeRateDto {
         switch (curUnit) {
             case "USD" -> dto.setUsdRate(rate);
             case "EUR" -> dto.setEurRate(rate);
-            case "JPY" -> dto.setJpyRate(rate);
+            case "JPY(100)" -> dto.setJpyRate(rate);
+            case "CNH" -> dto.setCnyRate(rate);
         }
         
         return dto;
     }
     
     /**
-     * 주요 통화(USD, EUR, JPY)가 모두 포함된 DTO를 생성합니다.
+     * 주요 통화(USD, EUR, JPY, CNY)가 모두 포함된 DTO를 생성합니다.
      * 
      * @param date 기준 날짜
      * @param usdRate 미국 달러 환율
      * @param eurRate 유럽 유로 환율
      * @param jpyRate 일본 엔화 환율
+     * @param cnyRate 중국 위안화 환율
      * @return 생성된 DTO 객체
      */
-    public static ExchangeRateDto createWithAllRates(LocalDate date, Double usdRate, Double eurRate, Double jpyRate) {
+    public static ExchangeRateDto createWithAllRates(LocalDate date, Double usdRate, Double eurRate, Double jpyRate, Double cnyRate) {
         return ExchangeRateDto.builder()
                 .date(date)
                 .usdRate(usdRate)
                 .eurRate(eurRate)
                 .jpyRate(jpyRate)
+                .cnyRate(cnyRate)
                 .build();
     }
 } 

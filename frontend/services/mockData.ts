@@ -86,6 +86,7 @@ export const mockExchangeRate = {
       usdRate: 1364.00,
       eurRate: 1470.00,
       jpyRate: 9.10,
+      cnyRate: 190.43,
       history: [
         {
           date: new Date().toISOString().split('T')[0],

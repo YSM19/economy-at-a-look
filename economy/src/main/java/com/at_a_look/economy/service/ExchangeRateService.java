@@ -49,7 +49,7 @@ public class ExchangeRateService {
     
     private static final String API_URL = "https://www.koreaexim.go.kr/site/program/financial/exchangeJSON";
     private static final String DATA_TYPE = "AP01"; // 환율 정보 타입
-    private static final List<String> MAJOR_CURRENCIES = Arrays.asList("USD", "EUR", "JPY");
+    private static final List<String> MAJOR_CURRENCIES = Arrays.asList("USD", "EUR", "JPY(100)", "CNH");
 
     /**
      * 매일 오전 11npm 시 30분에 환율 데이터를 자동으로 가져옵니다.
@@ -362,10 +362,20 @@ public class ExchangeRateService {
         LocalDate today = LocalDate.now();
         List<ExchangeRate> rates = getLatestRatesOrFetch(today);
         
+        log.info("📊 조회된 환율 데이터 개수: {}", rates.size());
+        rates.forEach(rate -> {
+            log.info("💱 환율 데이터: {} - {} = {}", 
+                    rate.getCurUnit(), rate.getCurNm(), rate.getDealBasRate());
+        });
+        
         // 주요 통화 환율 추출
         Double usdRate = getExchangeRateValue(rates, "USD");
         Double eurRate = getExchangeRateValue(rates, "EUR");
-        Double jpyRate = getExchangeRateValue(rates, "JPY");
+        Double jpyRate = getExchangeRateValue(rates, "JPY(100)");
+        Double cnyRate = getExchangeRateValue(rates, "CNH");
+        
+        log.info("🏦 추출된 환율: USD={}, EUR={}, JPY={}, CNH={}", 
+                 usdRate, eurRate, jpyRate, cnyRate);
         
         // 최근 30일 기록 조회
         List<ExchangeRateResponseDTO> history = ExchangeRateResponseDTO.fromEntities(
@@ -375,6 +385,7 @@ public class ExchangeRateService {
                 .usdRate(usdRate)
                 .eurRate(eurRate)
                 .jpyRate(jpyRate)
+                .cnyRate(cnyRate)
                 .history(history)
                 .build();
     }
@@ -512,7 +523,7 @@ public class ExchangeRateService {
         Map<String, List<ExchangeRate>> ratesByUnit = rates.stream()
                 .collect(Collectors.groupingBy(ExchangeRate::getCurUnit));
         
-        // USD, EUR, JPY 통화별 환율 DTO 생성
+        // USD, EUR, JPY, CNY 통화별 환율 DTO 생성
         List<ExchangeRateDto> result = new ArrayList<>();
         LocalDate current = startDate;
         
@@ -521,15 +532,17 @@ public class ExchangeRateService {
             
             Double usdRate = getExchangeRateForDate(ratesByUnit.getOrDefault("USD", new ArrayList<>()), date);
             Double eurRate = getExchangeRateForDate(ratesByUnit.getOrDefault("EUR", new ArrayList<>()), date);
-            Double jpyRate = getExchangeRateForDate(ratesByUnit.getOrDefault("JPY", new ArrayList<>()), date);
+            Double jpyRate = getExchangeRateForDate(ratesByUnit.getOrDefault("JPY(100)", new ArrayList<>()), date);
+            Double cnyRate = getExchangeRateForDate(ratesByUnit.getOrDefault("CNH", new ArrayList<>()), date);
             
             // 하나라도 값이 있으면 DTO 생성
-            if (usdRate != null || eurRate != null || jpyRate != null) {
+            if (usdRate != null || eurRate != null || jpyRate != null || cnyRate != null) {
                 result.add(ExchangeRateDto.builder()
                         .date(date)
                         .usdRate(usdRate)
                         .eurRate(eurRate)
                         .jpyRate(jpyRate)
+                        .cnyRate(cnyRate)
                         .build());
             }
             

@@ -7,6 +7,7 @@ import { Stack } from 'expo-router';
 import InterestRateGauge from '../components/InterestRateGauge';
 import ExchangeRateGauge from '../components/ExchangeRateGauge';
 import PriceIndexGauge from '../components/PriceIndexGauge';
+import ExchangeRateRecommendations from '../components/ExchangeRateRecommendations';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function HomeScreen() {
@@ -170,6 +171,11 @@ export default function HomeScreen() {
           {/* 선택된 탭 내용 */}
           {renderTabContent()}
           
+          {/* 환율 추천 탭 - 환율 탭일 때만 표시 */}
+          {activeTab === 'exchange' && (
+            <ExchangeRateRecommendations country={activeCountry} />
+          )}
+          
           {/* 하단 카드 - 탭에 맞게 표시 */}
           <View style={styles.sectionTitle}>
             <ThemedText style={styles.sectionTitleText}>자세히 알아보기</ThemedText>
@@ -275,7 +281,7 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   header: {
-    marginBottom: 20,
+    marginBottom: 10,
     marginTop: 40,
     paddingVertical: 12,
     paddingHorizontal: 16,
@@ -292,7 +298,7 @@ const styles = StyleSheet.create({
   gaugeLabel: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 10,
+    marginBottom: 5,
     marginLeft: 5,
     color: '#333',
   },
