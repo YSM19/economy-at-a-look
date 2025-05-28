@@ -123,7 +123,12 @@ export default function ExchangeRateScreen() {
               <View style={styles.rateItem}>
                 <ThemedText style={styles.rateLabel}>{countryInfo.rateLabel}</ThemedText>
                 <ThemedText style={styles.rateValue}>
-                  {((exchangeRateData as any)[countryInfo.rateProp] as number)?.toFixed(1) || 'N/A'}
+                  {(() => {
+                    const value = ((exchangeRateData as any)[countryInfo.rateProp] as number);
+                    if (!value) return 'N/A';
+                    const fixed = value.toFixed(1);
+                    return fixed.endsWith('.0') ? value.toFixed(0) + '원' : fixed + '원';
+                  })()}
                 </ThemedText>
               </View>
             </View>

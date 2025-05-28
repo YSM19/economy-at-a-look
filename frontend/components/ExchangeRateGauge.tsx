@@ -13,7 +13,15 @@ type ExchangeRateGaugeProps = {
 const formatNumberWithUnit = (value: number | string, unit: string): string => {
   // 숫자로 변환하고 소수점 둘째자리에서 반올림하여 첫째자리까지 표시
   const numValue = typeof value === 'string' ? parseFloat(value) : value;
-  const formattedNumber = numValue.toFixed(1).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  let formattedNumber = numValue.toFixed(1);
+  
+  // 소수점 첫째자리가 0이면 정수로 표시
+  if (formattedNumber.endsWith('.0')) {
+    formattedNumber = Math.round(numValue).toString();
+  }
+  
+  // 천 단위 콤마 추가
+  formattedNumber = formattedNumber.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
   return `${formattedNumber}${unit}`;
 };
 
@@ -187,92 +195,92 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
     if (country === 'usa' || !country) {
       // 5개 구간 설정 (980-1100-1220-1340-1460-1580)
       if (rate <= 1100) {
-        setRateText('매우 약세');
+        setRateText('달러 매우 약세');
         setRateColor('#2E7D32');
         setActiveSection(0);
       } else if (rate <= 1220) {
-        setRateText('약세');
+        setRateText('달러 약세');
         setRateColor('#4CAF50');
         setActiveSection(1);
       } else if (rate <= 1340) {
-        setRateText('보통');
+        setRateText('달러 보통');
         setRateColor('#FFC107');
         setActiveSection(2);
       } else if (rate <= 1460) {
-        setRateText('강세');
+        setRateText('달러 강세');
         setRateColor('#F44336');
         setActiveSection(3);
       } else {
-        setRateText('매우 강세');
+        setRateText('달러 매우 강세');
         setRateColor('#D84315');
         setActiveSection(4);
       }
     } else if (country === 'japan') {
       // 5개 구간 설정 (810-890-970-1050-1130-1210)
       if (rate <= 890) {
-        setRateText('매우 약세');
+        setRateText('엔화 매우 약세');
         setRateColor('#2E7D32');
         setActiveSection(0);
       } else if (rate <= 970) {
-        setRateText('약세');
+        setRateText('엔화 약세');
         setRateColor('#4CAF50');
         setActiveSection(1);
       } else if (rate <= 1050) {
-        setRateText('보통');
+        setRateText('엔화 보통');
         setRateColor('#FFC107');
         setActiveSection(2);
       } else if (rate <= 1130) {
-        setRateText('강세');
+        setRateText('엔화 강세');
         setRateColor('#F44336');
         setActiveSection(3);
       } else {
-        setRateText('매우 강세');
+        setRateText('엔화 매우 강세');
         setRateColor('#D84315');
         setActiveSection(4);
       }
     } else if (country === 'china') {
       // 5개 구간 설정 (154-166-178-190-202-214)
       if (rate <= 166) {
-        setRateText('매우 약세');
+        setRateText('위안 매우 약세');
         setRateColor('#2E7D32');
         setActiveSection(0);
       } else if (rate <= 178) {
-        setRateText('약세');
+        setRateText('위안 약세');
         setRateColor('#4CAF50');
         setActiveSection(1);
       } else if (rate <= 190) {
-        setRateText('보통');
+        setRateText('위안 보통');
         setRateColor('#FFC107');
         setActiveSection(2);
       } else if (rate <= 202) {
-        setRateText('강세');
+        setRateText('위안 강세');
         setRateColor('#F44336');
         setActiveSection(3);
       } else {
-        setRateText('매우 강세');
+        setRateText('위안 매우 강세');
         setRateColor('#D84315');
         setActiveSection(4);
       }
     } else if (country === 'europe') {
       // 5개 구간 설정 (1120-1240-1360-1480-1600-1720)
       if (rate <= 1240) {
-        setRateText('매우 약세');
+        setRateText('유로 매우 약세');
         setRateColor('#2E7D32');
         setActiveSection(0);
       } else if (rate <= 1360) {
-        setRateText('약세');
+        setRateText('유로 약세');
         setRateColor('#4CAF50');
         setActiveSection(1);
       } else if (rate <= 1480) {
-        setRateText('보통');
+        setRateText('유로 보통');
         setRateColor('#FFC107');
         setActiveSection(2);
       } else if (rate <= 1600) {
-        setRateText('강세');
+        setRateText('유로 강세');
         setRateColor('#F44336');
         setActiveSection(3);
       } else {
-        setRateText('매우 강세');
+        setRateText('유로 매우 강세');
         setRateColor('#D84315');
         setActiveSection(4);
       }
@@ -606,7 +614,7 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: -15,
   },
   infoText: {
     fontSize: 22,

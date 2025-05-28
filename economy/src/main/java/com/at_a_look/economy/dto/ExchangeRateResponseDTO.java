@@ -68,17 +68,25 @@ public class ExchangeRateResponseDTO {
             return "정보 없음";
         }
         
+        // 소수점 첫째자리가 0이면 정수로 표시
+        String rateStr;
+        if (dealBasRate % 1 == 0) {
+            rateStr = String.format("%.0f", dealBasRate);
+        } else {
+            rateStr = String.format("%.1f", dealBasRate);
+        }
+        
         // 통화별 포맷팅
         if ("JPY(100)".equals(curUnit)) {
-            return String.format("%.1f원/100엔", dealBasRate);
+            return rateStr + "원/100엔";
         } else if ("USD".equals(curUnit)) {
-            return String.format("%.1f원/달러", dealBasRate);
+            return rateStr + "원/달러";
         } else if ("EUR".equals(curUnit)) {
-            return String.format("%.1f원/유로", dealBasRate);
+            return rateStr + "원/유로";
         } else if ("CNH".equals(curUnit)) {
-            return String.format("%.1f원/위안", dealBasRate);
+            return rateStr + "원/위안";
         } else {
-            return String.format("%.1f원", dealBasRate);
+            return rateStr + "원";
         }
     }
 } 
