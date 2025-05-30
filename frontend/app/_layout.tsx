@@ -1,6 +1,6 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
@@ -8,7 +8,7 @@ import 'react-native-reanimated';
 import { View, StyleSheet } from 'react-native';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { HamburgerButton } from '../components/HamburgerButton';
+import { HamburgerButton, BackButton } from '../components/HamburgerButton';
 import { Sidebar } from '../components/Sidebar';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
@@ -20,6 +20,11 @@ export default function RootLayout() {
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
+  const pathname = usePathname();
+
+  // 뒤로가기 버튼을 표시할 경로들 (상세 화면들)
+  const showBackButtonPaths = ['/exchange-rate', '/interest-rate', '/consumer-price-index'];
+  const shouldShowBackButton = showBackButtonPaths.includes(pathname);
 
   useEffect(() => {
     if (loaded) {
@@ -39,7 +44,11 @@ export default function RootLayout() {
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={styles.container}>
         <View style={styles.hamburgerContainer}>
-          <HamburgerButton onPress={toggleSidebar} />
+          {shouldShowBackButton ? (
+            <BackButton />
+          ) : (
+            <HamburgerButton onPress={toggleSidebar} />
+          )}
         </View>
 
         <Sidebar 

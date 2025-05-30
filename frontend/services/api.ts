@@ -148,24 +148,12 @@ export const exchangeRateApi = {
 
 // 경제 지표 관련 API 호출 (재시도 1회로 제한)
 export const economicIndexApi = {
-  getIndex: () => withRetry(
-    () => api.get('/api/economic/index'),
-    undefined,
-    1 // 재시도 1회만
-  ),
-  getExchangeRate: () => withRetry(
-    () => api.get('/api/economic/exchange-rate'),
-    undefined,
-    1 // 재시도 1회만
-  ),
-  getInterestRate: () => withRetry(
-    () => api.get('/api/economic/interest-rate'),
-    undefined,
-    1 // 재시도 1회만
-  ),
-  getConsumerPriceIndex: () => withRetry(
-    () => api.get('/api/economic/consumer-price-index'),
-    undefined,
-    1 // 재시도 1회만
-  )
+  getEconomicIndex: () => withRetry(() => api.get('/api/economic/index')),
+  getExchangeRate: () => withRetry(() => api.get('/api/economic/exchange-rate')),
+  getExchangeRateByPeriod: (startDate: string, endDate: string) => 
+    withRetry(() => api.get('/api/economic/exchange-rate/period', {
+      params: { startDate, endDate }
+    })),
+  getInterestRate: () => withRetry(() => api.get('/api/economic/interest-rate')),
+  getConsumerPriceIndex: () => withRetry(() => api.get('/api/economic/consumer-price-index')),
 }; 

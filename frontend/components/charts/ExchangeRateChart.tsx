@@ -5,28 +5,104 @@ import { LineChart } from 'react-native-chart-kit';
 
 interface ExchangeRateDataPoint {
   date: string;
-  usdRate: number;
-  eurRate: number;
-  jpyRate: number;
+  usdRate?: number;
+  eurRate?: number;
+  jpyRate?: number;
+  cnyRate?: number;
 }
 
 interface ExchangeRateChartProps {
   data: ExchangeRateDataPoint[];
+  country?: string;
+  height?: number;
+  showOnlyDay?: boolean;
 }
 
-export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({ data }) => {
+export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({ 
+  data, 
+  country = 'usa',
+  height = 220,
+  showOnlyDay
+}) => {
   const screenWidth = Dimensions.get('window').width - 32;
 
+  // 국가별 데이터 선택
+  const getDataByCountry = () => {
+    switch (country) {
+      case 'usa':
+        return {
+          values: data.map(item => item.usdRate || 0).filter(val => val > 0),
+          label: '원/달러 환율',
+          color: (opacity = 1) => `rgba(25, 118, 210, ${opacity})`
+        };
+      case 'japan':
+        return {
+          values: data.map(item => item.jpyRate || 0).filter(val => val > 0),
+          label: '원/100엔 환율',
+          color: (opacity = 1) => `rgba(255, 152, 0, ${opacity})`
+        };
+      case 'china':
+        return {
+          values: data.map(item => item.cnyRate || 0).filter(val => val > 0),
+          label: '원/위안 환율',
+          color: (opacity = 1) => `rgba(244, 67, 54, ${opacity})`
+        };
+      case 'europe':
+        return {
+          values: data.map(item => item.eurRate || 0).filter(val => val > 0),
+          label: '원/유로 환율',
+          color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`
+        };
+      default:
+        return {
+          values: data.map(item => item.usdRate || 0).filter(val => val > 0),
+          label: '원/달러 환율',
+          color: (opacity = 1) => `rgba(25, 118, 210, ${opacity})`
+        };
+    }
+  };
+
+  const currencyData = getDataByCountry();
+  
+  // 유효한 데이터가 있는지 확인
+  if (currencyData.values.length === 0) {
+    return (
+      <View style={styles.noDataContainer}>
+        <ThemedText style={styles.noDataText}>표시할 데이터가 없습니다.</ThemedText>
+      </View>
+    );
+  }
+
+  // 데이터가 있는 날짜만 라벨로 사용
+  const validData = data.filter(item => {
+    switch (country) {
+      case 'usa': return item.usdRate && item.usdRate > 0;
+      case 'japan': return item.jpyRate && item.jpyRate > 0;
+      case 'china': return item.cnyRate && item.cnyRate > 0;
+      case 'europe': return item.eurRate && item.eurRate > 0;
+      default: return item.usdRate && item.usdRate > 0;
+    }
+  });
+
   const chartData = {
-    labels: data.map(item => item.date.slice(-2)),
+    labels: validData.map(item => {
+      const date = new Date(item.date);
+      // showOnlyDay가 true면 일짜만 표시
+      if (showOnlyDay) {
+        return `${date.getDate()}`;
+      } else {
+        // 기본적으로는 월/일 형식
+        return `${date.getMonth() + 1}/${date.getDate()}`;
+      }
+    }),
     datasets: [
       {
-        data: data.map(item => item.usdRate),
-        color: (opacity = 1) => `rgba(25, 118, 210, ${opacity})`,
+        data: currencyData.values,
+        color: currencyData.color,
         strokeWidth: 2,
       }
     ],
-    legend: ['원/달러 환율'],
+    legend: [currencyData.label],
   };
 
   const chartConfig = {
@@ -52,12 +128,11 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({ data }) =>
       <LineChart
         data={chartData}
         width={screenWidth}
-        height={220}
+        height={height}
         chartConfig={chartConfig}
-        bezier
         style={styles.chart}
         fromZero={false}
-        yAxisSuffix=""
+        yAxisSuffix="원"
         yAxisInterval={1}
         verticalLabelRotation={0}
         horizontalLabelRotation={0}
@@ -67,19 +142,8 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({ data }) =>
         withHorizontalLines={true}
         withVerticalLabels={true}
         withHorizontalLabels={true}
-        segments={5}
+        segments={4}
       />
-      <View style={styles.chartSelector}>
-        <View style={[styles.selectorItem, styles.activeSelector]}>
-          <ThemedText style={styles.activeSelectorText}>원/달러</ThemedText>
-        </View>
-        <View style={styles.selectorItem}>
-          <ThemedText style={styles.selectorText}>원/유로</ThemedText>
-        </View>
-        <View style={styles.selectorItem}>
-          <ThemedText style={styles.selectorText}>원/100엔</ThemedText>
-        </View>
-      </View>
     </View>
   );
 };
@@ -119,5 +183,15 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     lineHeight: 16,
     paddingVertical: 2,
+  },
+  noDataContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#666',
+    fontWeight: 'bold',
   },
 }); 

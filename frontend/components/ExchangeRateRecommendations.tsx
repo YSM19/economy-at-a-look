@@ -96,8 +96,8 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'recommended', description: '미국 여행 추천', icon: 'airplane' },
         { category: '해외직구', status: 'recommended', description: '미국 직구 추천', icon: 'package-variant' },
-        { category: '미국 투자', status: 'recommended', description: '달러 투자 추천', icon: 'chart-line' },
-        { category: '금 매매', status: 'recommended', description: '금 구매 추천', icon: 'gold' },
+        { category: '미국 투자', status: 'recommended', description: '원화 → 달러 환전 추천', icon: 'chart-line' },
+        { category: '금 구매', status: 'recommended', description: '금 구매 추천', icon: 'gold' },
         { category: '달러 수익 실현', status: 'not-recommended', description: '수익 실현 비추천', icon: 'cash-multiple' },
         { category: '해외송금 (원화→달러)', status: 'recommended', description: '달러 매수 추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (달러→원화)', status: 'not-recommended', description: '달러 매도 비추천', icon: 'bank-transfer-in' }
@@ -106,8 +106,8 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'recommended', description: '미국 여행 추천', icon: 'airplane' },
         { category: '해외직구', status: 'recommended', description: '미국 직구 추천', icon: 'package-variant' },
-        { category: '미국 투자', status: 'recommended', description: '달러 투자 추천', icon: 'chart-line' },
-        { category: '금 매매', status: 'recommended', description: '금 구매 추천', icon: 'gold' },
+        { category: '미국 투자', status: 'recommended', description: '원화 → 달러 환전 추천', icon: 'chart-line' },
+        { category: '금 구매', status: 'recommended', description: '금 구매 추천', icon: 'gold' },
         { category: '달러 수익 실현', status: 'not-recommended', description: '수익 실현 비추천', icon: 'cash-multiple' },
         { category: '해외송금 (원화→달러)', status: 'recommended', description: '달러 매수 추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (달러→원화)', status: 'not-recommended', description: '달러 매도 비추천', icon: 'bank-transfer-in' }
@@ -116,7 +116,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'neutral', description: '미국 여행 관망', icon: 'airplane' },
         { category: '해외직구', status: 'neutral', description: '미국 직구 대기', icon: 'package-variant' },
-        { category: '미국 투자', status: 'neutral', description: '달러 투자 관망', icon: 'chart-line' },
+        { category: '미국 투자', status: 'neutral', description: '원화 → 달러 환전 관망', icon: 'chart-line' },
         { category: '금 매매', status: 'neutral', description: '금 매매 보유', icon: 'gold' },
         { category: '달러 수익 실현', status: 'neutral', description: '수익 실현 보유', icon: 'cash-multiple' },
         { category: '해외송금 (원화→달러)', status: 'neutral', description: '달러 매수 대기', icon: 'bank-transfer-out' },
@@ -126,8 +126,8 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'not-recommended', description: '미국 여행 비추천', icon: 'airplane' },
         { category: '해외직구', status: 'not-recommended', description: '미국 직구 비추천', icon: 'package-variant' },
-        { category: '미국 투자', status: 'not-recommended', description: '달러 투자 비추천', icon: 'chart-line' },
-        { category: '금 매매', status: 'recommended', description: '금 판매 추천', icon: 'gold' },
+        { category: '미국 투자', status: 'not-recommended', description: '원화 → 달러 환전 비추천', icon: 'chart-line' },
+        { category: '금 판매', status: 'recommended', description: '금 판매 추천', icon: 'gold' },
         { category: '달러 수익 실현', status: 'recommended', description: '수익 실현 추천', icon: 'cash-multiple' },
         { category: '해외송금 (원화→달러)', status: 'not-recommended', description: '달러 매수 비추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (달러→원화)', status: 'recommended', description: '달러 매도 추천', icon: 'bank-transfer-in' }
@@ -136,8 +136,8 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'not-recommended', description: '미국 여행 비추천', icon: 'airplane' },
         { category: '해외직구', status: 'not-recommended', description: '미국 직구 비추천', icon: 'package-variant' },
-        { category: '미국 투자', status: 'not-recommended', description: '달러 투자 비추천', icon: 'chart-line' },
-        { category: '금 매매', status: 'recommended', description: '금 판매 추천', icon: 'gold' },
+        { category: '미국 투자', status: 'not-recommended', description: '원화 → 달러 환전 비추천', icon: 'chart-line' },
+        { category: '금 판매', status: 'recommended', description: '금 판매 추천', icon: 'gold' },
         { category: '달러 수익 실현', status: 'recommended', description: '수익 실현 추천', icon: 'cash-multiple' },
         { category: '해외송금 (원화→달러)', status: 'not-recommended', description: '달러 매수 비추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (달러→원화)', status: 'recommended', description: '달러 매도 추천', icon: 'bank-transfer-in' }
@@ -150,7 +150,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'recommended', description: '일본 여행 추천', icon: 'airplane' },
         { category: '해외직구', status: 'recommended', description: '일본 직구 추천', icon: 'package-variant' },
-        { category: '일본 투자', status: 'recommended', description: '엔화 투자 추천', icon: 'chart-line' },
+        { category: '일본 투자', status: 'recommended', description: '원화 → 엔화 환전 추천', icon: 'chart-line' },
         { category: '해외송금 (원화→엔화)', status: 'recommended', description: '엔화 매수 추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (엔화→원화)', status: 'not-recommended', description: '엔화 매도 비추천', icon: 'bank-transfer-in' }
       ];
@@ -158,7 +158,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'recommended', description: '일본 여행 추천', icon: 'airplane' },
         { category: '해외직구', status: 'recommended', description: '일본 직구 추천', icon: 'package-variant' },
-        { category: '일본 투자', status: 'recommended', description: '엔화 투자 추천', icon: 'chart-line' },
+        { category: '일본 투자', status: 'recommended', description: '원화 → 엔화 환전 추천', icon: 'chart-line' },
         { category: '해외송금 (원화→엔화)', status: 'recommended', description: '엔화 매수 추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (엔화→원화)', status: 'not-recommended', description: '엔화 매도 비추천', icon: 'bank-transfer-in' }
       ];
@@ -166,7 +166,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'neutral', description: '일본 여행 관망', icon: 'airplane' },
         { category: '해외직구', status: 'neutral', description: '일본 직구 대기', icon: 'package-variant' },
-        { category: '일본 투자', status: 'neutral', description: '엔화 투자 관망', icon: 'chart-line' },
+        { category: '일본 투자', status: 'neutral', description: '원화 → 엔화 환전 관망', icon: 'chart-line' },
         { category: '해외송금 (원화→엔화)', status: 'neutral', description: '엔화 매수 대기', icon: 'bank-transfer-out' },
         { category: '해외송금 (엔화→원화)', status: 'neutral', description: '엔화 매도 대기', icon: 'bank-transfer-in' }
       ];
@@ -174,7 +174,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'not-recommended', description: '일본 여행 비추천', icon: 'airplane' },
         { category: '해외직구', status: 'not-recommended', description: '일본 직구 비추천', icon: 'package-variant' },
-        { category: '일본 투자', status: 'not-recommended', description: '엔화 투자 비추천', icon: 'chart-line' },
+        { category: '일본 투자', status: 'not-recommended', description: '원화 → 엔화 환전 비추천', icon: 'chart-line' },
         { category: '해외송금 (원화→엔화)', status: 'not-recommended', description: '엔화 매수 비추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (엔화→원화)', status: 'recommended', description: '엔화 매도 추천', icon: 'bank-transfer-in' }
       ];
@@ -182,7 +182,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'not-recommended', description: '일본 여행 비추천', icon: 'airplane' },
         { category: '해외직구', status: 'not-recommended', description: '일본 직구 비추천', icon: 'package-variant' },
-        { category: '일본 투자', status: 'not-recommended', description: '엔화 투자 비추천', icon: 'chart-line' },
+        { category: '일본 투자', status: 'not-recommended', description: '원화 → 엔화 환전 비추천', icon: 'chart-line' },
         { category: '해외송금 (원화→엔화)', status: 'not-recommended', description: '엔화 매수 비추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (엔화→원화)', status: 'recommended', description: '엔화 매도 추천', icon: 'bank-transfer-in' }
       ];
@@ -194,7 +194,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'recommended', description: '중국 여행 추천', icon: 'airplane' },
         { category: '해외직구', status: 'recommended', description: '중국 직구 추천', icon: 'package-variant' },
-        { category: '중국 투자', status: 'recommended', description: '위안 투자 추천', icon: 'chart-line' },
+        { category: '중국 투자', status: 'recommended', description: '원화 → 위안 환전 추천', icon: 'chart-line' },
         { category: '해외송금 (원화→위안)', status: 'recommended', description: '위안 매수 추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (위안→원화)', status: 'not-recommended', description: '위안 매도 비추천', icon: 'bank-transfer-in' }
       ];
@@ -202,7 +202,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'recommended', description: '중국 여행 추천', icon: 'airplane' },
         { category: '해외직구', status: 'recommended', description: '중국 직구 추천', icon: 'package-variant' },
-        { category: '중국 투자', status: 'recommended', description: '위안 투자 추천', icon: 'chart-line' },
+        { category: '중국 투자', status: 'recommended', description: '원화 → 위안 환전 추천', icon: 'chart-line' },
         { category: '해외송금 (원화→위안)', status: 'recommended', description: '위안 매수 추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (위안→원화)', status: 'not-recommended', description: '위안 매도 비추천', icon: 'bank-transfer-in' }
       ];
@@ -210,7 +210,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'neutral', description: '중국 여행 관망', icon: 'airplane' },
         { category: '해외직구', status: 'neutral', description: '중국 직구 대기', icon: 'package-variant' },
-        { category: '중국 투자', status: 'neutral', description: '위안 투자 관망', icon: 'chart-line' },
+        { category: '중국 투자', status: 'neutral', description: '원화 → 위안 환전 관망', icon: 'chart-line' },
         { category: '해외송금 (원화→위안)', status: 'neutral', description: '위안 매수 대기', icon: 'bank-transfer-out' },
         { category: '해외송금 (위안→원화)', status: 'neutral', description: '위안 매도 대기', icon: 'bank-transfer-in' }
       ];
@@ -218,7 +218,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'not-recommended', description: '중국 여행 비추천', icon: 'airplane' },
         { category: '해외직구', status: 'not-recommended', description: '중국 직구 비추천', icon: 'package-variant' },
-        { category: '중국 투자', status: 'not-recommended', description: '위안 투자 비추천', icon: 'chart-line' },
+        { category: '중국 투자', status: 'not-recommended', description: '원화 → 위안 환전 비추천', icon: 'chart-line' },
         { category: '해외송금 (원화→위안)', status: 'not-recommended', description: '위안 매수 비추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (위안→원화)', status: 'recommended', description: '위안 매도 추천', icon: 'bank-transfer-in' }
       ];
@@ -226,7 +226,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'not-recommended', description: '중국 여행 비추천', icon: 'airplane' },
         { category: '해외직구', status: 'not-recommended', description: '중국 직구 비추천', icon: 'package-variant' },
-        { category: '중국 투자', status: 'not-recommended', description: '위안 투자 비추천', icon: 'chart-line' },
+        { category: '중국 투자', status: 'not-recommended', description: '원화 → 위안 환전 비추천', icon: 'chart-line' },
         { category: '해외송금 (원화→위안)', status: 'not-recommended', description: '위안 매수 비추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (위안→원화)', status: 'recommended', description: '위안 매도 추천', icon: 'bank-transfer-in' }
       ];
@@ -238,7 +238,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'recommended', description: '유럽 여행 추천', icon: 'airplane' },
         { category: '해외직구', status: 'recommended', description: '유럽 직구 추천', icon: 'package-variant' },
-        { category: '유럽 투자', status: 'recommended', description: '유로 투자 추천', icon: 'chart-line' },
+        { category: '유럽 투자', status: 'recommended', description: '원화 → 유로 환전 추천', icon: 'chart-line' },
         { category: '해외송금 (원화→유로)', status: 'recommended', description: '유로 매수 추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (유로→원화)', status: 'not-recommended', description: '유로 매도 비추천', icon: 'bank-transfer-in' }
       ];
@@ -246,7 +246,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'recommended', description: '유럽 여행 추천', icon: 'airplane' },
         { category: '해외직구', status: 'recommended', description: '유럽 직구 추천', icon: 'package-variant' },
-        { category: '유럽 투자', status: 'recommended', description: '유로 투자 추천', icon: 'chart-line' },
+        { category: '유럽 투자', status: 'recommended', description: '원화 → 유로 환전 추천', icon: 'chart-line' },
         { category: '해외송금 (원화→유로)', status: 'recommended', description: '유로 매수 추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (유로→원화)', status: 'not-recommended', description: '유로 매도 비추천', icon: 'bank-transfer-in' }
       ];
@@ -254,7 +254,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'neutral', description: '유럽 여행 관망', icon: 'airplane' },
         { category: '해외직구', status: 'neutral', description: '유럽 직구 대기', icon: 'package-variant' },
-        { category: '유럽 투자', status: 'neutral', description: '유로 투자 관망', icon: 'chart-line' },
+        { category: '유럽 투자', status: 'neutral', description: '원화 → 유로 환전 관망', icon: 'chart-line' },
         { category: '해외송금 (원화→유로)', status: 'neutral', description: '유로 매수 대기', icon: 'bank-transfer-out' },
         { category: '해외송금 (유로→원화)', status: 'neutral', description: '유로 매도 대기', icon: 'bank-transfer-in' }
       ];
@@ -262,7 +262,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'not-recommended', description: '유럽 여행 비추천', icon: 'airplane' },
         { category: '해외직구', status: 'not-recommended', description: '유럽 직구 비추천', icon: 'package-variant' },
-        { category: '유럽 투자', status: 'not-recommended', description: '유로 투자 비추천', icon: 'chart-line' },
+        { category: '유럽 투자', status: 'not-recommended', description: '원화 → 유로 환전 비추천', icon: 'chart-line' },
         { category: '해외송금 (원화→유로)', status: 'not-recommended', description: '유로 매수 비추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (유로→원화)', status: 'recommended', description: '유로 매도 추천', icon: 'bank-transfer-in' }
       ];
@@ -270,7 +270,7 @@ const ExchangeRateRecommendations: React.FC<ExchangeRateRecommendationsProps> = 
       return [
         { category: '여행', status: 'not-recommended', description: '유럽 여행 비추천', icon: 'airplane' },
         { category: '해외직구', status: 'not-recommended', description: '유럽 직구 비추천', icon: 'package-variant' },
-        { category: '유럽 투자', status: 'not-recommended', description: '유로 투자 비추천', icon: 'chart-line' },
+        { category: '유럽 투자', status: 'not-recommended', description: '원화 → 유로 환전 비추천', icon: 'chart-line' },
         { category: '해외송금 (원화→유로)', status: 'not-recommended', description: '유로 매수 비추천', icon: 'bank-transfer-out' },
         { category: '해외송금 (유로→원화)', status: 'recommended', description: '유로 매도 추천', icon: 'bank-transfer-in' }
       ];

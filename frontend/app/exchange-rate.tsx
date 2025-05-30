@@ -13,13 +13,14 @@ interface ExchangeRateData {
   eurRate: number;
   jpyRate: number;
   cnyRate?: number;
-  history: {
-    date: string;
-    usdRate: number;
-    eurRate: number;
-    jpyRate: number;
-    cnyRate?: number;
-  }[];
+}
+
+interface PeriodData {
+  date: string;
+  usdRate: number;
+  eurRate: number;
+  jpyRate: number;
+  cnyRate?: number;
 }
 
 export default function ExchangeRateScreen() {
@@ -27,6 +28,8 @@ export default function ExchangeRateScreen() {
   const country = typeof params.country === 'string' ? params.country : 'usa';
   
   const [exchangeRateData, setExchangeRateData] = useState<ExchangeRateData | null>(null);
+  const [weeklyData, setWeeklyData] = useState<PeriodData[]>([]);
+  const [monthlyData, setMonthlyData] = useState<PeriodData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -78,32 +81,63 @@ export default function ExchangeRateScreen() {
 
   const countryInfo = getCountryInfo();
 
+  // 주말 제외 날짜 계산 함수
+  const getBusinessDaysAgo = (days: number): string => {
+    const today = new Date();
+    let count = 0;
+    let current = new Date(today);
+
+    while (count < days) {
+      current.setDate(current.getDate() - 1);
+      // 주말(토요일=6, 일요일=0) 제외
+      if (current.getDay() !== 0 && current.getDay() !== 6) {
+        count++;
+      }
+    }
+
+    return current.toISOString().split('T')[0];
+  };
+
+  const getToday = (): string => {
+    return new Date().toISOString().split('T')[0];
+  };
+
   useEffect(() => {
-    // 실제 API 연결로 환율 데이터 가져오기
-    const fetchExchangeRateData = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await economicIndexApi.getExchangeRate();
         
-        if (response.data && response.data.success && response.data.data) {
-          const apiData = response.data.data;
+        // 현재 환율 데이터 가져오기
+        const currentResponse = await economicIndexApi.getExchangeRate();
+        if (currentResponse.data && currentResponse.data.success && currentResponse.data.data) {
+          const apiData = currentResponse.data.data;
           const transformedData: ExchangeRateData = {
             usdRate: apiData.usdRate || 0,
             eurRate: apiData.eurRate || 0,
             jpyRate: apiData.jpyRate || 0,
             cnyRate: apiData.cnyRate || 0,
-            history: apiData.history?.map((item: any) => ({
-              date: item.date,
-              usdRate: item.curUnit === 'USD' ? parseFloat(item.dealBasRate) : 0,
-              eurRate: item.curUnit === 'EUR' ? parseFloat(item.dealBasRate) : 0,
-              jpyRate: item.curUnit === 'JPY(100)' ? parseFloat(item.dealBasRate) : 0,
-              cnyRate: item.curUnit === 'CNH' ? parseFloat(item.dealBasRate) : 0,
-            })) || []
           };
           setExchangeRateData(transformedData);
-        } else {
-          setError('환율 데이터를 불러올 수 없습니다.');
         }
+
+        // 7일 데이터 가져오기 (주말 제외)
+        const weekStartDate = getBusinessDaysAgo(7);
+        const weekEndDate = getToday();
+        const weeklyResponse = await economicIndexApi.getExchangeRateByPeriod(weekStartDate, weekEndDate);
+        
+        if (weeklyResponse.data && weeklyResponse.data.success && weeklyResponse.data.data) {
+          setWeeklyData(weeklyResponse.data.data);
+        }
+
+        // 30일 데이터 가져오기 (주말 제외)
+        const monthStartDate = getBusinessDaysAgo(30);
+        const monthEndDate = getToday();
+        const monthlyResponse = await economicIndexApi.getExchangeRateByPeriod(monthStartDate, monthEndDate);
+        
+        if (monthlyResponse.data && monthlyResponse.data.success && monthlyResponse.data.data) {
+          setMonthlyData(monthlyResponse.data.data);
+        }
+
       } catch (err) {
         console.error('환율 데이터 로딩 실패:', err);
         setError('환율 데이터를 불러오는 중 오류가 발생했습니다.');
@@ -112,8 +146,8 @@ export default function ExchangeRateScreen() {
       }
     };
     
-    fetchExchangeRateData();
-  }, []);
+    fetchData();
+  }, [country]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -130,28 +164,65 @@ export default function ExchangeRateScreen() {
         </View>
         
         {loading ? (
-          <ThemedText>로딩 중...</ThemedText>
+          <View style={styles.loadingContainer}>
+            <ThemedText style={styles.loadingText}>로딩 중...</ThemedText>
+          </View>
         ) : error ? (
-          <ThemedText>데이터를 불러오는 중 오류가 발생했습니다.</ThemedText>
+          <View style={styles.errorContainer}>
+            <ThemedText style={styles.errorText}>데이터를 불러오는 중 오류가 발생했습니다.</ThemedText>
+          </View>
         ) : exchangeRateData && (
           <>
             <View style={styles.currentRates}>
               <View style={styles.rateItem}>
                 <ThemedText style={styles.rateLabel}>{countryInfo.rateLabel}</ThemedText>
-                <ThemedText style={styles.rateValue}>
-                  {(() => {
-                    const value = ((exchangeRateData as any)[countryInfo.rateProp] as number);
-                    if (!value) return 'N/A';
-                    const fixed = value.toFixed(1);
-                    return fixed.endsWith('.0') ? value.toFixed(0) + '원' : fixed + '원';
-                  })()}
-                </ThemedText>
+                <View style={styles.rateValueContainer}>
+                  <ThemedText style={styles.rateValue}>
+                    {(() => {
+                      const value = ((exchangeRateData as any)[countryInfo.rateProp] as number);
+                      if (!value) return 'N/A';
+                      const fixed = value.toFixed(1);
+                      return fixed.endsWith('.0') ? value.toFixed(0) : fixed;
+                    })()}
+                  </ThemedText>
+                  <ThemedText style={styles.rateCurrency}>원</ThemedText>
+                </View>
               </View>
             </View>
             
+            {/* 7일 환율 변동 추이 */}
             <View style={styles.chartContainer}>
-              <ThemedText style={styles.chartTitle}>환율 변동 추이</ThemedText>
-              <ExchangeRateChart data={exchangeRateData.history} />
+              <ThemedText style={styles.chartTitle}>최근 7일 환율 변동 추이</ThemedText>
+              <ThemedText style={styles.chartSubtitle}>주말 및 공휴일 제외</ThemedText>
+              {weeklyData.length > 0 ? (
+                <ExchangeRateChart 
+                  data={weeklyData} 
+                  country={country}
+                  height={200}
+                />
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <ThemedText style={styles.noDataText}>7일 데이터가 없습니다.</ThemedText>
+                </View>
+              )}
+            </View>
+            
+            {/* 30일 환율 변동 추이 */}
+            <View style={styles.chartContainer}>
+              <ThemedText style={styles.chartTitle}>최근 30일 환율 변동 추이</ThemedText>
+              <ThemedText style={styles.chartSubtitle}>주말 및 공휴일 제외</ThemedText>
+              {monthlyData.length > 0 ? (
+                <ExchangeRateChart 
+                  data={monthlyData} 
+                  country={country}
+                  height={200}
+                  showOnlyDay={true}
+                />
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <ThemedText style={styles.noDataText}>30일 데이터가 없습니다.</ThemedText>
+                </View>
+              )}
             </View>
             
             <View style={styles.infoContainer}>
@@ -199,42 +270,100 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   rateItem: {
-    width: '30%',
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-  },
-  rateLabel: {
-    fontSize: 12,
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  rateValue: {
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  chartContainer: {
-    marginBottom: 24,
     backgroundColor: '#fff',
     borderRadius: 12,
     padding: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 3.84,
+    elevation: 5,
+    flex: 1,
+    alignItems: 'center',
+  },
+  rateLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 8,
+  },
+  rateValueContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  rateValue: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#1976D2',
+  },
+  rateCurrency: {
+    fontSize: 16,
+    color: '#666',
+    marginLeft: 4,
+  },
+  chartContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginVertical: 8,
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   chartTitle: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  chartSubtitle: {
+    fontSize: 12,
+    color: '#666',
     marginBottom: 16,
+    textAlign: 'center',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#666',
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#f44336',
+    textAlign: 'center',
+  },
+  noDataContainer: {
+    padding: 40,
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#666',
   },
   infoContainer: {
-    marginBottom: 24,
-    padding: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f5f5f5',
     borderRadius: 12,
+    padding: 16,
+    marginVertical: 8,
   },
   infoTitle: {
     fontSize: 16,
@@ -244,5 +373,6 @@ const styles = StyleSheet.create({
   infoContent: {
     fontSize: 14,
     lineHeight: 20,
+    color: '#666',
   },
 }); 

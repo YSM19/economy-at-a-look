@@ -8,6 +8,7 @@ import InterestRateGauge from '../components/InterestRateGauge';
 import ExchangeRateGauge from '../components/ExchangeRateGauge';
 import PriceIndexGauge from '../components/PriceIndexGauge';
 import ExchangeRateRecommendations from '../components/ExchangeRateRecommendations';
+import ExchangeRateCalculator from '../components/ExchangeRateCalculator';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 
 export default function HomeScreen() {
@@ -174,6 +175,11 @@ export default function HomeScreen() {
           {/* 환율 추천 탭 - 환율 탭일 때만 표시 */}
           {activeTab === 'exchange' && (
             <ExchangeRateRecommendations country={activeCountry} />
+          )}
+          
+          {/* 환율 계산기 - 환율 탭일 때만 표시 */}
+          {activeTab === 'exchange' && (
+            <ExchangeRateCalculator country={activeCountry} />
           )}
           
           {/* 하단 카드 - 탭에 맞게 표시 */}
