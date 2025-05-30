@@ -1,11 +1,12 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
 import InterestRateChart from '../components/charts/InterestRateChart';
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { economicIndexApi } from '../services/api';
 
 interface InterestRateData {
   kbRate: number;
@@ -22,27 +23,29 @@ interface InterestRateData {
 export default function InterestRateScreen() {
   const [interestRateData, setInterestRateData] = useState<InterestRateData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 실제 API 연결 시 여기에 구현
-    // 임시 데이터로 대체
-    const mockData: InterestRateData = {
-      kbRate: 3.5,
-      fedRate: 5.25,
-      marketRate: 4.2,
-      history: [
-        { date: '2023-01', kbRate: 3.0, fedRate: 4.5, marketRate: 3.8 },
-        { date: '2023-02', kbRate: 3.1, fedRate: 4.7, marketRate: 3.9 },
-        { date: '2023-03', kbRate: 3.2, fedRate: 4.9, marketRate: 4.0 },
-        { date: '2023-04', kbRate: 3.3, fedRate: 5.0, marketRate: 4.1 },
-        { date: '2023-05', kbRate: 3.4, fedRate: 5.1, marketRate: 4.1 },
-        { date: '2023-06', kbRate: 3.5, fedRate: 5.25, marketRate: 4.2 },
-      ]
+    // 실제 API 연결로 금리 데이터 가져오기
+    const fetchInterestRateData = async () => {
+      try {
+        setLoading(true);
+        const response = await economicIndexApi.getInterestRate();
+        
+        if (response.data && response.data.success && response.data.data) {
+          setInterestRateData(response.data.data);
+        } else {
+          setError('금리 데이터를 불러올 수 없습니다.');
+        }
+      } catch (err) {
+        console.error('금리 데이터 로딩 실패:', err);
+        setError('금리 데이터를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
+      }
     };
     
-    setInterestRateData(mockData);
-    setLoading(false);
+    fetchInterestRateData();
   }, []);
 
   return (

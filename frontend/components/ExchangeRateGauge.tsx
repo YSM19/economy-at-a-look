@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { ThemedText } from './ThemedText';
 import Svg, { Path, Circle, G, Line, Text as SvgText, Rect } from 'react-native-svg';
-import { economicIndexApi } from '../services/api';
+import { exchangeRateApi } from '../services/api';
 
 type ExchangeRateGaugeProps = {
   value?: number;
@@ -26,7 +26,7 @@ const formatNumberWithUnit = (value: number | string, unit: string): string => {
 };
 
 const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 'usa' }) => {
-  const [rate, setRate] = useState(value || 1350);
+  const [rate, setRate] = useState(value || 0); // 기본값을 0으로 설정
   const [rateText, setRateText] = useState('');
   const [rateColor, setRateColor] = useState('#FFC107');
   const [activeSection, setActiveSection] = useState(1);
@@ -43,11 +43,10 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
   ]);
   
   useEffect(() => {
-    // 국가에 따라 제목, 기본 환율, 그리고 범위 설정
+    // 국가에 따라 제목, 그리고 범위 설정 (기본값 제거)
     switch(country) {
       case 'usa':
         setCurrencyTitle('환율 (USD/KRW)');
-        if (!value) setRate(1350);
         setMinRate(980);
         setMaxRate(1580);
         setSections([
@@ -60,7 +59,6 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
         break;
       case 'japan':
         setCurrencyTitle('환율 (JPY/KRW)');
-        if (!value) setRate(950);
         setMinRate(810);
         setMaxRate(1210);
         setSections([
@@ -73,7 +71,6 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
         break;
       case 'china':
         setCurrencyTitle('환율 (CNY/KRW)');
-        if (!value) setRate(190);
         setMinRate(154);
         setMaxRate(214);
         setSections([
@@ -86,7 +83,6 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
         break;
       case 'europe':
         setCurrencyTitle('환율 (EUR/KRW)');
-        if (!value) setRate(1350);
         setMinRate(1120);
         setMaxRate(1720);
         setSections([
@@ -99,7 +95,6 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
         break;
       default:
         setCurrencyTitle('환율 (USD/KRW)');
-        if (!value) setRate(1350);
         setMinRate(980);
         setMaxRate(1580);
         setSections([
@@ -114,77 +109,79 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
     fetchExchangeRateData();
   }, [country]);
   
-  // 백엔드에서 환율 데이터 가져오기
   const fetchExchangeRateData = async () => {
     setLoading(true);
     setError(null);
     
     try {
-      // 경제 지표 API에서 최신 환율 정보 가져오기
-      const response = await economicIndexApi.getExchangeRate();
+      // 최신 환율 데이터 가져오기
+      const response = await exchangeRateApi.getLatestRates();
       
-      // ApiResponse 형식으로 래핑된 데이터에서 usdRate 필드 가져오기
-      if (response.data && response.data.success && response.data.data) {
-        const exchangeData = response.data.data;
+      // 디버깅을 위한 응답 로그
+      console.log('환율 API 응답:', response);
+      console.log('응답 데이터:', response.data);
+      
+      // 배열 형태의 환율 데이터 처리
+      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
+        const exchangeRates = response.data;
+        
+        console.log('처리할 환율 데이터:', exchangeRates);
+        
+        let newRate = 0;
         
         // 선택된 국가에 따라 환율 데이터 설정
         switch(country) {
           case 'usa':
-            if (exchangeData.usdRate) {
-              setRate(exchangeData.usdRate);
-            } else {
-              const usdHistory = exchangeData.history?.find((item: any) => item.curUnit === 'USD');
-              if (usdHistory) {
-                setRate(parseFloat(usdHistory.dealBasRate) || 1350);
-              }
+            const usdRate = exchangeRates.find(rate => rate.curUnit === 'USD');
+            if (usdRate && usdRate.dealBasRate) {
+              newRate = usdRate.dealBasRate;
             }
             break;
           case 'japan':
-            if (exchangeData.jpyRate) {
-              setRate(exchangeData.jpyRate);
-            } else {
-              const jpyHistory = exchangeData.history?.find((item: any) => item.curUnit === 'JPY(100)');
-              if (jpyHistory) {
-                setRate(parseFloat(jpyHistory.dealBasRate) || 950);
-              }
+            const jpyRate = exchangeRates.find(rate => rate.curUnit === 'JPY(100)');
+            if (jpyRate && jpyRate.dealBasRate) {
+              newRate = jpyRate.dealBasRate;
             }
             break;
           case 'china':
-            if (exchangeData.cnyRate) {
-              setRate(exchangeData.cnyRate);
-            } else {
-              const cnyHistory = exchangeData.history?.find((item: any) => item.curUnit === 'CNH');
-              if (cnyHistory) {
-                setRate(parseFloat(cnyHistory.dealBasRate) || 190);
-              }
+            const cnyRate = exchangeRates.find(rate => rate.curUnit === 'CNH');
+            if (cnyRate && cnyRate.dealBasRate) {
+              newRate = cnyRate.dealBasRate;
             }
             break;
           case 'europe':
-            if (exchangeData.eurRate) {
-              setRate(exchangeData.eurRate);
-            } else {
-              const eurHistory = exchangeData.history?.find((item: any) => item.curUnit === 'EUR');
-              if (eurHistory) {
-                setRate(parseFloat(eurHistory.dealBasRate) || 1350);
-              }
+            const eurRate = exchangeRates.find(rate => rate.curUnit === 'EUR');
+            if (eurRate && eurRate.dealBasRate) {
+              newRate = eurRate.dealBasRate;
             }
             break;
           default:
-            if (exchangeData.usdRate) {
-              setRate(exchangeData.usdRate);
-            } else {
-              const usdHistory = exchangeData.history?.find((item: any) => item.curUnit === 'USD');
-              if (usdHistory) {
-                setRate(parseFloat(usdHistory.dealBasRate) || 1350);
-              }
+            const defaultUsdRate = exchangeRates.find(rate => rate.curUnit === 'USD');
+            if (defaultUsdRate && defaultUsdRate.dealBasRate) {
+              newRate = defaultUsdRate.dealBasRate;
             }
         }
+        
+        console.log('계산된 환율:', newRate);
+        
+        // 유효한 환율 데이터가 있으면 설정
+        if (newRate > 0) {
+          setRate(newRate);
+        } else {
+          throw new Error(`선택된 국가(${country})의 환율 데이터를 찾을 수 없습니다.\n사용 가능한 통화: ${exchangeRates.map(r => r.curUnit).join(', ')}\n\n💡 관리자에게 환율 데이터 업데이트를 요청하세요.`);
+        }
       } else {
-        throw new Error('API 응답 형식이 예상과 다릅니다.');
+        throw new Error('환율 데이터가 아직 로드되지 않았습니다.\n\n💡 서버 관리자에게 다음 명령을 실행하도록 요청하세요:\nPOST /api/exchange-rates/fetch');
       }
     } catch (err) {
       console.error('환율 데이터를 가져오는 중 오류 발생:', err);
-      setError('환율 데이터를 가져오는데 실패했습니다. 마지막으로 저장된 환율 데이터를 표시합니다.');
+      
+      // 더 자세한 에러 메시지 표시
+      if (err instanceof Error) {
+        setError(`환율 데이터 로드 실패: ${err.message}`);
+      } else {
+        setError('환율 데이터를 가져오는데 실패했습니다. 다시 시도해주세요.');
+      }
     } finally {
       setLoading(false);
     }
@@ -415,12 +412,15 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
           <ActivityIndicator size="large" color="#0066CC" />
           <ThemedText style={styles.loadingText}>환율 데이터를 불러오는 중...</ThemedText>
         </View>
-      ) : error ? (
-        <View style={styles.errorContainer}>
-          <ThemedText style={styles.errorText}>{error}</ThemedText>
-        </View>
-      ) : (
+      ) : (rate && rate > 0) ? (
         <>
+          {/* 에러 메시지가 있으면 작은 경고로 표시 */}
+          {error && (
+            <View style={styles.warningContainer}>
+              <ThemedText style={styles.warningText}>{error}</ThemedText>
+            </View>
+          )}
+          
           <View style={styles.gaugeContainer}>
             <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
               {/* 배경 원 */}
@@ -550,6 +550,17 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
             </ThemedText>
           </View>
         </>
+      ) : (
+        <View style={styles.errorContainer}>
+          <ThemedText style={styles.errorText}>
+            {error?.split('\n').map((line, index) => (
+              <ThemedText key={index} style={styles.errorText}>
+                {line}
+                {index < error.split('\n').length - 1 && '\n'}
+              </ThemedText>
+            ))}
+          </ThemedText>
+        </View>
       )}
     </View>
   );
@@ -640,11 +651,28 @@ const styles = StyleSheet.create({
   errorContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    height: 200,
+    height: 250,
+    paddingHorizontal: 20,
   },
   errorText: {
     fontSize: 14,
     color: '#F44336',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  warningContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFF3CD',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#FFEAA7',
+  },
+  warningText: {
+    fontSize: 12,
+    color: '#E67E22',
     textAlign: 'center',
   },
 });

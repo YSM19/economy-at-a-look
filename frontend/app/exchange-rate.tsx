@@ -6,6 +6,7 @@ import { useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
 import { useState, useEffect } from 'react';
 import { ExchangeRateChart } from '../components/charts/ExchangeRateChart';
+import { economicIndexApi } from '../services/api';
 
 interface ExchangeRateData {
   usdRate: number;
@@ -27,7 +28,7 @@ export default function ExchangeRateScreen() {
   
   const [exchangeRateData, setExchangeRateData] = useState<ExchangeRateData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   // 국가별 제목과 설명 정보
   const getCountryInfo = () => {
@@ -78,25 +79,40 @@ export default function ExchangeRateScreen() {
   const countryInfo = getCountryInfo();
 
   useEffect(() => {
-    // 실제 API 연결 시 여기에 구현
-    // 임시 데이터로 대체
-    const mockData: ExchangeRateData = {
-      usdRate: 1350.50,
-      eurRate: 1450.75,
-      jpyRate: 9.25,
-      cnyRate: 6.45,
-      history: [
-        { date: '2023-01', usdRate: 1300.25, eurRate: 1400.50, jpyRate: 8.75, cnyRate: 6.35 },
-        { date: '2023-02', usdRate: 1310.75, eurRate: 1405.25, jpyRate: 8.85, cnyRate: 6.40 },
-        { date: '2023-03', usdRate: 1320.50, eurRate: 1415.75, jpyRate: 8.95, cnyRate: 6.45 },
-        { date: '2023-04', usdRate: 1330.25, eurRate: 1425.50, jpyRate: 9.05, cnyRate: 6.50 },
-        { date: '2023-05', usdRate: 1340.75, eurRate: 1440.25, jpyRate: 9.15, cnyRate: 6.55 },
-        { date: '2023-06', usdRate: 1350.50, eurRate: 1450.75, jpyRate: 9.25, cnyRate: 6.60 },
-      ]
+    // 실제 API 연결로 환율 데이터 가져오기
+    const fetchExchangeRateData = async () => {
+      try {
+        setLoading(true);
+        const response = await economicIndexApi.getExchangeRate();
+        
+        if (response.data && response.data.success && response.data.data) {
+          const apiData = response.data.data;
+          const transformedData: ExchangeRateData = {
+            usdRate: apiData.usdRate || 0,
+            eurRate: apiData.eurRate || 0,
+            jpyRate: apiData.jpyRate || 0,
+            cnyRate: apiData.cnyRate || 0,
+            history: apiData.history?.map((item: any) => ({
+              date: item.date,
+              usdRate: item.curUnit === 'USD' ? parseFloat(item.dealBasRate) : 0,
+              eurRate: item.curUnit === 'EUR' ? parseFloat(item.dealBasRate) : 0,
+              jpyRate: item.curUnit === 'JPY(100)' ? parseFloat(item.dealBasRate) : 0,
+              cnyRate: item.curUnit === 'CNH' ? parseFloat(item.dealBasRate) : 0,
+            })) || []
+          };
+          setExchangeRateData(transformedData);
+        } else {
+          setError('환율 데이터를 불러올 수 없습니다.');
+        }
+      } catch (err) {
+        console.error('환율 데이터 로딩 실패:', err);
+        setError('환율 데이터를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
+      }
     };
     
-    setExchangeRateData(mockData);
-    setLoading(false);
+    fetchExchangeRateData();
   }, []);
 
   return (

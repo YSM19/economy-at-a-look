@@ -1,10 +1,11 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
 import { useState, useEffect } from 'react';
 import { CPIChart } from '../components/charts/CPIChart';
+import { economicIndexApi } from '../services/api';
 
 interface CPIData {
   currentCPI: number;
@@ -22,29 +23,29 @@ interface CPIData {
 export default function ConsumerPriceIndexScreen() {
   const [cpiData, setCpiData] = useState<CPIData | null>(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // 실제 API 연결 시 여기에 구현
-    // 임시 데이터로 대체
-    const mockData: CPIData = {
-      currentCPI: 110.5,
-      prevMonthCPI: 109.8,
-      changeRate: 0.64,
-      annualRate: 3.8,
-      history: [
-        { date: '2023-01', cpi: 106.2, monthlyChange: 0.8, annualChange: 5.2 },
-        { date: '2023-02', cpi: 106.9, monthlyChange: 0.7, annualChange: 4.8 },
-        { date: '2023-03', cpi: 107.5, monthlyChange: 0.6, annualChange: 4.2 },
-        { date: '2023-04', cpi: 108.2, monthlyChange: 0.6, annualChange: 3.9 },
-        { date: '2023-05', cpi: 109.0, monthlyChange: 0.7, annualChange: 3.7 },
-        { date: '2023-06', cpi: 109.8, monthlyChange: 0.7, annualChange: 3.6 },
-        { date: '2023-07', cpi: 110.5, monthlyChange: 0.6, annualChange: 3.8 },
-      ]
+    // 실제 API 연결로 소비자물가지수 데이터 가져오기
+    const fetchCPIData = async () => {
+      try {
+        setLoading(true);
+        const response = await economicIndexApi.getConsumerPriceIndex();
+        
+        if (response.data && response.data.success && response.data.data) {
+          setCpiData(response.data.data);
+        } else {
+          setError('소비자물가지수 데이터를 불러올 수 없습니다.');
+        }
+      } catch (err) {
+        console.error('소비자물가지수 데이터 로딩 실패:', err);
+        setError('소비자물가지수 데이터를 불러오는 중 오류가 발생했습니다.');
+      } finally {
+        setLoading(false);
+      }
     };
     
-    setCpiData(mockData);
-    setLoading(false);
+    fetchCPIData();
   }, []);
 
   return (

@@ -1,6 +1,5 @@
 import axios, { AxiosResponse } from 'axios';
 import Config, { isDevelopment, useMockData } from '../constants/Config';
-import { mockExchangeRate } from './mockData';
 
 /**
  * 환경 설정에 따라 구성된 axios 인스턴스
@@ -119,46 +118,54 @@ const withRetry = async <T>(apiCall: () => Promise<AxiosResponse<T>>, mockData?:
   throw lastError;
 };
 
-// 환율 관련 API 호출
+// 환율 관련 API 호출 (재시도 1회로 제한)
 export const exchangeRateApi = {
   getTodayRates: () => withRetry(
     () => api.get('/api/exchange-rates/today'),
-    mockExchangeRate.todayRates.data
+    undefined,
+    1 // 재시도 1회만
   ),
   getLatestRates: () => withRetry(
     () => api.get('/api/exchange-rates/latest'),
-    mockExchangeRate.latestRates.data
+    undefined,
+    1 // 재시도 1회만
   ),
   getRatesByCurrency: (currency: string) => 
     withRetry(
       () => api.get(`/api/exchange-rates/currency/${currency}`),
-      mockExchangeRate.latestRates.data.filter(item => item.curUnit === currency)
+      undefined,
+      1 // 재시도 1회만
     ),
   fetchRates: (date?: string) => {
     const params = date ? { date } : {};
     return withRetry(
       () => api.post('/api/exchange-rates/fetch', null, { params }),
-      mockExchangeRate.todayRates.data
+      undefined,
+      1 // 재시도 1회만
     );
   }
 };
 
-// 경제 지표 관련 API 호출
+// 경제 지표 관련 API 호출 (재시도 1회로 제한)
 export const economicIndexApi = {
   getIndex: () => withRetry(
     () => api.get('/api/economic/index'),
-    mockExchangeRate.economicIndex.data
+    undefined,
+    1 // 재시도 1회만
   ),
   getExchangeRate: () => withRetry(
     () => api.get('/api/economic/exchange-rate'),
-    mockExchangeRate.exchangeRateData.data
+    undefined,
+    1 // 재시도 1회만
   ),
   getInterestRate: () => withRetry(
     () => api.get('/api/economic/interest-rate'),
-    { usdRate: 3.75, fedRate: 4.25, bobRate: 3.5 }
+    undefined,
+    1 // 재시도 1회만
   ),
   getConsumerPriceIndex: () => withRetry(
     () => api.get('/api/economic/consumer-price-index'),
-    { currentValue: 102.5, previousValue: 101.2, annualChange: 2.5 }
+    undefined,
+    1 // 재시도 1회만
   )
 }; 

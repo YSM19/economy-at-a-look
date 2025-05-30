@@ -26,14 +26,16 @@ public class RestTemplateConfig {
             protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
                 super.prepareConnection(connection, httpMethod);
                 
-                // 리디렉션 자동 처리 비활성화
-                connection.setInstanceFollowRedirects(false);
+                // 리디렉션 자동 처리 활성화 (한국수출입은행 API에서 필요할 수 있음)
+                connection.setInstanceFollowRedirects(true);
                 
-                // 추가 헤더 설정
+                // 브라우저와 유사한 헤더 설정
                 connection.setRequestProperty("Accept", "application/json, text/plain, */*");
                 connection.setRequestProperty("Accept-Language", "ko-KR,ko;q=0.9,en;q=0.8");
                 connection.setRequestProperty("Accept-Encoding", "gzip, deflate, br");
                 connection.setRequestProperty("Connection", "keep-alive");
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                connection.setRequestProperty("Referer", "https://www.koreaexim.go.kr/");
                 connection.setRequestProperty("Cache-Control", "no-cache");
                 connection.setRequestProperty("Pragma", "no-cache");
             }
@@ -59,12 +61,7 @@ public class RestTemplateConfig {
             Collections.singletonList(new ClientHttpRequestInterceptor() {
                 @Override
                 public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-                    // 브라우저와 유사한 User-Agent 설정
-                    request.getHeaders().set("User-Agent", 
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-                    // 리퍼러 헤더 추가
-                    request.getHeaders().set("Referer", "https://www.koreaexim.go.kr/");
-                    // 호스트 헤더 명시적 설정
+                    // 추가 헤더만 설정 (기본 헤더는 이미 prepareConnection에서 설정됨)
                     request.getHeaders().set("Host", "www.koreaexim.go.kr");
                     
                     return execution.execute(request, body);
@@ -89,12 +86,7 @@ public class RestTemplateConfig {
             Collections.singletonList(new ClientHttpRequestInterceptor() {
                 @Override
                 public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-                    // 브라우저와 유사한 User-Agent 설정
-                    request.getHeaders().set("User-Agent", 
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-                    // 리퍼러 헤더 추가
-                    request.getHeaders().set("Referer", "https://www.koreaexim.go.kr/");
-                    // 호스트 헤더 명시적 설정
+                    // 추가 헤더만 설정 (기본 헤더는 이미 prepareConnection에서 설정됨)
                     request.getHeaders().set("Host", "www.koreaexim.go.kr");
                     
                     return execution.execute(request, body);
@@ -119,9 +111,7 @@ public class RestTemplateConfig {
             Collections.singletonList(new ClientHttpRequestInterceptor() {
                 @Override
                 public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-                    request.getHeaders().set("User-Agent", 
-                        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-                    request.getHeaders().set("Referer", "https://www.koreaexim.go.kr/");
+                    // 호스트 헤더만 추가 설정
                     request.getHeaders().set("Host", "www.koreaexim.go.kr");
                     
                     return execution.execute(request, body);

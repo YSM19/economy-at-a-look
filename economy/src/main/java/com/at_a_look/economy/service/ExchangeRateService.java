@@ -79,8 +79,11 @@ public class ExchangeRateService {
     @Transactional
     public int fetchExchangeRates(LocalDate date) {
         log.info("📊 환율 데이터 가져오기 시작: 날짜 = {}", date);
+        log.info("🕐 현재 시스템 날짜: {}", LocalDate.now());
+        log.info("📅 요청된 날짜: {}", date);
         
         String formattedDate = date.format(DateTimeFormatter.BASIC_ISO_DATE);
+        log.info("📝 포맷된 날짜: {}", formattedDate);
         
         // API URL 생성
         String url = UriComponentsBuilder.fromHttpUrl(API_URL)
@@ -95,12 +98,25 @@ public class ExchangeRateService {
         try {
             // API 호출 전 로그 추가
             log.debug("🔄 API 호출 시도 - URL: {}, 날짜: {}", API_URL, formattedDate);
+            log.info("🌐 실제 호출 URL: {}", url);
             
             // API 호출
             ExchangeRateApiResponse[] response = restTemplate.getForObject(url, ExchangeRateApiResponse[].class);
             
+            // 응답 상세 로깅
+            log.info("📥 API 응답 수신: response={}", response != null ? "not null" : "null");
+            if (response != null) {
+                log.info("📊 응답 배열 길이: {}", response.length);
+                if (response.length > 0) {
+                    log.info("📋 첫 번째 응답 샘플: curUnit={}, curNm={}, dealBasR={}", 
+                            response[0].getCurUnit(), response[0].getCurNm(), response[0].getDealBasR());
+                }
+            }
+            
             if (response == null || response.length == 0) {
-                log.warn("📭 외부 API에서 {}일 환율 데이터를 제공하지 않습니다. (주말, 공휴일 등)", date);
+                log.warn("📭 외부 API에서 {}일 환율 데이터를 제공하지 않습니다.", date);
+                log.warn("🔍 API 응답이 {}입니다. URL: {}", 
+                        response == null ? "null" : "빈 배열", url);
                 return 0;
             }
             
@@ -251,38 +267,24 @@ public class ExchangeRateService {
     }
 
     /**
-     * 특정 날짜의 환율 데이터를 조회하거나 없으면 API에서 가져옵니다.
-     * API에서 데이터를 가져오는 데 실패하면 가장 최근에 저장된 데이터를 사용합니다.
+     * 특정 날짜의 환율 데이터를 조회하거나 없으면 가장 최근에 저장된 데이터를 사용합니다.
+     * API 호출 없이 바로 최근 데이터로 대체하여 응답 속도를 개선합니다.
      */
     private List<ExchangeRateResponseDTO> getOrFetchRatesByDate(LocalDate date) {
         List<ExchangeRate> rates = exchangeRateRepository.findBySearchDate(date);
         
-        // 데이터가 없으면 API에서 가져오기 시도
+        // 데이터가 없으면 바로 최근 저장된 환율 데이터로 대체
         if (rates.isEmpty()) {
-            log.warn("📊 {}일의 환율 데이터가 DB에 없습니다. API에서 가져오기를 시도합니다.", date);
+            log.warn("📊 {}일의 환율 데이터가 DB에 없습니다. 최근 저장된 환율 데이터로 대체합니다.", date);
             
-            try {
-                int fetchedCount = fetchExchangeRates(date);
-                rates = exchangeRateRepository.findBySearchDate(date);
-                
-                if (!rates.isEmpty()) {
-                    log.info("✅ API에서 {}일 환율 데이터 {}개를 성공적으로 가져왔습니다.", date, fetchedCount);
-                } else {
-                    log.error("❌ API 호출은 성공했지만 {}일 환율 데이터가 저장되지 않았습니다.", date);
-                }
-            } catch (Exception e) {
-                log.error("❌ [API 호출 실패] {}일 환율 데이터 가져오기 실패: {}", date, e.getMessage());
-                log.info("🔄 최근 저장된 환율 데이터로 대체를 시도합니다.");
-                
-                // 가장 최근 날짜의 모든 환율 데이터 조회
-                rates = getLatestStoredRates();
-                if (!rates.isEmpty()) {
-                    LocalDate latestDate = rates.get(0).getSearchDate();
-                    log.info("📈 대체 데이터 사용: {}일 환율 데이터 {}개를 사용합니다.", latestDate, rates.size());
-                    log.warn("⚠️ 주의: 요청한 날짜({})가 아닌 {}일 데이터입니다.", date, latestDate);
-                } else {
-                    log.error("💥 [심각한 오류] 저장된 환율 데이터가 전혀 없습니다!");
-                }
+            // 가장 최근 날짜의 모든 환율 데이터 조회
+            rates = getLatestStoredRates();
+            if (!rates.isEmpty()) {
+                LocalDate latestDate = rates.get(0).getSearchDate();
+                log.info("📈 대체 데이터 사용: {}일 환율 데이터 {}개를 사용합니다.", latestDate, rates.size());
+                log.warn("⚠️ 주의: 요청한 날짜({})가 아닌 {}일 데이터입니다.", date, latestDate);
+            } else {
+                log.error("💥 [심각한 오류] 저장된 환율 데이터가 전혀 없습니다!");
             }
         } else {
             log.debug("✅ {}일 환율 데이터 {}개를 DB에서 조회했습니다.", date, rates.size());
@@ -391,34 +393,23 @@ public class ExchangeRateService {
     }
     
     /**
-     * 최신 환율 데이터를 가져오거나 없으면 API에서 가져옵니다.
-     * API에서 데이터를 가져오는 데 실패하면 가장 최근에 저장된 데이터를 사용합니다.
+     * 최신 환율 데이터를 가져오거나 없으면 가장 최근에 저장된 데이터를 사용합니다.
+     * API 호출 없이 바로 최근 데이터로 대체하여 응답 속도를 개선합니다.
      */
     private List<ExchangeRate> getLatestRatesOrFetch(LocalDate date) {
         List<ExchangeRate> rates = exchangeRateRepository.findBySearchDate(date);
         
-        // 오늘 데이터가 없으면 API에서 가져오기 시도
+        // 오늘 데이터가 없으면 바로 최근 저장된 환율 데이터로 대체
         if (rates.isEmpty()) {
-            log.warn("📊 {}일의 최신 환율 데이터가 없습니다. API 호출을 시도합니다.", date);
+            log.warn("📊 {}일의 최신 환율 데이터가 없습니다. 최근 저장된 환율 데이터로 대체합니다.", date);
             
-            try {
-                fetchExchangeRates(date);
-                rates = exchangeRateRepository.findBySearchDate(date);
-                
-                if (!rates.isEmpty()) {
-                    log.info("✅ 최신 환율 데이터 API 호출 성공 - {}개 통화", rates.size());
-                }
-            } catch (Exception e) {
-                log.error("❌ [최신 환율 데이터 API 실패] {}일 데이터 가져오기 실패: {}", date, e.getMessage());
-                
-                // 가장 최근 날짜의 모든 환율 데이터 조회
-                rates = getLatestStoredRates();
-                if (!rates.isEmpty()) {
-                    LocalDate latestDate = rates.get(0).getSearchDate();
-                    log.info("📈 대체 데이터 사용: {}일 환율 데이터로 대체합니다.", latestDate);
-                } else {
-                    log.error("💥 [심각한 오류] 저장된 환율 데이터가 전혀 없습니다!");
-                }
+            // 가장 최근 날짜의 모든 환율 데이터 조회
+            rates = getLatestStoredRates();
+            if (!rates.isEmpty()) {
+                LocalDate latestDate = rates.get(0).getSearchDate();
+                log.info("📈 대체 데이터 사용: {}일 환율 데이터로 대체합니다.", latestDate);
+            } else {
+                log.error("💥 [심각한 오류] 저장된 환율 데이터가 전혀 없습니다!");
             }
         }
         
@@ -438,7 +429,7 @@ public class ExchangeRateService {
     
     /**
      * 가장 최근의 달러 환율 정보를 단일 객체로 반환합니다.
-     * 데이터가 없으면 API에서 가져오기 시도하고, 실패하면 가장 최근 저장된 데이터를 사용합니다.
+     * 데이터가 없으면 가장 최근 저장된 데이터를 사용합니다.
      * 
      * @return 달러 환율 DTO (Optional)
      */
@@ -449,29 +440,18 @@ public class ExchangeRateService {
         
         List<ExchangeRate> rates = exchangeRateRepository.findBySearchDate(today);
         
-        // 오늘 데이터가 없으면 API에서 가져오기 시도
+        // 오늘 데이터가 없으면 바로 최근 저장된 환율 데이터로 대체
         if (rates.isEmpty()) {
-            log.warn("📊 {}일의 환율 데이터가 없습니다. API 호출을 시도합니다.", today);
+            log.warn("📊 {}일의 환율 데이터가 없습니다. 최근 저장된 환율 데이터로 대체합니다.", today);
             
-            try {
-                fetchExchangeRates(today);
-                rates = exchangeRateRepository.findBySearchDate(today);
-                
-                if (!rates.isEmpty()) {
-                    log.info("✅ API에서 오늘 환율 데이터를 성공적으로 가져왔습니다.");
-                }
-            } catch (Exception e) {
-                log.error("❌ [환율 API 실패] {}일 환율 데이터 가져오기 실패: {}", today, e.getMessage());
-                
-                // 가장 최근 날짜의 모든 환율 데이터 조회
-                rates = getLatestStoredRates();
-                if (rates.isEmpty()) {
-                    log.error("💥 [심각한 오류] 저장된 환율 데이터가 없어 빈 값을 반환합니다.");
-                    return Optional.empty();
-                }
-                LocalDate latestDate = rates.get(0).getSearchDate();
-                log.info("📈 대체 데이터 사용: {}일 환율 데이터를 사용합니다.", latestDate);
+            // 가장 최근 날짜의 모든 환율 데이터 조회
+            rates = getLatestStoredRates();
+            if (rates.isEmpty()) {
+                log.error("💥 [심각한 오류] 저장된 환율 데이터가 없어 빈 값을 반환합니다.");
+                return Optional.empty();
             }
+            LocalDate latestDate = rates.get(0).getSearchDate();
+            log.info("📈 대체 데이터 사용: {}일 환율 데이터를 사용합니다.", latestDate);
         }
         
         // USD 환율 찾기
