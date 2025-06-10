@@ -17,17 +17,21 @@ import java.util.stream.Collectors;
 public class InterestRateDto {
     private Long id;
     private LocalDate date;
-    private Double kbRate;
-    private Double fedRate;
-    private Double marketRate;
+    private String countryCode;
+    private String countryName;
+    private String bankName;
+    private String rateType;
+    private Double interestRate;
 
     public static InterestRateDto fromEntity(InterestRate entity) {
         return InterestRateDto.builder()
                 .id(entity.getId())
                 .date(entity.getDate())
-                .kbRate(entity.getKbRate())
-                .fedRate(entity.getFedRate())
-                .marketRate(entity.getMarketRate())
+                .countryCode(entity.getCountryCode())
+                .countryName(entity.getCountryName())
+                .bankName(entity.getBankName())
+                .rateType(entity.getRateType())
+                .interestRate(entity.getInterestRate())
                 .build();
     }
 
@@ -41,9 +45,11 @@ public class InterestRateDto {
         return InterestRate.builder()
                 .id(id)
                 .date(date)
-                .kbRate(kbRate)
-                .fedRate(fedRate)
-                .marketRate(marketRate)
+                .countryCode(countryCode)
+                .countryName(countryName)
+                .bankName(bankName)
+                .rateType(rateType)
+                .interestRate(interestRate)
                 .build();
     }
 } 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Alert, Platform, TextInput } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Alert, Platform, TextInput, Dimensions } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ThemedText } from '../../components/ThemedText';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -22,10 +22,27 @@ export default function AdminDashboardScreen() {
   const [customDate, setCustomDate] = useState('');
   const [selectedCountries, setSelectedCountries] = useState<string[]>([]);
   const [isCountriesLoading, setIsCountriesLoading] = useState(false);
+  const [isInterestRateLoading, setIsInterestRateLoading] = useState(false);
+  const [isExchangeRateLoading, setIsExchangeRateLoading] = useState(false);
+  const [isCPILoading, setIsCPILoading] = useState(false);
+  const [screenData, setScreenData] = useState(Dimensions.get('window'));
 
   useEffect(() => {
     // 인증 확인
     checkAuthentication();
+  }, []);
+
+  useEffect(() => {
+    // 화면 크기 변경 감지
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setScreenData(window);
+    });
+
+    return () => {
+      if (subscription && subscription.remove) {
+        subscription.remove();
+      }
+    };
   }, []);
 
   // 관리자 인증 확인
@@ -57,7 +74,7 @@ export default function AdminDashboardScreen() {
 
   // 오늘의 환율 데이터 조회 (외부 API 호출)
   const fetchExchangeRates = async () => {
-    setIsLoading(true);
+    setIsExchangeRateLoading(true);
     setErrorMessage(null);
     setApiResult(null);
     
@@ -112,7 +129,7 @@ export default function AdminDashboardScreen() {
       Alert.alert('오류', userMessage);
       
     } finally {
-      setIsLoading(false);
+      setIsExchangeRateLoading(false);
     }
   };
 
@@ -250,6 +267,384 @@ export default function AdminDashboardScreen() {
     }
   };
 
+  // 1년 금리 데이터 수동 호출
+  const fetchYearlyInterestRates = async () => {
+    setIsInterestRateLoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('📅 관리자 대시보드: 1년 금리 데이터 가져오기 시작');
+      const response = await axios.post(`${Config.apiUrl}/api/economic/admin/interest-rate/fetch/yearly`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 1년 금리 데이터 가져오기 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '최근 1년간의 금리 데이터를 성공적으로 가져왔습니다.');
+      } else {
+        console.warn('⚠️ 1년 금리 데이터 가져오기 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '1년 금리 데이터를 가져오는데 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 1년 금리 데이터 가져오기 에러:', error);
+      let userMessage = '1년 금리 데이터를 가져오는 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsInterestRateLoading(false);
+    }
+  };
+
+  // 1달 금리 데이터 수동 호출
+  const fetchMonthlyInterestRates = async () => {
+    setIsInterestRateLoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('📅 관리자 대시보드: 1달 금리 데이터 가져오기 시작');
+      const response = await axios.post(`${Config.apiUrl}/api/economic/admin/interest-rate/fetch/monthly`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 1달 금리 데이터 가져오기 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '최근 1개월간의 금리 데이터를 성공적으로 가져왔습니다.');
+      } else {
+        console.warn('⚠️ 1달 금리 데이터 가져오기 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '1달 금리 데이터를 가져오는데 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 1달 금리 데이터 가져오기 에러:', error);
+      let userMessage = '1달 금리 데이터를 가져오는 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsInterestRateLoading(false);
+    }
+  };
+
+  // 1년 환율 데이터 수동 호출
+  const fetchYearlyExchangeRates = async () => {
+    setIsExchangeRateLoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('📅 관리자 대시보드: 1년 환율 데이터 가져오기 시작');
+      const response = await axios.post(`${Config.apiUrl}/api/economic/admin/exchange-rate/fetch/yearly`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 1년 환율 데이터 가져오기 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '최근 1년간의 환율 데이터를 성공적으로 가져왔습니다.');
+      } else {
+        console.warn('⚠️ 1년 환율 데이터 가져오기 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '1년 환율 데이터를 가져오는데 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 1년 환율 데이터 가져오기 에러:', error);
+      let userMessage = '1년 환율 데이터를 가져오는 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsExchangeRateLoading(false);
+    }
+  };
+
+  // 1달 환율 데이터 수동 호출
+  const fetchMonthlyExchangeRates = async () => {
+    setIsExchangeRateLoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('📅 관리자 대시보드: 1달 환율 데이터 가져오기 시작');
+      const response = await axios.post(`${Config.apiUrl}/api/economic/admin/exchange-rate/fetch/monthly`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 1달 환율 데이터 가져오기 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '최근 1개월간의 환율 데이터를 성공적으로 가져왔습니다.');
+      } else {
+        console.warn('⚠️ 1달 환율 데이터 가져오기 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '1달 환율 데이터를 가져오는데 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 1달 환율 데이터 가져오기 에러:', error);
+      let userMessage = '1달 환율 데이터를 가져오는 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsExchangeRateLoading(false);
+    }
+  };
+
+  // 1년 소비자물가지수 데이터 가져오기
+  const fetchYearlyCPIData = async () => {
+    setIsCPILoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('📊 관리자 대시보드: 1년 소비자물가지수 데이터 가져오기 시작');
+      const response = await axios.post(`${Config.apiUrl}/api/economic/admin/consumer-price-index/fetch/yearly`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 1년 소비자물가지수 데이터 가져오기 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '최근 1년간의 소비자물가지수 데이터를 성공적으로 가져왔습니다.');
+      } else {
+        console.warn('⚠️ 1년 소비자물가지수 데이터 가져오기 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '1년 소비자물가지수 데이터를 가져오는데 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 1년 소비자물가지수 데이터 가져오기 에러:', error);
+      let userMessage = '1년 소비자물가지수 데이터를 가져오는 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsCPILoading(false);
+    }
+  };
+
+  // 2년 소비자물가지수 데이터 가져오기
+  const fetch2YearsCPIData = async () => {
+    setIsCPILoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('📊 관리자 대시보드: 2년 소비자물가지수 데이터 가져오기 시작');
+      const response = await axios.post(`${Config.apiUrl}/api/economic/admin/consumer-price-index/fetch/2years`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 2년 소비자물가지수 데이터 가져오기 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '최근 2년간의 소비자물가지수 데이터를 성공적으로 가져왔습니다.');
+      } else {
+        console.warn('⚠️ 2년 소비자물가지수 데이터 가져오기 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '2년 소비자물가지수 데이터를 가져오는데 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 2년 소비자물가지수 데이터 가져오기 에러:', error);
+      let userMessage = '2년 소비자물가지수 데이터를 가져오는 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsCPILoading(false);
+    }
+  };
+
+  // 소비자물가지수 데이터 강제 새로고침
+  const refreshCPIData = async () => {
+    setIsCPILoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('🔄 관리자 대시보드: 소비자물가지수 데이터 강제 새로고침 시작');
+      const response = await axios.post(`${Config.apiUrl}/api/economic/consumer-price-index/refresh`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 소비자물가지수 데이터 새로고침 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '소비자물가지수 데이터가 성공적으로 새로고침되었습니다.');
+      } else {
+        console.warn('⚠️ 소비자물가지수 데이터 새로고침 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '소비자물가지수 데이터 새로고침에 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 소비자물가지수 데이터 새로고침 에러:', error);
+      let userMessage = '소비자물가지수 데이터 새로고침 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsCPILoading(false);
+    }
+  };
+
+  // 소비자물가지수 스케줄러 수동 실행
+  const runCPIScheduler = async () => {
+    setIsCPILoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('⚙️ 관리자 대시보드: 소비자물가지수 스케줄러 수동 실행 시작');
+      const response = await axios.post(`${Config.apiUrl}/api/economic/consumer-price-index/scheduler/run`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 소비자물가지수 스케줄러 수동 실행 성공:', response.data.message);
+        Alert.alert('성공', response.data.message || '소비자물가지수 스케줄러가 성공적으로 실행되었습니다.');
+      } else {
+        console.warn('⚠️ 소비자물가지수 스케줄러 수동 실행 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '소비자물가지수 스케줄러 실행에 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 소비자물가지수 스케줄러 수동 실행 에러:', error);
+      let userMessage = '소비자물가지수 스케줄러 실행 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsCPILoading(false);
+    }
+  };
+
+  // 소비자물가지수 데이터 상태 디버깅
+  const debugCPIData = async () => {
+    setIsCPILoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log('🔍 관리자 대시보드: 소비자물가지수 데이터 상태 확인 시작');
+      const response = await axios.get(`${Config.apiUrl}/api/economic/consumer-price-index/debug`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log('✅ 소비자물가지수 데이터 상태 확인 성공:', response.data.message);
+        Alert.alert('디버깅 정보', response.data.data || '소비자물가지수 데이터 상태를 확인했습니다.');
+      } else {
+        console.warn('⚠️ 소비자물가지수 데이터 상태 확인 실패:', response.data.message);
+        Alert.alert('오류', response.data.message || '소비자물가지수 데이터 상태 확인에 실패했습니다.');
+      }
+      
+    } catch (error) {
+      console.error('💥 소비자물가지수 데이터 상태 확인 에러:', error);
+      let userMessage = '소비자물가지수 데이터 상태 확인 중 오류가 발생했습니다.';
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsCPILoading(false);
+    }
+  };
+
   // 인증 안된 경우 로딩 화면 표시
   if (!isAuthenticated) {
     return (
@@ -276,18 +671,63 @@ export default function AdminDashboardScreen() {
           <ThemedText style={styles.headerSubtitle}>데이터 관리 및 API 요청</ThemedText>
         </View>
         
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>환율 데이터 관리</ThemedText>
+        {/* 환율과 금리 데이터 관리 영역 */}
+        <View style={screenData.width > 768 ? styles.mainContainer : styles.mainContainerMobile}>
+          {/* 환율 데이터 관리 영역 */}
+          <View style={styles.categoryContainer}>
+            <View style={styles.categoryHeader}>
+              <ThemedText style={styles.categoryTitle}>🌍 환율 데이터 관리</ThemedText>
+              <View style={styles.categoryLine} />
+            </View>
+            
+            <View style={[styles.section, styles.exchangeRateSection]}>
+              <ThemedText style={styles.sectionTitle}>💱 실시간 환율 데이터</ThemedText>
           
-          <TouchableOpacity 
-            style={[styles.button, isLoading && styles.disabledButton]}
-            onPress={fetchExchangeRates}
-            disabled={isLoading}
-          >
-            <ThemedText style={styles.buttonText}>
-              {isLoading ? '가져오는 중...' : '🌐 오늘 환율 데이터 가져오기'}
-            </ThemedText>
-          </TouchableOpacity>
+                      <TouchableOpacity 
+              style={[styles.button, (isExchangeRateLoading || isLoading) && styles.disabledButton]}
+              onPress={fetchExchangeRates}
+              disabled={isExchangeRateLoading || isLoading}
+            >
+              <ThemedText style={styles.buttonText}>
+                {isExchangeRateLoading ? '가져오는 중...' : '🌐 오늘 환율 데이터 가져오기'}
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.button, 
+                styles.exchangeRateButton,
+                (isExchangeRateLoading || isLoading) && styles.disabledButton
+              ]}
+              onPress={fetchMonthlyExchangeRates}
+              disabled={isExchangeRateLoading || isLoading}
+            >
+              <ThemedText style={styles.buttonText}>
+                {isExchangeRateLoading ? '📊 가져오는 중...' : '📅 1달 환율 데이터 가져오기'}
+              </ThemedText>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[
+                styles.button, 
+                styles.exchangeRateButtonSecondary,
+                (isExchangeRateLoading || isLoading) && styles.disabledButton
+              ]}
+              onPress={fetchYearlyExchangeRates}
+              disabled={isExchangeRateLoading || isLoading}
+            >
+              <ThemedText style={styles.buttonText}>
+                {isExchangeRateLoading ? '📊 가져오는 중...' : '📅 1년 환율 데이터 가져오기'}
+              </ThemedText>
+            </TouchableOpacity>
+            
+            {isExchangeRateLoading && (
+              <View style={styles.loadingNotice}>
+                <ThemedText style={styles.loadingNoticeText}>
+                  ⏱️ 외부 API에서 환율 데이터를 가져오고 있습니다. 중복된 데이터는 자동으로 건너뛰므로 시간이 절약됩니다.
+                </ThemedText>
+              </View>
+            )}
           
           <View style={styles.dateInputContainer}>
             <TextInput
@@ -307,10 +747,10 @@ export default function AdminDashboardScreen() {
               </ThemedText>
             </TouchableOpacity>
           </View>
-        </View>
-        
-        <View style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>국가별 환율 데이터 수집 (6개월)</ThemedText>
+          </View>
+          
+          <View style={[styles.section, styles.exchangeRateSection]}>
+            <ThemedText style={styles.sectionTitle}>🌐 국가별 환율 데이터 수집 (6개월)</ThemedText>
           <ThemedText style={styles.sectionDescription}>
             선택한 국가의 최근 6개월 환율 데이터를 외부 API에서 가져와 저장합니다.
           </ThemedText>
@@ -389,6 +829,163 @@ export default function AdminDashboardScreen() {
               </ThemedText>
             </View>
           )}
+            </View>
+          </View>
+          
+          {/* 금리 데이터 관리 영역 */}
+          <View style={styles.categoryContainer}>
+            <View style={styles.categoryHeader}>
+              <ThemedText style={styles.categoryTitle}>💰 금리 데이터 관리</ThemedText>
+              <View style={styles.categoryLine} />
+            </View>
+            
+            <View style={[styles.section, styles.interestRateSection]}>
+              <ThemedText style={styles.sectionTitle}>📊 한국은행 기준금리</ThemedText>
+              <ThemedText style={styles.sectionDescription}>
+                한국은행 ECOS API에서 기준금리 데이터를 수동으로 가져옵니다.
+              </ThemedText>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.button, 
+                  styles.interestRateButton,
+                  (isInterestRateLoading || isLoading) && styles.disabledButton
+                ]}
+                onPress={fetchMonthlyInterestRates}
+                disabled={isInterestRateLoading || isLoading}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isInterestRateLoading ? '📊 가져오는 중...' : '📅 1달 금리 데이터 가져오기'}
+                </ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.button, 
+                  styles.interestRateButtonSecondary,
+                  (isInterestRateLoading || isLoading) && styles.disabledButton
+                ]}
+                onPress={fetchYearlyInterestRates}
+                disabled={isInterestRateLoading || isLoading}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isInterestRateLoading ? '📊 가져오는 중...' : '📅 1년 금리 데이터 가져오기'}
+                </ThemedText>
+              </TouchableOpacity>
+              
+              {isInterestRateLoading && (
+                <View style={styles.loadingNotice}>
+                  <ThemedText style={styles.loadingNoticeText}>
+                    ⏱️ 한국은행 ECOS API에서 금리 데이터를 가져오고 있습니다. 중복된 데이터는 자동으로 건너뛰므로 시간이 절약됩니다.
+                  </ThemedText>
+                </View>
+              )}
+            </View>
+          </View>
+
+          {/* 소비자물가지수 데이터 관리 영역 */}
+          <View style={styles.categoryContainer}>
+            <View style={styles.categoryHeader}>
+              <ThemedText style={styles.categoryTitle}>📊 소비자물가지수 데이터 관리</ThemedText>
+              <View style={styles.categoryLine} />
+            </View>
+            
+            <View style={[styles.section, styles.cpiSection]}>
+              <ThemedText style={styles.sectionTitle}>📈 소비자물가지수 (CPI)</ThemedText>
+              <ThemedText style={styles.sectionDescription}>
+                한국은행 ECOS API에서 소비자물가지수 데이터를 수동으로 가져옵니다. (통계표: 901Y009)
+              </ThemedText>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.button, 
+                  styles.cpiButton,
+                  (isCPILoading || isLoading) && styles.disabledButton
+                ]}
+                onPress={refreshCPIData}
+                disabled={isCPILoading || isLoading}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isCPILoading ? '🔄 새로고침 중...' : '🔄 CPI 데이터 강제 새로고침'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[
+                  styles.button, 
+                  styles.cpiButton,
+                  (isCPILoading || isLoading) && styles.disabledButton
+                ]}
+                onPress={fetchYearlyCPIData}
+                disabled={isCPILoading || isLoading}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isCPILoading ? '📊 가져오는 중...' : '📅 1년 CPI 데이터 가져오기'}
+                </ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  styles.button, 
+                  styles.cpiButtonSecondary,
+                  (isCPILoading || isLoading) && styles.disabledButton
+                ]}
+                onPress={fetch2YearsCPIData}
+                disabled={isCPILoading || isLoading}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isCPILoading ? '📊 가져오는 중...' : '📅 2년 CPI 데이터 가져오기'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[
+                  styles.button, 
+                  styles.cpiSchedulerButton,
+                  (isCPILoading || isLoading) && styles.disabledButton
+                ]}
+                onPress={runCPIScheduler}
+                disabled={isCPILoading || isLoading}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isCPILoading ? '⚙️ 실행 중...' : '⚙️ CPI 스케줄러 수동 실행'}
+                </ThemedText>
+              </TouchableOpacity>
+
+              <TouchableOpacity 
+                style={[
+                  styles.button, 
+                  styles.secondaryButton,
+                  (isCPILoading || isLoading) && styles.disabledButton
+                ]}
+                onPress={debugCPIData}
+                disabled={isCPILoading || isLoading}
+              >
+                <ThemedText style={styles.buttonText}>
+                  {isCPILoading ? '🔍 확인 중...' : '🔍 CPI 데이터 상태 확인'}
+                </ThemedText>
+              </TouchableOpacity>
+              
+              {isCPILoading && (
+                <View style={styles.loadingNotice}>
+                  <ThemedText style={styles.loadingNoticeText}>
+                    ⏱️ 한국은행 ECOS API에서 소비자물가지수 데이터를 가져오고 있습니다. 월별 데이터이므로 금리보다 처리 시간이 짧습니다.
+                  </ThemedText>
+                </View>
+              )}
+
+              <View style={styles.cpiInfoContainer}>
+                <ThemedText style={styles.cpiInfoTitle}>📋 CPI 데이터 정보</ThemedText>
+                <ThemedText style={styles.cpiInfoText}>
+                  • 통계표 코드: 901Y009 (소비자물가지수){'\n'}
+                  • 데이터 주기: 월별 (M){'\n'}
+                  • 통계항목: 총지수(0) 및 12개 세부 항목{'\n'}
+                  • 자동 계산: 월별/연간 변화율 포함{'\n'}
+                  • 스케줄링: 매월 1일 오후 2시 자동 업데이트
+                </ThemedText>
+              </View>
+            </View>
+          </View>
         </View>
         
         {errorMessage && (
@@ -444,8 +1041,6 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     ...Platform.select({
       web: {
-        maxWidth: 600,
-        alignSelf: 'center',
         width: '100%',
       },
     }),
@@ -462,7 +1057,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   button: {
-    backgroundColor: '#0066CC',
+    backgroundColor: '#4A90E2',
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
@@ -607,6 +1202,58 @@ const styles = StyleSheet.create({
   countriesButton: {
     backgroundColor: '#0066CC',
   },
+  interestRateButton: {
+    backgroundColor: '#FF8C42',
+  },
+  interestRateButtonSecondary: {
+    backgroundColor: '#FF7A2B',
+  },
+  exchangeRateButton: {
+    backgroundColor: '#4A90E2', // 환율 섹션 주요 버튼 색상 (밝은 블루)
+  },
+  exchangeRateButtonSecondary: {
+    backgroundColor: '#357ABD', // 조금 더 진한 파란색
+  },
+  // 메인 컨테이너 (가로 배치용)
+  mainContainer: {
+    flexDirection: 'row',
+    gap: 20,
+  },
+  mainContainerMobile: {
+    flexDirection: 'column',
+    gap: 20,
+  },
+  // 카테고리 구분 스타일
+  categoryContainer: {
+    flex: 1,
+    marginBottom: 30,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  categoryTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#2E86AB',
+    marginRight: 10,
+  },
+  categoryLine: {
+    flex: 1,
+    height: 2,
+    backgroundColor: '#E0E0E0',
+  },
+  exchangeRateSection: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#4A90E2',
+    backgroundColor: '#F0F6FF',
+  },
+  interestRateSection: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#FF8C42',
+    backgroundColor: '#FFF7F0',
+  },
   loadingNotice: {
     backgroundColor: '#E8F5E9',
     borderRadius: 8,
@@ -616,5 +1263,39 @@ const styles = StyleSheet.create({
   loadingNoticeText: {
     fontSize: 14,
     color: '#666',
+  },
+  // 소비자물가지수 관련 스타일 (생동감 있는 민트 그린)
+  cpiSection: {
+    borderLeftWidth: 4,
+    borderLeftColor: '#20B2AA',
+    backgroundColor: '#F0FDFF',
+  },
+  cpiButton: {
+    backgroundColor: '#20B2AA',
+  },
+  cpiButtonSecondary: {
+    backgroundColor: '#17A2B8',
+  },
+  cpiSchedulerButton: {
+    backgroundColor: '#138496',
+  },
+  cpiInfoContainer: {
+    backgroundColor: '#E8F8F9',
+    borderRadius: 8,
+    padding: 15,
+    marginTop: 15,
+    borderWidth: 1,
+    borderColor: '#B8E6E8',
+  },
+  cpiInfoTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#0D7377',
+    marginBottom: 8,
+  },
+  cpiInfoText: {
+    fontSize: 14,
+    color: '#155A5E',
+    lineHeight: 20,
   },
 }); 

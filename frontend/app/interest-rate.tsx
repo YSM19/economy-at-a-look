@@ -1,22 +1,25 @@
 import React from 'react';
-import { View, StyleSheet, SafeAreaView, ScrollView, ActivityIndicator } from 'react-native';
+import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
-import InterestRateChart from '../components/charts/InterestRateChart';
 import { useState, useEffect } from 'react';
-import axios from 'axios';
 import { economicIndexApi } from '../services/api';
+import { InterestRateChart } from '../components/charts/InterestRateChart';
 
 interface InterestRateData {
-  kbRate: number;
-  fedRate: number;
-  marketRate: number;
-  history: {
+  korea: {
+    rate: number;
+    bankName: string;
+    countryCode: string;
+    lastUpdated: string;
+  };
+  announcements: {
     date: string;
-    kbRate: number;
-    fedRate: number;
-    marketRate: number;
+    interestRate: number;
+    countryCode: string;
+    countryName: string;
+    bankName: string;
   }[];
 }
 
@@ -30,10 +33,19 @@ export default function InterestRateScreen() {
     const fetchInterestRateData = async () => {
       try {
         setLoading(true);
-        const response = await economicIndexApi.getInterestRate();
         
-        if (response.data && response.data.success && response.data.data) {
-          setInterestRateData(response.data.data);
+        // 현재 금리 정보와 발표일 데이터를 병렬로 가져오기
+        const [currentRateResponse, announcementsResponse] = await Promise.all([
+          economicIndexApi.getInterestRate(),
+          economicIndexApi.getInterestRateAnnouncements('KR')
+        ]);
+        
+        if (currentRateResponse.data && currentRateResponse.data.success && currentRateResponse.data.data &&
+            announcementsResponse.data && announcementsResponse.data.success) {
+          setInterestRateData({
+            korea: currentRateResponse.data.data.korea,
+            announcements: announcementsResponse.data.data || []
+          });
         } else {
           setError('금리 데이터를 불러올 수 없습니다.');
         }
@@ -59,7 +71,7 @@ export default function InterestRateScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <ThemedText style={styles.title}>금리 동향</ThemedText>
-          <ThemedText style={styles.subtitle}>한국은행 기준금리, 미 연방준비제도 기준금리, 시장금리</ThemedText>
+          <ThemedText style={styles.subtitle}>한국은행 기준금리</ThemedText>
         </View>
         
         {loading ? (
@@ -70,22 +82,27 @@ export default function InterestRateScreen() {
           <>
             <View style={styles.currentRates}>
               <View style={styles.rateItem}>
-                <ThemedText style={styles.rateLabel}>한국은행 기준금리</ThemedText>
-                <ThemedText style={styles.rateValue}>{interestRateData.kbRate}%</ThemedText>
-              </View>
-              <View style={styles.rateItem}>
-                <ThemedText style={styles.rateLabel}>미 연준 기준금리</ThemedText>
-                <ThemedText style={styles.rateValue}>{interestRateData.fedRate}%</ThemedText>
-              </View>
-              <View style={styles.rateItem}>
-                <ThemedText style={styles.rateLabel}>시장금리</ThemedText>
-                <ThemedText style={styles.rateValue}>{interestRateData.marketRate}%</ThemedText>
+                <ThemedText style={styles.rateLabel}>{interestRateData.korea.bankName}</ThemedText>
+                <ThemedText style={styles.rateValue}>{interestRateData.korea.rate}%</ThemedText>
+                <ThemedText style={styles.rateDate}>
+                  업데이트: {new Date(interestRateData.korea.lastUpdated).toLocaleDateString()}
+                </ThemedText>
               </View>
             </View>
             
             <View style={styles.chartContainer}>
-              <ThemedText style={styles.chartTitle}>금리 변동 추이</ThemedText>
-              <InterestRateChart data={interestRateData.history} />
+              <ThemedText style={styles.chartTitle}>정책금리 동향</ThemedText>
+              {interestRateData.announcements && interestRateData.announcements.length > 0 ? (
+                <InterestRateChart data={interestRateData.announcements.map(item => ({
+                  date: item.date,
+                  rate: item.interestRate,
+                  announcementDate: item.date
+                }))} />
+              ) : (
+                <View style={styles.noDataContainer}>
+                  <ThemedText style={styles.noDataText}>정책금리 히스토리 데이터를 준비 중입니다.</ThemedText>
+                </View>
+              )}
             </View>
             
             <View style={styles.infoContainer}>
@@ -129,16 +146,12 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   currentRates: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
     marginBottom: 24,
-    flexWrap: 'wrap',
   },
   rateItem: {
-    width: '30%',
     backgroundColor: '#f0f0f0',
     borderRadius: 12,
-    padding: 16,
+    padding: 20,
     alignItems: 'center',
   },
   rateLabel: {
@@ -149,6 +162,11 @@ const styles = StyleSheet.create({
   rateValue: {
     fontSize: 18,
     fontWeight: 'bold',
+  },
+  rateDate: {
+    fontSize: 10,
+    opacity: 0.6,
+    marginTop: 4,
   },
   chartContainer: {
     marginBottom: 24,
@@ -180,5 +198,14 @@ const styles = StyleSheet.create({
   infoContent: {
     fontSize: 14,
     lineHeight: 20,
+  },
+  noDataContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
   },
 }); 

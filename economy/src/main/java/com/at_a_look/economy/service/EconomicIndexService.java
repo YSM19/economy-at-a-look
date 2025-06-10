@@ -4,6 +4,7 @@ import com.at_a_look.economy.dto.ConsumerPriceIndexDto;
 import com.at_a_look.economy.dto.EconomicIndexDto;
 import com.at_a_look.economy.dto.ExchangeRateDto;
 import com.at_a_look.economy.dto.InterestRateDto;
+import com.at_a_look.economy.dto.InterestRateResponse;
 import com.at_a_look.economy.dto.response.EconomicIndexResponse;
 import com.at_a_look.economy.entity.EconomicIndex;
 import com.at_a_look.economy.repository.EconomicIndexRepository;
@@ -55,12 +56,12 @@ public class EconomicIndexService {
         double cpiWeight = 0.34;
         
         // 각 지표 최신값 가져오기
-        Optional<InterestRateDto> interestRate = interestRateService.getLatestInterestRate();
+        InterestRateResponse interestRateResponse = interestRateService.fetchLatestInterestRates();
         Optional<ExchangeRateDto> exchangeRate = exchangeRateService.getLatestExchangeRate();
         Optional<ConsumerPriceIndexDto> cpi = consumerPriceIndexService.getLatestConsumerPriceIndex();
         
         // 지표별 점수 계산 (0-100 사이 값)
-        double interestRateScore = interestRate.map(this::calculateInterestRateScore).orElse(50.0);
+        double interestRateScore = calculateInterestRateScore(interestRateResponse);
         double exchangeRateScore = exchangeRate.map(this::calculateExchangeRateScore).orElse(50.0);
         double cpiScore = cpi.map(this::calculateCPIScore).orElse(50.0);
         
@@ -71,10 +72,12 @@ public class EconomicIndexService {
     }
     
     // 금리 점수 계산
-    private double calculateInterestRateScore(InterestRateDto interestRate) {
+    private double calculateInterestRateScore(InterestRateResponse interestRateResponse) {
         // 실제 구현 시 금리 범위와 점수 매핑을 정교하게 설정
-        // 임시 계산 로직
-        double kbRate = interestRate.getKbRate();
+        // 임시 계산 로직 - 한국 금리 사용
+        if (interestRateResponse.getKorea() == null) return 50.0;
+        
+        double kbRate = interestRateResponse.getKorea().getRate();
         if (kbRate < 2.0) return 85.0; // 매우 낮은 금리 -> 경기확장/과열
         else if (kbRate < 2.5) return 75.0; // 낮은 금리 -> 경기확장
         else if (kbRate < 3.0) return 65.0; // 약간 낮은 금리 -> 경기확장

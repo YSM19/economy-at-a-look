@@ -14,6 +14,7 @@ import java.util.List;
 @AllArgsConstructor
 public class ConsumerPriceIndexResponse {
     private Double currentCPI;
+    private Double prevMonthCPI;
     private Double changeRate;
     private Double annualRate;
     private List<ConsumerPriceIndexDto> history;

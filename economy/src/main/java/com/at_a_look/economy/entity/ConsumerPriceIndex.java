@@ -6,8 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
-
 @Entity
 @Data
 @Builder
@@ -20,8 +18,8 @@ public class ConsumerPriceIndex {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
-    private LocalDate date;
+    @Column(nullable = false, length = 6)
+    private String date; // YYYYMM 형식
 
     @Column(name = "cpi_value", nullable = false)
     private Double cpiValue;

@@ -6,7 +6,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -16,7 +15,7 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class ConsumerPriceIndexDto {
     private Long id;
-    private LocalDate date;
+    private String date; // YYYYMM 형식
     private Double cpiValue;
     private Double monthlyChange;
     private Double annualChange;

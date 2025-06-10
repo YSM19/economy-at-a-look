@@ -13,8 +13,9 @@ interface CPIData {
   changeRate: number;
   annualRate: number;
   history: {
+    id: number;
     date: string;
-    cpi: number;
+    cpiValue: number;
     monthlyChange: number;
     annualChange: number;
   }[];
@@ -71,7 +72,7 @@ export default function ConsumerPriceIndexScreen() {
             <View style={styles.cpiSummary}>
               <View style={styles.cpiItem}>
                 <ThemedText style={styles.cpiLabel}>현재 CPI</ThemedText>
-                <ThemedText style={styles.cpiValue}>{cpiData.currentCPI.toFixed(1)}</ThemedText>
+                <ThemedText style={styles.cpiValue}>{cpiData.currentCPI}</ThemedText>
               </View>
               <View style={styles.cpiItem}>
                 <ThemedText style={styles.cpiLabel}>전월대비</ThemedText>
@@ -89,7 +90,12 @@ export default function ConsumerPriceIndexScreen() {
             
             <View style={styles.chartContainer}>
               <ThemedText style={styles.chartTitle}>물가지수 변동 추이</ThemedText>
-              <CPIChart data={cpiData.history} />
+              <CPIChart data={cpiData.history.map(item => ({
+                date: item.date,
+                cpi: item.cpiValue,
+                monthlyChange: item.monthlyChange,
+                annualChange: item.annualChange
+              }))} />
             </View>
             
             <View style={styles.infoContainer}>

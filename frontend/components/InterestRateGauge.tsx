@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import { View, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
 import { ThemedText } from './ThemedText';
 import Svg, { Path, Circle, G, Line, Text as SvgText } from 'react-native-svg';
+import { economicIndexApi } from '../services/api';
 
 type InterestRateGaugeProps = {
   value?: number;
@@ -12,12 +13,64 @@ const formatNumberWithUnit = (value: number | string, unit: string): string => {
   return `${value}${unit}`;
 };
 
-const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) => {
-  const [rate, setRate] = useState(value);
+const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
+  const [rate, setRate] = useState(value || 0);
   const [rateText, setRateText] = useState('');
   const [rateColor, setRateColor] = useState('#4CAF50');
   const [activeSection, setActiveSection] = useState(1);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [bankName, setBankName] = useState('한국은행 기준금리');
+  const [lastUpdated, setLastUpdated] = useState('');
   
+  // API에서 금리 데이터 가져오기
+  useEffect(() => {
+    const fetchInterestRate = async () => {
+      if (value !== undefined) {
+        setRate(value);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await economicIndexApi.getInterestRate();
+        
+        console.log('🔍 [InterestRateGauge] API 응답:', response.data);
+        
+        if (response.data?.success && response.data.data) {
+          const interestData = response.data.data;
+          
+          console.log('🔍 [InterestRateGauge] 금리 데이터:', interestData);
+          
+          // 한국 기준금리만 사용
+          if (interestData.korea && interestData.korea.rate !== undefined) {
+            const koreaRate = parseFloat(interestData.korea.rate.toString());
+            console.log('✅ [InterestRateGauge] 한국 금리 설정:', koreaRate);
+            setRate(koreaRate);
+            setBankName(interestData.korea.bankName || '한국은행 기준금리');
+          } else {
+            console.warn('⚠️ [InterestRateGauge] 한국 금리 데이터가 없습니다');
+            setError('한국 금리 데이터가 없습니다');
+          }
+          
+          // 마지막 업데이트 시간 설정
+          if (interestData.lastUpdated) {
+            setLastUpdated(interestData.lastUpdated);
+          }
+        }
+      } catch (err) {
+        console.error('금리 데이터 가져오기 실패:', err);
+        setError('금리 데이터를 가져올 수 없습니다');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInterestRate();
+  }, [value]);
+
   useEffect(() => {
     if (rate <= 2) {
       setRateText('저금리');
@@ -109,9 +162,35 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
     return { x, y };
   };
 
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ThemedText style={styles.title}>금리</ThemedText>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#007AFF" />
+          <ThemedText style={styles.loadingText}>금리 정보를 가져오는 중...</ThemedText>
+        </View>
+      </View>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <ThemedText style={styles.title}>금리</ThemedText>
+        <View style={styles.errorContainer}>
+          <ThemedText style={styles.errorText}>{error}</ThemedText>
+          <ThemedText style={styles.description}>
+            네트워크 연결을 확인하고 다시 시도해주세요.
+          </ThemedText>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.title}>금리</ThemedText>
+      <ThemedText style={styles.title}>{bankName}</ThemedText>
       <View style={styles.gaugeContainer}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
           {/* 배경 원 */}
@@ -239,6 +318,11 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value = 4.5 }) =>
           현재 정책금리는 {formatNumberWithUnit(rate, '%')}입니다.
           금리가 낮을수록 대출 비용이 낮아지고, 높을수록 물가 상승을 억제합니다.
         </ThemedText>
+        {lastUpdated && (
+          <ThemedText style={styles.lastUpdated}>
+            마지막 업데이트: {lastUpdated}
+          </ThemedText>
+        )}
       </View>
     </View>
   );
@@ -288,6 +372,34 @@ const styles = StyleSheet.create({
     color: '#666',
     textAlign: 'center',
     lineHeight: 18,
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 14,
+    color: '#666',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 40,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#F44336',
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  lastUpdated: {
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 4,
   },
 });
 

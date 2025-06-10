@@ -20,7 +20,28 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
 
   // 선택된 차트 모드에 따라 데이터 생성
   const getChartData = () => {
-    const labels = data.map(item => item.date.slice(-2));
+    // 데이터를 날짜 순으로 정렬 (오래된 것부터)하여 최신이 오른쪽에 오도록
+    const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
+    
+    // 효율적인 레이블 생성: 첫 번째는 YY.MM, 이후 월만, 연도 바뀔 때 YY.MM
+    const labels = sortedData.map((item, index) => {
+      const year = item.date.slice(2, 4); // 24
+      const month = item.date.slice(4, 6); // 06
+      
+      if (index === 0) {
+        // 첫 번째는 항상 년.월 표시
+        return `${year}.${month}`;
+      }
+      
+      const prevYear = sortedData[index - 1].date.slice(2, 4);
+      if (year !== prevYear) {
+        // 연도가 바뀔 때는 년.월 표시
+        return `${year}.${month}`;
+      }
+      
+      // 같은 연도 내에서는 월만 표시
+      return month;
+    });
     
     switch (chartMode) {
       case 'cpi':
@@ -28,7 +49,7 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
           labels,
           datasets: [
             {
-              data: data.map(item => item.cpi),
+              data: sortedData.map(item => item.cpi),
               color: (opacity = 1) => `rgba(25, 118, 210, ${opacity})`,
               strokeWidth: 2,
             }
@@ -40,7 +61,7 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
           labels,
           datasets: [
             {
-              data: data.map(item => item.monthlyChange),
+              data: sortedData.map(item => item.monthlyChange),
               color: (opacity = 1) => `rgba(245, 124, 0, ${opacity})`,
               strokeWidth: 2,
             }
@@ -52,7 +73,7 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
           labels,
           datasets: [
             {
-              data: data.map(item => item.annualChange),
+              data: sortedData.map(item => item.annualChange),
               color: (opacity = 1) => `rgba(211, 47, 47, ${opacity})`,
               strokeWidth: 2,
             }
@@ -63,6 +84,9 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
   };
 
   const chartData = getChartData();
+  
+  // 모든 차트 모드에서 데이터 범위에 맞게 Y축 동적 조정
+  // fromZero=false로 설정하여 항상 데이터 범위에 최적화
 
   const chartConfig = {
     backgroundGradientFrom: '#fff',
@@ -80,6 +104,14 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
     propsForLabels: {
       fontSize: 10,
     },
+    formatYLabel: (yValue: string) => {
+      const value = parseFloat(yValue);
+      if (chartMode === 'cpi') {
+        return value.toFixed(1);
+      } else {
+        return value.toFixed(1) + '%';
+      }
+    },
   };
 
   return (
@@ -89,9 +121,8 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
         width={screenWidth}
         height={220}
         chartConfig={chartConfig}
-        bezier
         style={styles.chart}
-        fromZero={chartMode !== 'cpi'}
+        fromZero={false}
         yAxisSuffix={chartMode === 'cpi' ? '' : '%'}
         yAxisInterval={1}
         verticalLabelRotation={0}

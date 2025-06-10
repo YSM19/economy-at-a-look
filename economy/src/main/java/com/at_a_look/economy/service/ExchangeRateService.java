@@ -585,4 +585,100 @@ public class ExchangeRateService {
         log.info("🎉 국가별 환율 데이터 가져오기 완료: 총 {}개 데이터 저장", totalCount);
         return totalCount;
     }
+
+    /**
+     * 최근 1년간의 환율 데이터를 가져와 저장합니다. (어드민 전용)
+     * 
+     * @return 저장된 총 환율 데이터 수
+     */
+    @Transactional
+    public int fetchYearlyExchangeRates() {
+        log.info("📅 최근 1년간 환율 데이터 가져오기 시작");
+        
+        int totalCount = 0;
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusYears(1); // 1년 전부터
+        
+        // 각 날짜별로 환율 데이터 가져오기
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            try {
+                // 기존 데이터가 있는지 확인
+                List<ExchangeRate> existingRates = exchangeRateRepository.findBySearchDate(currentDate);
+                if (!existingRates.isEmpty()) {
+                    log.debug("📋 {} 날짜 데이터 이미 존재, 건너뜀", currentDate);
+                    currentDate = currentDate.plusDays(1);
+                    continue;
+                }
+                
+                log.debug("📅 날짜별 환율 데이터 가져오기: {}", currentDate);
+                int dailyCount = fetchExchangeRates(currentDate);
+                totalCount += dailyCount;
+                
+                if (dailyCount > 0) {
+                    log.info("✅ {} 날짜 환율 데이터 {}개 저장", currentDate, dailyCount);
+                }
+                
+                // API 호출 간격 제어 (500ms 대기)
+                Thread.sleep(500);
+                
+            } catch (Exception e) {
+                log.warn("⚠️ {} 날짜 환율 데이터 가져오기 실패: {}", currentDate, e.getMessage());
+                // 개별 날짜 실패는 전체 프로세스를 중단하지 않음
+            }
+            
+            currentDate = currentDate.plusDays(1);
+        }
+        
+        log.info("🎉 1년간 환율 데이터 가져오기 완료: 총 {}개 데이터 저장", totalCount);
+        return totalCount;
+    }
+
+    /**
+     * 최근 1개월간의 환율 데이터를 가져와 저장합니다. (어드민 전용)
+     * 
+     * @return 저장된 총 환율 데이터 수
+     */
+    @Transactional
+    public int fetchMonthlyExchangeRates() {
+        log.info("📅 최근 1개월간 환율 데이터 가져오기 시작");
+        
+        int totalCount = 0;
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusMonths(1); // 1개월 전부터
+        
+        // 각 날짜별로 환율 데이터 가져오기
+        LocalDate currentDate = startDate;
+        while (!currentDate.isAfter(endDate)) {
+            try {
+                // 기존 데이터가 있는지 확인
+                List<ExchangeRate> existingRates = exchangeRateRepository.findBySearchDate(currentDate);
+                if (!existingRates.isEmpty()) {
+                    log.debug("📋 {} 날짜 데이터 이미 존재, 건너뜀", currentDate);
+                    currentDate = currentDate.plusDays(1);
+                    continue;
+                }
+                
+                log.debug("📅 날짜별 환율 데이터 가져오기: {}", currentDate);
+                int dailyCount = fetchExchangeRates(currentDate);
+                totalCount += dailyCount;
+                
+                if (dailyCount > 0) {
+                    log.info("✅ {} 날짜 환율 데이터 {}개 저장", currentDate, dailyCount);
+                }
+                
+                // API 호출 간격 제어 (500ms 대기)
+                Thread.sleep(500);
+                
+            } catch (Exception e) {
+                log.warn("⚠️ {} 날짜 환율 데이터 가져오기 실패: {}", currentDate, e.getMessage());
+                // 개별 날짜 실패는 전체 프로세스를 중단하지 않음
+            }
+            
+            currentDate = currentDate.plusDays(1);
+        }
+        
+        log.info("🎉 1개월간 환율 데이터 가져오기 완료: 총 {}개 데이터 저장", totalCount);
+        return totalCount;
+    }
 } 

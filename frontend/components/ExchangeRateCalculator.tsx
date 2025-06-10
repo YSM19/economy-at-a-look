@@ -12,8 +12,11 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
   const [krwAmount, setKrwAmount] = useState('');
   const [foreignAmount, setForeignAmount] = useState('');
   const [currentRate, setCurrentRate] = useState<number | null>(null);
+  const [customRate, setCustomRate] = useState('');
+  const [isCustomRate, setIsCustomRate] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isCalculatingFromKRW, setIsCalculatingFromKRW] = useState(true);
+  const [isKRWFirst, setIsKRWFirst] = useState(true);
 
   useEffect(() => {
     fetchExchangeRate();
@@ -81,7 +84,8 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
   const currencyInfo = getCurrencyInfo();
 
   const calculateFromKRW = (amount: string) => {
-    if (!currentRate || !amount) {
+    const rate = getEffectiveRate();
+    if (!rate || !amount) {
       setForeignAmount('');
       return;
     }
@@ -95,16 +99,17 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
     let result;
     if (country === 'japan') {
       // 일본 엔은 100엔 단위로 환율이 표시되므로
-      result = (numAmount / currentRate) * 100;
+      result = (numAmount / rate) * 100;
     } else {
-      result = numAmount / currentRate;
+      result = numAmount / rate;
     }
     
     setForeignAmount(formatNumber(result.toFixed(2)));
   };
 
   const calculateFromForeign = (amount: string) => {
-    if (!currentRate || !amount) {
+    const rate = getEffectiveRate();
+    if (!rate || !amount) {
       setKrwAmount('');
       return;
     }
@@ -118,12 +123,60 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
     let result;
     if (country === 'japan') {
       // 일본 엔은 100엔 단위로 환율이 표시되므로
-      result = (numAmount * currentRate) / 100;
+      result = (numAmount * rate) / 100;
     } else {
-      result = numAmount * currentRate;
+      result = numAmount * rate;
     }
     
     setKrwAmount(formatNumber(Math.round(result).toString()));
+  };
+
+  // 현재 사용할 환율을 반환하는 함수
+  const getEffectiveRate = (): number | null => {
+    if (isCustomRate && customRate) {
+      const rate = parseFloat(customRate.replace(/,/g, ''));
+      return isNaN(rate) ? null : rate;
+    }
+    return currentRate;
+  };
+
+  // 커스텀 환율 토글
+  const toggleCustomRate = () => {
+    setIsCustomRate(!isCustomRate);
+    if (!isCustomRate && currentRate) {
+      setCustomRate(currentRate.toString());
+    }
+    // 현재 입력된 값들을 다시 계산
+    if (krwAmount) {
+      calculateFromKRW(krwAmount);
+    } else if (foreignAmount) {
+      calculateFromForeign(foreignAmount);
+    }
+  };
+
+  // 커스텀 환율 변경
+  const handleCustomRateChange = (text: string) => {
+    const cleanText = text.replace(/[^0-9.]/g, '');
+    setCustomRate(cleanText);
+    
+    // 현재 입력된 값들을 다시 계산
+    if (krwAmount) {
+      calculateFromKRW(krwAmount);
+    } else if (foreignAmount) {
+      calculateFromForeign(foreignAmount);
+    }
+  };
+
+  // 실시간 환율로 되돌리기
+  const resetToCurrentRate = () => {
+    setIsCustomRate(false);
+    setCustomRate('');
+    // 현재 입력된 값들을 다시 계산
+    if (krwAmount) {
+      calculateFromKRW(krwAmount);
+    } else if (foreignAmount) {
+      calculateFromForeign(foreignAmount);
+    }
   };
 
   const formatNumber = (value: string) => {
@@ -182,15 +235,56 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
     calculateFromForeign(formattedText);
   };
 
+  // 통화 정보를 동적으로 반환하는 함수
+  const getFirstCurrencyInfo = () => {
+    if (isKRWFirst) {
+      return {
+        name: '한국 원화',
+        symbol: 'KRW',
+        unit: '원',
+        icon: 'currency-krw',
+        color: '#4CAF50'
+      };
+    } else {
+      return currencyInfo;
+    }
+  };
+
+  const getSecondCurrencyInfo = () => {
+    if (isKRWFirst) {
+      return currencyInfo;
+    } else {
+      return {
+        name: '한국 원화',
+        symbol: 'KRW',
+        unit: '원',
+        icon: 'currency-krw',
+        color: '#4CAF50'
+      };
+    }
+  };
+
   const swapCurrencies = () => {
-    const tempKrw = krwAmount;
-    const tempForeign = foreignAmount;
+    // 현재 첫 번째 칸의 값을 저장
+    const currentFirstValue = isKRWFirst ? krwAmount : foreignAmount;
     
-    setKrwAmount(tempForeign);
-    setForeignAmount(tempKrw);
+    // 통화 순서만 바꾸기
+    setIsKRWFirst(!isKRWFirst);
     
-    if (tempForeign) {
-      calculateFromForeign(tempForeign);
+    if (currentFirstValue) {
+      setTimeout(() => {
+        if (isKRWFirst) {
+          // 현재 원화가 첫 번째 → 외화가 첫 번째로 바뀜
+          // 원화 값을 첫 번째 칸에 유지하고, 외화로 환전 결과 계산
+          setForeignAmount(currentFirstValue);
+          calculateFromForeign(currentFirstValue);
+        } else {
+          // 현재 외화가 첫 번째 → 원화가 첫 번째로 바뀜  
+          // 외화 값을 첫 번째 칸에 유지하고, 원화로 환전 결과 계산
+          setKrwAmount(currentFirstValue);
+          calculateFromKRW(currentFirstValue);
+        }
+      }, 0);
     }
   };
 
@@ -216,27 +310,62 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
       <View style={styles.container}>
         {/* 현재 환율 표시 */}
         <View style={styles.rateDisplay}>
-          <ThemedText style={styles.rateText}>
-            현재 환율: 1 {currencyInfo.symbol} = {currentRate?.toLocaleString()}원
-          </ThemedText>
+          <TouchableOpacity onPress={toggleCustomRate} style={styles.rateTextContainer}>
+            <ThemedText style={styles.rateText}>
+              현재 환율: 1 {currencyInfo.symbol} = {getEffectiveRate()?.toLocaleString()}원
+            </ThemedText>
+            <MaterialCommunityIcons 
+              name={isCustomRate ? "chevron-up" : "chevron-down"} 
+              size={16} 
+              color="#666" 
+              style={styles.chevronIcon}
+            />
+          </TouchableOpacity>
+          
+          {isCustomRate && (
+            <View style={styles.customRateContainer}>
+              <TextInput
+                style={styles.customRateInput}
+                value={customRate}
+                onChangeText={handleCustomRateChange}
+                placeholder="환율 입력"
+                keyboardType="numeric"
+                placeholderTextColor="#999"
+              />
+              <TouchableOpacity style={styles.resetButton} onPress={resetToCurrentRate}>
+                <MaterialCommunityIcons name="refresh" size={16} color="#2196F3" />
+                <ThemedText style={styles.resetButtonText}>초기화</ThemedText>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
-        {/* 원화 입력 */}
+        {/* 첫 번째 통화 입력 */}
         <View style={styles.inputContainer}>
           <View style={styles.inputHeader}>
-            <MaterialCommunityIcons name="currency-krw" size={20} color="#4CAF50" />
-            <ThemedText style={styles.currencyLabel}>한국 원화 (KRW)</ThemedText>
+            <MaterialCommunityIcons 
+              name={isKRWFirst ? "currency-krw" : (
+                country === 'usa' ? 'currency-usd' : 
+                country === 'europe' ? 'currency-eur' : 
+                country === 'japan' ? 'currency-jpy' : 'cash'
+              )}
+              size={20} 
+              color={isKRWFirst ? "#4CAF50" : "#FF9800"}
+            />
+            <ThemedText style={styles.currencyLabel}>
+              {getFirstCurrencyInfo().name} ({getFirstCurrencyInfo().symbol})
+            </ThemedText>
           </View>
           <TextInput
             style={styles.input}
-            value={krwAmount}
-            onChangeText={handleKRWChange}
+            value={isKRWFirst ? krwAmount : foreignAmount}
+            onChangeText={isKRWFirst ? handleKRWChange : handleForeignChange}
             placeholder="금액을 입력하세요"
             keyboardType="numeric"
             placeholderTextColor="#999"
           />
-          {krwAmount ? (
-            <ThemedText style={styles.unitText}>원</ThemedText>
+          {(isKRWFirst ? krwAmount : foreignAmount) ? (
+            <ThemedText style={styles.unitText}>{getFirstCurrencyInfo().unit}</ThemedText>
           ) : null}
         </View>
 
@@ -247,30 +376,32 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
           </TouchableOpacity>
         </View>
 
-        {/* 외화 입력 */}
+        {/* 두 번째 통화 입력 */}
         <View style={styles.inputContainer}>
           <View style={styles.inputHeader}>
             <MaterialCommunityIcons 
-              name={country === 'usa' ? 'currency-usd' : 
-                   country === 'europe' ? 'currency-eur' : 
-                   country === 'japan' ? 'currency-jpy' : 'currency-cny'} 
+              name={!isKRWFirst ? "currency-krw" : (
+                country === 'usa' ? 'currency-usd' : 
+                country === 'europe' ? 'currency-eur' : 
+                country === 'japan' ? 'currency-jpy' : 'cash'
+              )}
               size={20} 
-              color="#FF9800" 
+              color={!isKRWFirst ? "#4CAF50" : "#FF9800"}
             />
             <ThemedText style={styles.currencyLabel}>
-              {currencyInfo.name} ({currencyInfo.symbol})
+              {getSecondCurrencyInfo().name} ({getSecondCurrencyInfo().symbol})
             </ThemedText>
           </View>
           <TextInput
             style={styles.input}
-            value={foreignAmount}
-            onChangeText={handleForeignChange}
+            value={isKRWFirst ? foreignAmount : krwAmount}
+            onChangeText={isKRWFirst ? handleForeignChange : handleKRWChange}
             placeholder="금액을 입력하세요"
             keyboardType="numeric"
             placeholderTextColor="#999"
           />
-          {foreignAmount ? (
-            <ThemedText style={styles.unitText}>{currencyInfo.unit}</ThemedText>
+          {(isKRWFirst ? foreignAmount : krwAmount) ? (
+            <ThemedText style={styles.unitText}>{getSecondCurrencyInfo().unit}</ThemedText>
           ) : null}
         </View>
 
@@ -279,11 +410,6 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
           <TouchableOpacity style={styles.clearButton} onPress={clearAll}>
             <MaterialCommunityIcons name="refresh" size={16} color="#666" />
             <ThemedText style={styles.clearButtonText}>초기화</ThemedText>
-          </TouchableOpacity>
-          
-          <TouchableOpacity style={styles.refreshButton} onPress={fetchExchangeRate}>
-            <MaterialCommunityIcons name="reload" size={16} color="#2196F3" />
-            <ThemedText style={styles.refreshButtonText}>환율 새로고침</ThemedText>
           </TouchableOpacity>
         </View>
 
@@ -336,10 +462,17 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     alignItems: 'center',
   },
+  rateTextContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   rateText: {
     fontSize: 14,
     fontWeight: '600',
     color: '#2196F3',
+  },
+  chevronIcon: {
+    marginLeft: 4,
   },
   inputContainer: {
     marginBottom: 16,
@@ -393,9 +526,9 @@ const styles = StyleSheet.create({
   },
   actionContainer: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 16,
-    marginBottom: 12,
+    justifyContent: 'flex-end',
+    marginTop: -10,
+    marginBottom: -5,
   },
   clearButton: {
     flexDirection: 'row',
@@ -408,19 +541,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
     marginLeft: 4,
-  },
-  refreshButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    borderRadius: 6,
-    backgroundColor: '#e3f2fd',
-  },
-  refreshButtonText: {
-    fontSize: 12,
-    color: '#2196F3',
-    marginLeft: 4,
-    fontWeight: '500',
   },
   infoContainer: {
     flexDirection: 'row',
@@ -436,6 +556,40 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     flex: 1,
     lineHeight: 16,
+  },
+  customRateContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 12,
+    padding: 12,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+  },
+  customRateInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+    backgroundColor: '#fff',
+    flex: 1,
+    marginRight: 8,
+  },
+  resetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    borderRadius: 6,
+    backgroundColor: '#e3f2fd',
+  },
+  resetButtonText: {
+    fontSize: 12,
+    color: '#2196F3',
+    marginLeft: 4,
   },
 });
 

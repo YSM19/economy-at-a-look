@@ -155,5 +155,10 @@ export const economicIndexApi = {
       params: { startDate, endDate }
     })),
   getInterestRate: () => withRetry(() => api.get('/api/economic/interest-rate')),
+  getInterestRateAnnouncements: (countryCode?: string) => withRetry(() => 
+    countryCode ? 
+    api.get(`/api/economic/interest-rate/announcements/${countryCode}`) : 
+    api.get('/api/economic/interest-rate/announcements')
+  ),
   getConsumerPriceIndex: () => withRetry(() => api.get('/api/economic/consumer-price-index')),
 }; 

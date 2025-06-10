@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ExchangeRate {
+public class ExchangeRate { // 환율
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
