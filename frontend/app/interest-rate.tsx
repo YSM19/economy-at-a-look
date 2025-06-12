@@ -131,13 +131,13 @@ const styles = StyleSheet.create({
     paddingTop: 30,
   },
   header: {
-    marginBottom: 24,
+    marginBottom: 0,
     marginTop: 20,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 0,
     paddingTop: 0,
     lineHeight: 32,
   },
@@ -146,12 +146,12 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   currentRates: {
-    marginBottom: 24,
+    marginBottom: 0,
   },
   rateItem: {
     backgroundColor: '#f0f0f0',
     borderRadius: 12,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
   },
   rateLabel: {

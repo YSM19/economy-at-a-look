@@ -136,7 +136,7 @@ export default function HomeScreen() {
       case 'price':
         return (
           <>
-            <ThemedText style={styles.gaugeLabel}>오늘의 물가</ThemedText>
+            <ThemedText style={styles.gaugeLabel}>소비자 물가지수 동향</ThemedText>
             <View style={styles.priceChartContainer}>
               {cpiLoading ? (
                 <View style={styles.loadingContainer}>
@@ -152,9 +152,23 @@ export default function HomeScreen() {
                       </ThemedText>
                     </View>
                     <View style={styles.cpiInfoItem}>
-                      <ThemedText style={styles.cpiInfoLabel}>전월 CPI</ThemedText>
-                      <ThemedText style={styles.cpiInfoValue}>
-                        {(cpiData.prevMonthCPI && isFinite(cpiData.prevMonthCPI)) ? cpiData.prevMonthCPI : 'N/A'}
+                      <ThemedText style={styles.cpiInfoLabel}>전월대비</ThemedText>
+                      <ThemedText style={[
+                        styles.cpiInfoValue,
+                        cpiData.changeRate > 0 ? styles.positiveChange : styles.negativeChange
+                      ]}>
+                        {(cpiData.changeRate && isFinite(cpiData.changeRate)) ? 
+                          `${cpiData.changeRate > 0 ? '+' : ''}${cpiData.changeRate.toFixed(2)}%` : 'N/A'}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.cpiInfoItem}>
+                      <ThemedText style={styles.cpiInfoLabel}>전년동월대비</ThemedText>
+                      <ThemedText style={[
+                        styles.cpiInfoValue,
+                        cpiData.annualRate > 0 ? styles.positiveChange : styles.negativeChange
+                      ]}>
+                        {(cpiData.annualRate && isFinite(cpiData.annualRate)) ? 
+                          `${cpiData.annualRate > 0 ? '+' : ''}${cpiData.annualRate.toFixed(1)}%` : 'N/A'}
                       </ThemedText>
                     </View>
                   </View>
@@ -569,23 +583,33 @@ const styles = StyleSheet.create({
   },
   cpiSummaryInfo: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     marginBottom: 16,
     paddingVertical: 12,
+    paddingHorizontal: 8,
     backgroundColor: '#f9f9f9',
     borderRadius: 12,
   },
   cpiInfoItem: {
     alignItems: 'center',
+    flex: 1,
   },
   cpiInfoLabel: {
-    fontSize: 12,
+    fontSize: 11,
     color: '#666',
     marginBottom: 4,
+    textAlign: 'center',
   },
   cpiInfoValue: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
     color: '#333',
+    textAlign: 'center',
+  },
+  positiveChange: {
+    color: '#d32f2f', // 빨간색 (상승)
+  },
+  negativeChange: {
+    color: '#4caf50', // 초록색 (하락)
   },
 }); 
