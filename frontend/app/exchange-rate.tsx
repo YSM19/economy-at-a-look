@@ -39,32 +39,32 @@ export default function ExchangeRateScreen() {
       case 'usa':
         return {
           title: '미국 달러 환율 정보',
-          subtitle: '원/달러 환율 동향',
-          rateLabel: '원/달러 환율',
+          subtitle: '달러 환율 동향',
+          rateLabel: '1달러',
           rateProp: 'usdRate',
           description: '원/달러 환율이 상승하면 수입품 가격이 오르고 수출 경쟁력이 강화됩니다. 콜금리 인상은 원/달러 환율 상승, 연방자금금리 인상은 원/달러 환율 하락 경향을 보입니다.'
         };
       case 'japan':
         return {
           title: '일본 엔화 환율 정보',
-          subtitle: '원/100엔 환율 동향',
-          rateLabel: '원/100엔 환율',
+          subtitle: '엔화 환율 동향',
+          rateLabel: '1엔',
           rateProp: 'jpyRate',
           description: '원/엔 환율은 일본과의 무역 및 투자에 직접적인 영향을 미칩니다. 일본 중앙은행의 통화정책과 한국의 금리 정책에 따라 변동됩니다.'
         };
       case 'china':
         return {
           title: '중국 위안화 환율 정보',
-          subtitle: '원/위안 환율 동향',
-          rateLabel: '원/위안 환율',
+          subtitle: '위안화 환율 동향',
+          rateLabel: '1위안',
           rateProp: 'cnyRate',
           description: '원/위안 환율은 중국과의 무역 관계에 중요한 영향을 미칩니다. 중국의 경제성장률과 통화정책에 따라 변동됩니다.'
         };
       case 'europe':
         return {
           title: '유럽 유로 환율 정보',
-          subtitle: '원/유로 환율 동향',
-          rateLabel: '원/유로 환율',
+          subtitle: '유로 환율 동향',
+          rateLabel: '1유로',
           rateProp: 'eurRate',
           description: '원/유로 환율은 유럽연합과의 무역 및 투자에 영향을 미칩니다. 유럽중앙은행의 통화정책과 유럽 경제 상황에 따라 변동됩니다.'
         };
@@ -249,13 +249,13 @@ const styles = StyleSheet.create({
     paddingTop: 30,
   },
   header: {
-    marginBottom: 24,
-    marginTop: 20,
+    marginBottom: 16,
+    marginTop: 10,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 6,
     paddingTop: 0,
     lineHeight: 32,
   },
@@ -264,31 +264,25 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   currentRates: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 24,
-    flexWrap: 'wrap',
+    marginBottom: 16,
   },
   rateItem: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
-    flex: 1,
-    alignItems: 'center',
   },
   rateLabel: {
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: 'bold',
     color: '#666',
     marginBottom: 8,
+    textAlign: 'center',
   },
   rateValueContainer: {
     flexDirection: 'row',
@@ -297,7 +291,7 @@ const styles = StyleSheet.create({
   rateValue: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1976D2',
+    color: '#333',
   },
   rateCurrency: {
     fontSize: 16,
@@ -306,29 +300,25 @@ const styles = StyleSheet.create({
   },
   chartContainer: {
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    marginVertical: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
   },
   chartTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
-    textAlign: 'center',
+    color: '#333',
   },
   chartSubtitle: {
     fontSize: 12,
     color: '#666',
     marginBottom: 16,
-    textAlign: 'center',
   },
   loadingContainer: {
     flex: 1,
@@ -352,27 +342,31 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   noDataContainer: {
-    padding: 40,
+    padding: 20,
     alignItems: 'center',
   },
   noDataText: {
     fontSize: 14,
     color: '#666',
+    textAlign: 'center',
   },
   infoContainer: {
-    backgroundColor: '#f5f5f5',
-    borderRadius: 12,
+    marginBottom: 24,
     padding: 16,
-    marginVertical: 8,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: '#333',
   },
   infoContent: {
     fontSize: 14,
     lineHeight: 20,
-    color: '#666',
+    color: '#555',
   },
 }); 

@@ -165,6 +165,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
     },
     propsForLabels: {
       fontSize: 10,
+      fontWeight: 'bold',
     },
   };
 

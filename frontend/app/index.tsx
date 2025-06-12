@@ -122,7 +122,7 @@ export default function HomeScreen() {
       case 'interest':
         return (
           <>
-            <ThemedText style={styles.gaugeLabel}>오늘의 금리</ThemedText>
+                            <ThemedText style={styles.gaugeLabel}>현재 금리</ThemedText>
             <InterestRateGauge />
           </>
         );
@@ -238,22 +238,22 @@ export default function HomeScreen() {
     
     switch(activeCountry) {
       case 'usa':
-        buttonTitle = "미국 환율 상세 정보";
+        buttonTitle = "달러 환율 상세정보";
         subtitle = "미국 달러/원화 환율 추이 확인";
         route = '/exchange-rate?country=usa';
         break;
       case 'japan':
-        buttonTitle = "일본 환율 상세 정보";
+        buttonTitle = "엔화 환율 상세정보";
         subtitle = "일본 엔화/원화 환율 추이 확인";
         route = '/exchange-rate?country=japan';
         break;
       case 'china':
-        buttonTitle = "중국 환율 상세 정보";
+        buttonTitle = "위안화 환율 상세정보";
         subtitle = "중국 위안/원화 환율 추이 확인";
         route = '/exchange-rate?country=china';
         break;
       case 'europe':
-        buttonTitle = "유럽 환율 상세 정보";
+        buttonTitle = "유로 환율 상세정보";
         subtitle = "유럽 유로/원화 환율 추이 확인";
         route = '/exchange-rate?country=europe';
         break;
@@ -335,7 +335,7 @@ export default function HomeScreen() {
                   <MaterialCommunityIcons name="trending-up" size={24} color="#1976D2" />
                 </View>
                 <View style={styles.cardTextContainer}>
-                  <ThemedText style={styles.cardTitle}>금리 상세 정보</ThemedText>
+                  <ThemedText style={styles.cardTitle}>금리 상세정보</ThemedText>
                   <ThemedText style={styles.cardSubtitle}>정책금리, 시장금리, 대출금리 추이</ThemedText>
                 </View>
                 <MaterialCommunityIcons name="chevron-right" size={24} color="#999" />
@@ -595,13 +595,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cpiInfoLabel: {
-    fontSize: 11,
+    fontSize: 14,
+    fontWeight: 'bold',
     color: '#666',
     marginBottom: 4,
     textAlign: 'center',
   },
   cpiInfoValue: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
     color: '#333',
     textAlign: 'center',

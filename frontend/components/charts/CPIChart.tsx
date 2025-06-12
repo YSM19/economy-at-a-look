@@ -119,6 +119,7 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
     },
     propsForLabels: {
       fontSize: 10,
+      fontWeight: 'bold',
     },
     formatYLabel: (yValue: string) => {
       const value = parseFloat(yValue);

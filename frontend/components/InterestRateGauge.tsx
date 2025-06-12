@@ -49,7 +49,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
             const koreaRate = parseFloat(interestData.korea.rate.toString());
             console.log('✅ [InterestRateGauge] 한국 금리 설정:', koreaRate);
             setRate(koreaRate);
-            setBankName(interestData.korea.bankName || '한국은행 기준금리');
+            setBankName('한국은행 기준금리');
           } else {
             console.warn('⚠️ [InterestRateGauge] 한국 금리 데이터가 없습니다');
             setError('한국 금리 데이터가 없습니다');

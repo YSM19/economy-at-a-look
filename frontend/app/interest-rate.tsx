@@ -71,7 +71,6 @@ export default function InterestRateScreen() {
       <ScrollView style={styles.scrollView}>
         <View style={styles.header}>
           <ThemedText style={styles.title}>금리 동향</ThemedText>
-          <ThemedText style={styles.subtitle}>한국은행 기준금리</ThemedText>
         </View>
         
         {loading ? (
@@ -82,10 +81,10 @@ export default function InterestRateScreen() {
           <>
             <View style={styles.currentRates}>
               <View style={styles.rateItem}>
-                <ThemedText style={styles.rateLabel}>{interestRateData.korea.bankName}</ThemedText>
+                <ThemedText style={styles.rateLabel}>한국은행 기준금리</ThemedText>
                 <ThemedText style={styles.rateValue}>{interestRateData.korea.rate}%</ThemedText>
                 <ThemedText style={styles.rateDate}>
-                  업데이트: {new Date(interestRateData.korea.lastUpdated).toLocaleDateString()}
+                  업데이트: {new Date(interestRateData.korea.lastUpdated).toLocaleDateString('ko-KR').replace(/\//g, '.')}
                 </ThemedText>
               </View>
             </View>
@@ -131,13 +130,13 @@ const styles = StyleSheet.create({
     paddingTop: 30,
   },
   header: {
-    marginBottom: 0,
-    marginTop: 20,
+    marginBottom: 16,
+    marginTop: 10,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
-    marginBottom: 0,
+    marginBottom: 6,
     paddingTop: 0,
     lineHeight: 32,
   },
@@ -146,58 +145,71 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   currentRates: {
-    marginBottom: 0,
+    marginBottom: 16,
   },
   rateItem: {
-    backgroundColor: '#f0f0f0',
-    borderRadius: 12,
-    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
     alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   rateLabel: {
-    fontSize: 12,
+    fontSize: 16,
+    fontWeight: 'bold',
     marginBottom: 8,
     textAlign: 'center',
+    color: '#666',
   },
   rateValue: {
-    fontSize: 18,
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#333',
   },
   rateDate: {
-    fontSize: 10,
+    fontSize: 11,
     opacity: 0.6,
     marginTop: 4,
   },
   chartContainer: {
-    marginBottom: 24,
     backgroundColor: '#fff',
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 16,
+    marginVertical: 16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowRadius: 3.84,
+    elevation: 5,
   },
   chartTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 16,
+    color: '#333',
   },
   infoContainer: {
     marginBottom: 24,
     padding: 16,
-    backgroundColor: '#f9f9f9',
-    borderRadius: 12,
+    backgroundColor: '#f8f9fa',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
   },
   infoTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 8,
+    color: '#333',
   },
   infoContent: {
     fontSize: 14,
     lineHeight: 20,
+    color: '#555',
   },
   noDataContainer: {
     padding: 20,
