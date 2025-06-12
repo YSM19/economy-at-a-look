@@ -66,8 +66,10 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
           datasets: [
             {
               data: sortedData.map(item => item.cpi),
-              color: (opacity = 1) => `rgba(25, 118, 210, ${opacity})`,
-              strokeWidth: 2,
+              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+              strokeWidth: 3,
+              withDots: true,
+              withShadow: true,
             }
           ],
           legend: ['소비자물가지수'],
@@ -78,8 +80,10 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
           datasets: [
             {
               data: sortedData.map(item => item.monthlyChange),
-              color: (opacity = 1) => `rgba(245, 124, 0, ${opacity})`,
-              strokeWidth: 2,
+              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+              strokeWidth: 3,
+              withDots: true,
+              withShadow: true,
             }
           ],
           legend: ['전월대비 변화율(%)'],
@@ -90,8 +94,10 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
           datasets: [
             {
               data: sortedData.map(item => item.annualChange),
-              color: (opacity = 1) => `rgba(211, 47, 47, ${opacity})`,
-              strokeWidth: 2,
+              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+              strokeWidth: 3,
+              withDots: true,
+              withShadow: true,
             }
           ],
           legend: ['전년동월대비 변화율(%)'],
@@ -105,22 +111,34 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
   // fromZero=false로 설정하여 항상 데이터 범위에 최적화
 
   const chartConfig = {
-    backgroundGradientFrom: '#fff',
-    backgroundGradientTo: '#fff',
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientFromOpacity: 0,
+    backgroundGradientTo: '#f0f9ff',
+    backgroundGradientToOpacity: 0.6,
     decimalPlaces: chartMode === 'cpi' ? 1 : 2,
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    color: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(51, 65, 85, ${opacity})`,
     style: {
       borderRadius: 16,
     },
     propsForDots: {
       r: '4',
-      strokeWidth: '1',
+      strokeWidth: '2',
+      shadowColor: '#3b82f6',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
     },
     propsForLabels: {
       fontSize: 10,
       fontWeight: 'bold',
     },
+    propsForBackgroundLines: {
+      strokeDasharray: "3,3",
+      stroke: "#e2e8f0",
+      strokeWidth: 1,
+    },
+    fillShadowGradientOpacity: 0.1,
     formatYLabel: (yValue: string) => {
       const value = parseFloat(yValue);
       if (chartMode === 'cpi') {

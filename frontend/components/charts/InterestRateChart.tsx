@@ -94,8 +94,10 @@ export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) =>
           datasets: [
             {
               data: sortedData.map(item => item.rate),
-              color: (opacity = 1) => `rgba(255, 140, 66, ${opacity})`, // 활기찬 오렌지
+              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
               strokeWidth: 3,
+              withDots: true,
+              withShadow: true,
             }
           ],
           legend: ['정책금리(%)'],
@@ -112,8 +114,10 @@ export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) =>
           datasets: [
             {
               data: changes,
-              color: (opacity = 1) => `rgba(255, 140, 66, ${opacity})`, // 활기찬 오렌지
+              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
               strokeWidth: 3,
+              withDots: true,
+              withShadow: true,
             }
           ],
           legend: ['금리 변화(%p)'],
@@ -124,23 +128,37 @@ export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) =>
   const chartData = getChartData();
 
   const chartConfig = {
-    backgroundGradientFrom: '#fff',
-    backgroundGradientTo: '#fff',
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientFromOpacity: 0,
+    backgroundGradientTo: '#fff7ed',
+    backgroundGradientToOpacity: 0.6,
     decimalPlaces: chartMode === 'rate' ? 2 : 2,
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    color: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(51, 65, 85, ${opacity})`,
     style: {
       borderRadius: 16,
     },
     propsForDots: {
       r: '5',
       strokeWidth: '2',
-      stroke: '#FF8C42',
+      stroke: '#3b82f6',
+      fill: '#3b82f6',
+      shadowColor: '#3b82f6',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
     },
     propsForLabels: {
       fontSize: 11,
       fontWeight: 'bold',
     },
+    propsForBackgroundLines: {
+      strokeDasharray: "3,3",
+      stroke: "#e2e8f0",
+      strokeWidth: 1,
+    },
+    fillShadowGradient: '#3b82f6',
+    fillShadowGradientOpacity: 0.1,
     formatYLabel: (yValue: string) => {
       const value = parseFloat(yValue);
       if (chartMode === 'rate') {
@@ -316,7 +334,7 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   activeSelector: {
-    backgroundColor: '#FF8C42',
+    backgroundColor: '#3b82f6',
   },
   selectorText: {
     fontSize: 12,

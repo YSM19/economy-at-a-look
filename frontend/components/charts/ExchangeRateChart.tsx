@@ -50,31 +50,31 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
         return {
           values: data.map(item => item.usdRate || 0).filter(val => val > 0),
           label: '원/달러 환율',
-          color: (opacity = 1) => `rgba(25, 118, 210, ${opacity})`
+          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`
         };
       case 'japan':
         return {
           values: data.map(item => item.jpyRate || 0).filter(val => val > 0),
           label: '원/100엔 환율',
-          color: (opacity = 1) => `rgba(255, 152, 0, ${opacity})`
+          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`
         };
       case 'china':
         return {
           values: data.map(item => item.cnyRate || 0).filter(val => val > 0),
           label: '원/위안 환율',
-          color: (opacity = 1) => `rgba(244, 67, 54, ${opacity})`
+          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`
         };
       case 'europe':
         return {
           values: data.map(item => item.eurRate || 0).filter(val => val > 0),
           label: '원/유로 환율',
-          color: (opacity = 1) => `rgba(76, 175, 80, ${opacity})`
+          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`
         };
       default:
         return {
           values: data.map(item => item.usdRate || 0).filter(val => val > 0),
           label: '원/달러 환율',
-          color: (opacity = 1) => `rgba(25, 118, 210, ${opacity})`
+          color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`
         };
     }
   };
@@ -144,29 +144,46 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
       {
         data: currencyData.values,
         color: currencyData.color,
-        strokeWidth: 2,
+        strokeWidth: 3,
+        withDots: true,
+        withShadow: true,
       }
     ],
     legend: [currencyData.label],
   };
 
   const chartConfig = {
-    backgroundGradientFrom: '#fff',
-    backgroundGradientTo: '#fff',
+    backgroundGradientFrom: '#ffffff',
+    backgroundGradientFromOpacity: 0,
+    backgroundGradientTo: '#f8fafc',
+    backgroundGradientToOpacity: 0.5,
     decimalPlaces: 0,
-    color: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(0, 0, 0, ${opacity})`,
+    color: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(51, 65, 85, ${opacity})`,
     style: {
       borderRadius: 16,
     },
     propsForDots: {
       r: '4',
-      strokeWidth: '1',
+      strokeWidth: '2',
+      stroke: '#3b82f6',
+      fill: '#3b82f6',
+      shadowColor: '#3b82f6',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.3,
+      shadowRadius: 4,
     },
     propsForLabels: {
       fontSize: 10,
       fontWeight: 'bold',
     },
+    propsForBackgroundLines: {
+      strokeDasharray: "3,3",
+      stroke: "#e2e8f0",
+      strokeWidth: 1,
+    },
+    fillShadowGradient: '#3b82f6',
+    fillShadowGradientOpacity: 0.1,
   };
 
   // 점 클릭 이벤트 핸들러
