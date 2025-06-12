@@ -19,6 +19,8 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.util.UriComponentsBuilder;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 import java.net.ProtocolException;
 import java.time.LocalDate;
@@ -85,44 +87,156 @@ public class ExchangeRateService {
         String formattedDate = date.format(DateTimeFormatter.BASIC_ISO_DATE);
         log.info("📝 포맷된 날짜: {}", formattedDate);
         
-        // API URL 생성
-        String url = UriComponentsBuilder.fromHttpUrl(API_URL)
+        // 여러 URL 구성 방식 시도
+        return tryMultipleApiCalls(date, formattedDate);
+    }
+    
+    /**
+     * 여러 API URL 구성 방식을 시도하여 리디렉션 문제를 우회합니다.
+     */
+    private int tryMultipleApiCalls(LocalDate date, String formattedDate) {
+        // 방법 1: 기본 UriComponentsBuilder 사용
+        String url1 = UriComponentsBuilder.fromHttpUrl(API_URL)
                 .queryParam("authkey", authKey)
                 .queryParam("searchdate", formattedDate)
                 .queryParam("data", DATA_TYPE)
                 .build()
                 .toUriString();
         
-        log.info("🌐 환율 API 호출: {}", url);
+        log.info("🌐 [방법 1] 환율 API 호출: {}", url1);
         
         try {
-            // API 호출 전 로그 추가
-            log.debug("🔄 API 호출 시도 - URL: {}, 날짜: {}", API_URL, formattedDate);
-            log.info("🌐 실제 호출 URL: {}", url);
+            return attemptApiCall(url1, date);
+        } catch (ResourceAccessException e) {
+            if (e.getCause() != null && e.getCause().getMessage().contains("redirected too many times")) {
+                log.warn("🔄 [방법 1 실패] 리디렉션 문제 발생, 방법 2 시도");
+                
+                // 방법 2: 수동 URL 구성
+                String url2 = String.format("%s?authkey=%s&searchdate=%s&data=%s", 
+                             API_URL, authKey, formattedDate, DATA_TYPE);
+                
+                log.info("🌐 [방법 2] 환율 API 호출: {}", url2);
+                
+                try {
+                    return attemptApiCall(url2, date);
+                } catch (ResourceAccessException e2) {
+                    if (e2.getCause() != null && e2.getCause().getMessage().contains("redirected too many times")) {
+                        log.warn("🔄 [방법 2 실패] 리디렉션 문제 지속, 방법 3 시도");
+                        
+                        // 방법 3: HTTP로 시도 (HTTPS 문제일 수 있음)
+                        String httpUrl = API_URL.replace("https://", "http://");
+                        String url3 = String.format("%s?authkey=%s&searchdate=%s&data=%s", 
+                                     httpUrl, authKey, formattedDate, DATA_TYPE);
+                        
+                        log.info("🌐 [방법 3] HTTP로 환율 API 호출: {}", url3);
+                        
+                        try {
+                            return attemptApiCall(url3, date);
+                        } catch (ResourceAccessException e3) {
+                            log.error("💥 [모든 방법 실패] 외부 API 리디렉션 문제로 데이터를 가져올 수 없습니다.");
+                            log.error("🔍 URL1: {}", url1);
+                            log.error("🔍 URL2: {}", url2);
+                            log.error("🔍 URL3: {}", url3);
+                            log.warn("💡 [대안] 기존 저장된 데이터를 사용하거나 API 서비스 복구를 기다려주세요.");
+                            
+                            // 마지막 예외를 던져서 컨트롤러에서 적절한 메시지를 표시하도록 함
+                            throw e3;
+                        }
+                    } else {
+                        throw e2;
+                    }
+                } catch (Exception e2) {
+                    throw e2;
+                }
+            } else {
+                throw e;
+            }
+        } catch (Exception e) {
+            throw e;
+        }
+    }
+    
+    /**
+     * 실제 API 호출을 수행합니다.
+     */
+    private int attemptApiCall(String url, LocalDate date) {
+        log.debug("🔄 API 호출 시도 - URL: {}, 날짜: {}", API_URL, date);
+        log.info("🌐 실제 호출 URL: {}", url);
+        
+        try {
+            // API 호출 - String으로 먼저 받아서 응답 내용 확인
+            String rawResponse = restTemplate.getForObject(url, String.class);
             
-            // API 호출
-            ExchangeRateApiResponse[] response = restTemplate.getForObject(url, ExchangeRateApiResponse[].class);
+            log.info("📥 원시 응답 수신: response={}", rawResponse != null ? "not null" : "null");
             
-            // 응답 상세 로깅
-            log.info("📥 API 응답 수신: response={}", response != null ? "not null" : "null");
-            if (response != null) {
+            if (rawResponse == null || rawResponse.trim().isEmpty()) {
+                log.warn("📭 외부 API에서 빈 응답을 반환했습니다.");
+                return 0;
+            }
+            
+            // 응답이 HTML인지 JSON인지 확인
+            String trimmedResponse = rawResponse.trim();
+            if (trimmedResponse.startsWith("<") || trimmedResponse.toLowerCase().contains("<html")) {
+                log.error("🚫 API가 HTML 응답을 반환했습니다 (서비스 오류 또는 유지보수 중)");
+                log.error("📄 HTML 응답 내용 (처음 500자): {}", 
+                         trimmedResponse.length() > 500 ? trimmedResponse.substring(0, 500) + "..." : trimmedResponse);
+                
+                // HTML 응답에서 유용한 정보 추출 시도
+                if (trimmedResponse.toLowerCase().contains("maintenance") || 
+                    trimmedResponse.toLowerCase().contains("유지보수") ||
+                    trimmedResponse.toLowerCase().contains("점검")) {
+                    log.warn("💡 [서비스 점검] 외부 API가 유지보수 중인 것으로 보입니다.");
+                } else if (trimmedResponse.toLowerCase().contains("error") || 
+                          trimmedResponse.toLowerCase().contains("오류")) {
+                    log.warn("💡 [서비스 오류] 외부 API에서 오류 페이지를 반환했습니다.");
+                } else {
+                    log.warn("💡 [알 수 없음] 외부 API가 예상치 못한 HTML 페이지를 반환했습니다.");
+                }
+                
+                return 0;
+            }
+            
+            // JSON 응답인 경우 정상 처리
+            try {
+                // ObjectMapper를 사용하여 JSON 파싱
+                com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                ExchangeRateApiResponse[] response = objectMapper.readValue(rawResponse, ExchangeRateApiResponse[].class);
+                
+                // 응답 상세 로깅
                 log.info("📊 응답 배열 길이: {}", response.length);
                 if (response.length > 0) {
                     log.info("📋 첫 번째 응답 샘플: curUnit={}, curNm={}, dealBasR={}", 
                             response[0].getCurUnit(), response[0].getCurNm(), response[0].getDealBasR());
                 }
+                
+                if (response.length == 0) {
+                    log.warn("📭 외부 API에서 {}일 환율 데이터를 제공하지 않습니다.", date);
+                    return 0;
+                }
+                
+                log.info("✅ 환율 데이터 {}개 조회 완료. 날짜: {}", response.length, date);
+                
+                return processAndSaveExchangeRates(response, date);
+                
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                log.error("💥 JSON 파싱 실패: {}", e.getMessage());
+                log.error("📄 파싱 실패한 응답 내용: {}", rawResponse);
+                throw new RuntimeException("API 응답 JSON 파싱 실패", e);
             }
             
-            if (response == null || response.length == 0) {
-                log.warn("📭 외부 API에서 {}일 환율 데이터를 제공하지 않습니다.", date);
-                log.warn("🔍 API 응답이 {}입니다. URL: {}", 
-                        response == null ? "null" : "빈 배열", url);
-                return 0;
+        } catch (HttpClientErrorException e) {
+            log.error("❌ HTTP 클라이언트 오류 발생");
+            
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                log.error("🔑 API 인증 오류: 인증키를 확인하세요. 상태 코드: {}", e.getStatusCode());
+            } else if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE) {
+                log.error("🚫 외부 API 서비스 일시 중단: 상태 코드: {}", e.getStatusCode());
+            } else {
+                log.error("🌐 API 호출 오류: 상태 코드: {}, 메시지: {}", e.getStatusCode(), e.getMessage());
             }
             
-            log.info("✅ 환율 데이터 {}개 조회 완료. 날짜: {}", response.length, date);
-            
-            return processAndSaveExchangeRates(response, date);
+            // 예외를 다시 던져서 컨트롤러에서 적절히 처리하도록 함
+            throw e;
             
         } catch (ResourceAccessException e) {
             // 리디렉션 루프나 네트워크 연결 문제 등
@@ -135,20 +249,6 @@ public class ExchangeRateService {
                 log.warn("💡 [API 실패] 외부 API 문제로 새로운 데이터를 가져올 수 없습니다.");
             } else {
                 log.error("🌐 [네트워크 오류] API 연결 문제: {}", e.getMessage());
-            }
-            
-            // 예외를 다시 던져서 컨트롤러에서 적절히 처리하도록 함
-            throw e;
-            
-        } catch (HttpClientErrorException e) {
-            log.error("❌ HTTP 클라이언트 오류 발생");
-            
-            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
-                log.error("🔑 API 인증 오류: 인증키를 확인하세요. 상태 코드: {}", e.getStatusCode());
-            } else if (e.getStatusCode() == HttpStatus.SERVICE_UNAVAILABLE) {
-                log.error("🚫 외부 API 서비스 일시 중단: 상태 코드: {}", e.getStatusCode());
-            } else {
-                log.error("🌐 API 호출 오류: 상태 코드: {}, 메시지: {}", e.getStatusCode(), e.getMessage());
             }
             
             // 예외를 다시 던져서 컨트롤러에서 적절히 처리하도록 함
