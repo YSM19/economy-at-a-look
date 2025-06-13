@@ -6,8 +6,10 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import InterestRateGauge from '../components/InterestRateGauge';
 import ExchangeRateGauge from '../components/ExchangeRateGauge';
-import { CPIChart } from '../components/charts/CPIChart';
+import CPIGauge from '../components/CPIGauge';
 import ExchangeRateRecommendations from '../components/ExchangeRateRecommendations';
+import InterestRateRecommendations from '../components/InterestRateRecommendations';
+import CPIRecommendations from '../components/CPIRecommendations';
 import ExchangeRateCalculator from '../components/ExchangeRateCalculator';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { economicIndexApi } from '../services/api';
@@ -62,50 +64,16 @@ export default function HomeScreen() {
         if (response.data && response.data.success && response.data.data) {
           console.log('✅ 실제 CPI 데이터 사용:', response.data.data);
           setCpiData(response.data.data);
-        } else {
+                } else {
           console.warn('⚠️ API 응답 구조가 예상과 다름:', response.data);
           // 응답이 직접 데이터인 경우 (success 래퍼 없음)
           if (response.data && response.data.currentCPI) {
             console.log('✅ 직접 CPI 데이터 사용:', response.data);
             setCpiData(response.data);
-          } else {
-                         console.log('❌ 유효한 CPI 데이터를 찾을 수 없음, 샘플 데이터 사용');
-             setCpiData({
-               currentCPI: 108.5,
-               prevMonthCPI: 108.2,
-               changeRate: 0.3,
-               annualRate: 3.2,
-               history: [
-                 { id: 1, date: '2024-01', cpiValue: 105.8, monthlyChange: 0.2, annualChange: 2.8 },
-                 { id: 2, date: '2024-02', cpiValue: 106.1, monthlyChange: 0.3, annualChange: 2.9 },
-                 { id: 3, date: '2024-03', cpiValue: 106.5, monthlyChange: 0.4, annualChange: 3.0 },
-                 { id: 4, date: '2024-04', cpiValue: 107.0, monthlyChange: 0.5, annualChange: 3.1 },
-                 { id: 5, date: '2024-05', cpiValue: 107.3, monthlyChange: 0.3, annualChange: 3.0 },
-                 { id: 6, date: '2024-06', cpiValue: 107.8, monthlyChange: 0.5, annualChange: 3.2 },
-                 { id: 7, date: '2024-07', cpiValue: 108.2, monthlyChange: 0.4, annualChange: 3.1 },
-                 { id: 8, date: '2024-08', cpiValue: 108.5, monthlyChange: 0.3, annualChange: 3.2 }
-               ]
-             });
           }
         }
-      } catch (error) {
-                 console.error('❌ CPI 데이터 로딩 실패:', error);
-         setCpiData({
-           currentCPI: 108.5,
-           prevMonthCPI: 108.2,
-           changeRate: 0.3,
-           annualRate: 3.2,
-           history: [
-             { id: 1, date: '2024-01', cpiValue: 105.8, monthlyChange: 0.2, annualChange: 2.8 },
-             { id: 2, date: '2024-02', cpiValue: 106.1, monthlyChange: 0.3, annualChange: 2.9 },
-             { id: 3, date: '2024-03', cpiValue: 106.5, monthlyChange: 0.4, annualChange: 3.0 },
-             { id: 4, date: '2024-04', cpiValue: 107.0, monthlyChange: 0.5, annualChange: 3.1 },
-             { id: 5, date: '2024-05', cpiValue: 107.3, monthlyChange: 0.3, annualChange: 3.0 },
-             { id: 6, date: '2024-06', cpiValue: 107.8, monthlyChange: 0.5, annualChange: 3.2 },
-             { id: 7, date: '2024-07', cpiValue: 108.2, monthlyChange: 0.4, annualChange: 3.1 },
-             { id: 8, date: '2024-08', cpiValue: 108.5, monthlyChange: 0.3, annualChange: 3.2 }
-           ]
-         });
+            } catch (error) {
+        console.error('❌ CPI 데이터 로딩 실패:', error);
       } finally {
         setCpiLoading(false);
       }
@@ -136,58 +104,8 @@ export default function HomeScreen() {
       case 'price':
         return (
           <>
-            <ThemedText style={styles.gaugeLabel}>소비자 물가지수 동향</ThemedText>
-            <View style={styles.priceChartContainer}>
-              {cpiLoading ? (
-                <View style={styles.loadingContainer}>
-                  <ThemedText style={styles.loadingText}>데이터를 불러오는 중...</ThemedText>
-                </View>
-              ) : cpiData && cpiData.history && Array.isArray(cpiData.history) && cpiData.history.length > 0 ? (
-                <>
-                  <View style={styles.cpiSummaryInfo}>
-                    <View style={styles.cpiInfoItem}>
-                      <ThemedText style={styles.cpiInfoLabel}>현재 CPI</ThemedText>
-                      <ThemedText style={styles.cpiInfoValue}>
-                        {(cpiData.currentCPI && isFinite(cpiData.currentCPI)) ? cpiData.currentCPI : 'N/A'}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.cpiInfoItem}>
-                      <ThemedText style={styles.cpiInfoLabel}>전월대비</ThemedText>
-                      <ThemedText style={[
-                        styles.cpiInfoValue,
-                        cpiData.changeRate > 0 ? styles.positiveChange : styles.negativeChange
-                      ]}>
-                        {(cpiData.changeRate && isFinite(cpiData.changeRate)) ? 
-                          `${cpiData.changeRate > 0 ? '+' : ''}${cpiData.changeRate.toFixed(2)}%` : 'N/A'}
-                      </ThemedText>
-                    </View>
-                    <View style={styles.cpiInfoItem}>
-                      <ThemedText style={styles.cpiInfoLabel}>전년동월대비</ThemedText>
-                      <ThemedText style={[
-                        styles.cpiInfoValue,
-                        cpiData.annualRate > 0 ? styles.positiveChange : styles.negativeChange
-                      ]}>
-                        {(cpiData.annualRate && isFinite(cpiData.annualRate)) ? 
-                          `${cpiData.annualRate > 0 ? '+' : ''}${cpiData.annualRate.toFixed(1)}%` : 'N/A'}
-                      </ThemedText>
-                    </View>
-                  </View>
-                  <CPIChart data={cpiData.history.map(item => ({
-                    date: item.date,
-                    cpi: isFinite(item.cpiValue) ? item.cpiValue : 0,
-                    monthlyChange: isFinite(item.monthlyChange) ? item.monthlyChange : 0,
-                    annualChange: isFinite(item.annualChange) ? item.annualChange : 0
-                  }))} />
-                </>
-              ) : (
-                <View style={styles.errorContainer}>
-                  <ThemedText style={styles.errorText}>
-                    CPI 데이터를 준비 중입니다.{'\n'}
-                    잠시 후 다시 시도해주세요.
-                  </ThemedText>
-                </View>
-              )}
-            </View>
+            <ThemedText style={styles.gaugeLabel}>소비자 물가지수</ThemedText>
+            <CPIGauge value={cpiData?.annualRate} />
           </>
         );
       default:
@@ -310,9 +228,19 @@ export default function HomeScreen() {
           {/* 선택된 탭 내용 */}
           {renderTabContent()}
           
+          {/* 금리 추천 - 금리 탭일 때만 표시 */}
+          {activeTab === 'interest' && (
+            <InterestRateRecommendations />
+          )}
+          
           {/* 환율 추천 탭 - 환율 탭일 때만 표시 */}
           {activeTab === 'exchange' && (
             <ExchangeRateRecommendations country={activeCountry} />
+          )}
+          
+          {/* 물가 추천 - 물가 탭일 때만 표시 */}
+          {activeTab === 'price' && (
+            <CPIRecommendations />
           )}
           
           {/* 환율 계산기 - 환율 탭일 때만 표시 */}
