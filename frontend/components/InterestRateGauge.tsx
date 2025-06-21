@@ -55,9 +55,23 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
             setError('한국 금리 데이터가 없습니다');
           }
           
-          // 마지막 업데이트 시간 설정
-          if (interestData.lastUpdated) {
-            setLastUpdated(interestData.lastUpdated);
+          // 마지막 업데이트 시간 설정 (발표일 기준)
+          if (interestData.korea && interestData.korea.lastUpdated) {
+            // 백엔드에서 받은 발표일 데이터 사용
+            const announcementDate = new Date(interestData.korea.lastUpdated);
+            setLastUpdated(announcementDate.toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }));
+          } else if (interestData.lastUpdated) {
+            // fallback: 전체 lastUpdated 사용
+            const fallbackDate = new Date(interestData.lastUpdated);
+            setLastUpdated(fallbackDate.toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric'
+            }));
           }
         }
       } catch (err) {
@@ -320,7 +334,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
         </ThemedText>
         {lastUpdated && (
           <ThemedText style={styles.lastUpdated}>
-            마지막 업데이트: {lastUpdated}
+            변경 발표일: {lastUpdated}
           </ThemedText>
         )}
       </View>
@@ -360,12 +374,12 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     alignItems: 'center',
-    marginTop: 8,
+    marginTop: -8,
   },
   infoText: {
     fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 4,
   },
   description: {
     fontSize: 12,

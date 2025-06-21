@@ -29,7 +29,14 @@ const InterestRateRecommendations: React.FC = () => {
       const response = await economicIndexApi.getInterestRate();
       
       if (response.data && response.data.success && response.data.data) {
-        const rate = response.data.data.currentRate || getDefaultRate();
+        const interestData = response.data.data;
+        console.log('🔍 [InterestRateRecommendations] 받은 금리 데이터:', interestData);
+        
+        const rate = interestData.korea?.rate || interestData.currentRate || getDefaultRate();
+        
+        console.log('📊 [InterestRateRecommendations] 파싱된 금리:', rate);
+        console.log('🎯 [InterestRateRecommendations] 생성될 추천:', generateRecommendations(rate));
+        
         setCurrentRate(rate);
         setRecommendations(generateRecommendations(rate));
       }
@@ -330,28 +337,28 @@ const InterestRateRecommendations: React.FC = () => {
 
 const styles = StyleSheet.create({
   outerContainer: {
-    marginTop: 24,
+    marginTop: 20,
     marginBottom: 16,
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    marginLeft: 5,
+    marginLeft: 2,
     textAlign: 'left',
   },
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 4,
   },
   loadingText: {
     textAlign: 'center',
@@ -360,17 +367,24 @@ const styles = StyleSheet.create({
   },
   recommendationsGrid: {
     flexDirection: 'column',
-    gap: 12,
+    gap: 8,
   },
   recommendationCard: {
     width: '100%',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    marginBottom: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#e9ecef',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   cardContent: {
     flexDirection: 'row',
@@ -383,41 +397,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   textSection: {
-    marginLeft: 10,
+    marginLeft: 12,
     flex: 1,
   },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   categoryText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+    color: '#212529',
   },
   descriptionText: {
     fontSize: 12,
-    color: '#666',
+    color: '#6c757d',
     lineHeight: 16,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
-    minWidth: 70,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    minWidth: 68,
     justifyContent: 'center',
   },
   statusBadgeText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#fff',
-    marginLeft: 4,
+    marginLeft: 3,
   },
   infoIcon: {
-    marginLeft: 4,
+    marginLeft: 2,
+    opacity: 0.7,
   },
   modalOverlay: {
     flex: 1,

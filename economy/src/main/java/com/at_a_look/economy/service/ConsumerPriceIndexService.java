@@ -385,6 +385,7 @@ public class ConsumerPriceIndexService {
                 .prevMonthCPI(prevMonthCPI)
                 .changeRate(latestCPI.getMonthlyChange())
                 .annualRate(latestCPI.getAnnualChange())
+                .date(latestCPI.getDate()) // 최신 데이터의 날짜 추가
                 .history(historyDtos)
                 .build();
     }

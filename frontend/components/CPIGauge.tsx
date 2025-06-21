@@ -21,6 +21,22 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState('');
   
+  const getInflationDescription = (rate: number): string => {
+    if (rate >= -1 && rate < 0) {
+      return '물가가 하락하고 있어 경기 침체 우려가 있습니다.';
+    } else if (rate >= 0 && rate < 1.0) {
+      return '물가 상승률이 낮아 소비 적기입니다.';
+    } else if (rate >= 1.0 && rate < 3.0) {
+      return '한국은행 목표 범위 내 물가가 안정적인 수준입니다.';
+    } else if (rate >= 3.0 && rate < 5.0) {
+      return '물가 상승률이 높아 실물자산 투자를 고려하세요.';
+    } else if (rate >= 5.0) {
+      return '물가 급등으로 현금 보유보다 실물자산이 유리합니다.';
+    } else {
+      return '극심한 물가 하락으로 현금 보유가 가장 안전합니다.';
+    }
+  };
+  
   // API에서 CPI 데이터 가져오기
   useEffect(() => {
     const fetchCPIRate = async () => {
@@ -41,6 +57,9 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
           const cpiData = response.data.data;
           
           console.log('🔍 [CPIGauge] CPI 데이터:', cpiData);
+          console.log('📅 [CPIGauge] cpiData.date:', cpiData.date);
+          console.log('📅 [CPIGauge] cpiData.lastUpdated:', cpiData.lastUpdated);
+          console.log('🔍 [CPIGauge] 모든 필드:', Object.keys(cpiData));
           
           // 전년동월대비 변화율 사용
           if (cpiData.yearlyChange !== undefined) {
@@ -56,9 +75,24 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
             setError('CPI 변화율 데이터가 없습니다');
           }
           
-          // 마지막 업데이트 시간 설정
-          if (cpiData.lastUpdated) {
-            setLastUpdated(cpiData.lastUpdated);
+          // 마지막 업데이트 시간 설정 (최신 DB date 값 사용)
+          console.log('🔍 [CPIGauge] date 필드 확인:', cpiData.date);
+          
+          if (cpiData.date) {
+            // 백엔드에서 받은 date 필드 사용 (YYYYMM 형식)
+            const dateStr = cpiData.date.toString();
+            const year = parseInt(dateStr.substring(0, 4));
+            const month = parseInt(dateStr.substring(4, 6)) - 1; // 월은 0부터 시작
+            const dateObj = new Date(year, month, 1);
+            setLastUpdated(dateObj.toISOString());
+            console.log('✅ [CPIGauge] API date 사용:', cpiData.date, '→', dateObj);
+          } else {
+            console.log('⚠️ [CPIGauge] date 필드가 없습니다. 백엔드 재시작이 필요할 수 있습니다.');
+            
+            // 임시 fallback: 현재 날짜에서 한 달 전으로 설정 (2024년 1월로 가정)
+            const tempDate = new Date(2024, 0, 1); // 2024년 1월
+            setLastUpdated(tempDate.toISOString());
+            console.log('🔄 [CPIGauge] 임시 날짜 사용 (2024년 1월)');
           }
         }
       } catch (err) {
@@ -73,16 +107,20 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
   }, [value]);
 
   useEffect(() => {
+    console.log('🔄 [CPIGauge] lastUpdated 상태 변경:', lastUpdated);
+  }, [lastUpdated]);
+
+  useEffect(() => {
     if (cpiRate >= -1 && cpiRate < 0) {
       setRateText('디플레이션');
       setRateColor('#F44336'); // 빨간색 (매우 위험)
       setActiveSection(0);
-    } else if (cpiRate >= 0 && cpiRate < 2.0) {
+    } else if (cpiRate >= 0 && cpiRate < 1.0) {
       setRateText('저물가');
       setRateColor('#FF9800'); // 주황색 (위험 신호)
       setActiveSection(1);
-    } else if (cpiRate >= 2.0 && cpiRate < 3.0) {
-      setRateText('안정물가');
+    } else if (cpiRate >= 1.0 && cpiRate < 3.0) {
+      setRateText('물가 안정');
       setRateColor('#4CAF50'); // 초록색 (이상적)
       setActiveSection(2);
     } else if (cpiRate >= 3.0 && cpiRate < 5.0) {
@@ -139,8 +177,8 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
   const createSections = () => {
     const baseSections = [
       { name: '디플레이션', color: '#FFCDD2', textColor: '#F44336', start: Math.max(minRate, -1), end: 0 },
-      { name: '저물가', color: '#FFE0B2', textColor: '#FF9800', start: 0, end: 2 },
-      { name: '안정물가', color: '#C8E6C9', textColor: '#4CAF50', start: 2, end: 3 },
+      { name: '저물가', color: '#FFE0B2', textColor: '#FF9800', start: 0, end: 1 },
+      { name: '물가 안정', color: '#C8E6C9', textColor: '#4CAF50', start: 1, end: 3 },
       { name: '고물가', color: '#FFE0B2', textColor: '#FF9800', start: 3, end: 5 },
       { name: '초고물가', color: '#FFCDD2', textColor: '#F44336', start: 5, end: Math.min(maxRate, 6) }
     ];
@@ -353,10 +391,24 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
           <ThemedText style={[styles.labelText, { color: rateColor }]}>
             {rateText}
           </ThemedText>
-          <ThemedText style={styles.dateText}>
-            {new Date().toLocaleDateString('ko-KR').replace(/\//g, '.')}
-          </ThemedText>
         </View>
+        
+        {/* 물가 상황 설명 */}
+        <ThemedText style={styles.descriptionText}>
+          {getInflationDescription(cpiRate)}
+        </ThemedText>
+        
+        {/* 마지막 업데이트 */}
+        <ThemedText style={styles.lastUpdated}>
+          {lastUpdated ? (
+            `마지막 업데이트: ${new Date(lastUpdated).toLocaleDateString('ko-KR', {
+              year: 'numeric',
+              month: 'long'
+            })}`
+          ) : (
+            '마지막 업데이트: 데이터 로딩 중...'
+          )}
+        </ThemedText>
       </View>
     </View>
   );
@@ -392,7 +444,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     alignItems: 'center',
     justifyContent: 'center',
-    top: '65%',
+    top: '60%',
     width: '100%',
     paddingHorizontal: 20,
   },
@@ -405,10 +457,10 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   labelText: {
-    fontSize: 16,
+    fontSize: 20,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 12,
   },
   dateText: {
     fontSize: 11,
@@ -442,6 +494,20 @@ const styles = StyleSheet.create({
     color: '#666',
     fontSize: 14,
     textAlign: 'center',
+  },
+  descriptionText: {
+    fontSize: 13,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: -8,
+    paddingHorizontal: 16,
+    lineHeight: 18,
+  },
+  lastUpdated: {
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
 

@@ -33,7 +33,7 @@ const Config = {
   
   // 운영 환경 설정
   production: {
-    apiUrl: 'https://api.economy-at-a-look.com',
+    apiUrl: 'http://192.168.0.2:8080',
     debug: false,
     apiTimeout: 30000, // 30초
     useTestAccount: false,

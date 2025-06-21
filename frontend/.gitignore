@@ -36,3 +36,6 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+
+## Configuration files with sensitive information
+#constants/Config.ts

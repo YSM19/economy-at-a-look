@@ -17,5 +17,6 @@ public class ConsumerPriceIndexResponse {
     private Double prevMonthCPI;
     private Double changeRate;
     private Double annualRate;
+    private String date; // 최신 데이터의 날짜 (YYYYMM 형식)
     private List<ConsumerPriceIndexDto> history;
 } 

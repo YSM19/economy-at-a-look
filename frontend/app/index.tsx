@@ -240,7 +240,17 @@ export default function HomeScreen() {
           
           {/* 물가 추천 - 물가 탭일 때만 표시 */}
           {activeTab === 'price' && (
-            <CPIRecommendations />
+            <>
+              <CPIRecommendations />
+              <View style={styles.noticeContainer}>
+                <ThemedText style={styles.noticeTitle}>📋 물가 범위 기준 안내</ThemedText>
+                <ThemedText style={styles.noticeText}>
+                  • 물가 구간은 한국은행 2% 물가안정목표 정책을 바탕으로 재구성되었습니다.{'\n'}
+                  • 안정물가 범위(1%~3%)는 한국은행의 물가안정목표 ±1%p 기준입니다.{'\n'}
+                  • 실제 투자 결정 시에는 다양한 경제 지표를 종합적으로 고려하시기 바랍니다.
+                </ThemedText>
+              </View>
+            </>
           )}
           
           {/* 환율 계산기 - 환율 탭일 때만 표시 */}
@@ -540,5 +550,30 @@ const styles = StyleSheet.create({
   },
   negativeChange: {
     color: '#4caf50', // 초록색 (하락)
+  },
+  noticeContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  noticeTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  noticeText: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
   },
 }); 

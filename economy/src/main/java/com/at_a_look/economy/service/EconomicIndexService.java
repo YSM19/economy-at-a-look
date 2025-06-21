@@ -106,8 +106,7 @@ public class EconomicIndexService {
         // 임시 계산 로직 (연간 변화율 기준)
         double annualChange = cpi.getAnnualChange();
         if (annualChange < 1.0) return 35.0; // 매우 낮은 물가상승률 -> 경기침체
-        else if (annualChange < 2.0) return 50.0; // 적정 물가상승률 -> 중립
-        else if (annualChange < 3.0) return 60.0; // 약간 높은 물가상승률 -> 경기확장
+        else if (annualChange < 3.0) return 60.0; // 안정 물가상승률 (1%~3%) -> 경기확장
         else if (annualChange < 4.0) return 70.0; // 높은 물가상승률 -> 경기확장
         else if (annualChange < 5.0) return 80.0; // 매우 높은 물가상승률 -> 경기과열
         else return 90.0; // 극도로 높은 물가상승률 -> 경기과열

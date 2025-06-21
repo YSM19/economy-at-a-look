@@ -144,7 +144,7 @@ export default function ConsumerPriceIndexScreen() {
               <View style={styles.levelItem}>
                 <View style={[styles.levelIndicator, { backgroundColor: '#F44336' }]} />
                 <View style={styles.levelContent}>
-                  <ThemedText style={styles.levelName}>디플레이션 : -1%~0% 미만</ThemedText>
+                  <ThemedText style={styles.levelName}>디플레이션 : -1%~0%</ThemedText>
                   <ThemedText style={styles.levelStatus}>상태: 물가가 지속적으로 하락하는 현상으로, 경제에 가장 위험한 신호 중 하나입니다.</ThemedText>
                   <ThemedText style={styles.levelDescription}>
                     • 소비 절벽: 사람들이 물가가 계속 떨어질 것으로 기대해 아예 소비를 멈춥니다.{'\n'}
@@ -157,7 +157,7 @@ export default function ConsumerPriceIndexScreen() {
               <View style={styles.levelItem}>
                 <View style={[styles.levelIndicator, { backgroundColor: '#FF9800' }]} />
                 <View style={styles.levelContent}>
-                  <ThemedText style={styles.levelName}>저물가 (디스인플레이션) : 0%~2% 미만</ThemedText>
+                  <ThemedText style={styles.levelName}>저물가 (디스인플레이션) : 0%~1%</ThemedText>
                   <ThemedText style={styles.levelStatus}>상태: 물가가 오르긴 하지만, 그 상승률이 목표치(2%)에 크게 못 미치는 낮은 수준을 보이는 상태입니다.</ThemedText>
                   <ThemedText style={styles.levelDescription}>
                     • 소비 지연: "나중에 사면 더 싸지 않을까?"라는 심리 때문에 소비를 미루게 됩니다.{'\n'}
@@ -170,7 +170,7 @@ export default function ConsumerPriceIndexScreen() {
               <View style={styles.levelItem}>
                 <View style={[styles.levelIndicator, { backgroundColor: '#4CAF50' }]} />
                 <View style={styles.levelContent}>
-                  <ThemedText style={styles.levelName}>안정적인 물가 (물가안정목표) : 2%~3% 미만</ThemedText>
+                  <ThemedText style={styles.levelName}>안정적인 물가 (물가안정목표) : 1%~3%</ThemedText>
                   <ThemedText style={styles.levelStatus}>상태: 경제가 건강하게 성장하고 있다는 신호입니다.</ThemedText>
                   <ThemedText style={styles.levelDescription}>
                     • 소비자들은 물가가 완만하게 오를 것을 예상하므로 소비를 미루지 않습니다.{'\n'}
@@ -216,6 +216,17 @@ export default function ConsumerPriceIndexScreen() {
                 소비자물가지수(CPI)는 소비자가 구입하는 상품과 서비스의 가격 변동을 측정하는 지표입니다.
                 CPI 상승은 인플레이션을 의미하며, 물가 안정이 중요한 경제 정책 목표 중 하나입니다.
                 한국은행은 물가 안정을 위해 통화정책을 운용합니다.
+              </ThemedText>
+            </View>
+            
+            {/* 물가 범위 기준 안내 */}
+            <View style={styles.noticeContainer}>
+              <ThemedText style={styles.noticeTitle}>📋 물가 범위 기준 안내</ThemedText>
+              <ThemedText style={styles.noticeText}>
+                • 물가 구간은 한국은행 2% 물가안정목표 정책을 바탕으로 재구성되었습니다.{'\n'}
+                • 안정물가 범위(1%~3%)는 한국은행의 물가안정목표 ±1%p 기준입니다.{'\n'}
+                • 디플레이션(-1%~0%), 저물가(0%~1%) 구간도 이에 맞춰 조정되었습니다.{'\n'}
+                • 실제 투자 결정 시에는 다양한 경제 지표를 종합적으로 고려하시기 바랍니다.
               </ThemedText>
             </View>
           </>
@@ -432,5 +443,30 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 18,
     color: '#555',
+  },
+  noticeContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
+    marginTop: 16,
+    marginBottom: 40,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  noticeTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 8,
+  },
+  noticeText: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
   },
 }); 

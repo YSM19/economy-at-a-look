@@ -33,6 +33,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currencyTitle, setCurrencyTitle] = useState('환율 (USD/KRW)');
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
   // 국가별 환율 범위 설정을 위한 상태 추가
   const [minRate, setMinRate] = useState(1000);
   const [maxRate, setMaxRate] = useState(1600);
@@ -167,6 +168,21 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
         // 유효한 환율 데이터가 있으면 설정
         if (newRate > 0) {
           setRate(newRate);
+          
+          // 해당 통화의 날짜 정보 설정
+          const selectedCurrencyData = exchangeRates.find(rate => {
+            switch(country) {
+              case 'usa': return rate.curUnit === 'USD';
+              case 'japan': return rate.curUnit === 'JPY(100)';
+              case 'china': return rate.curUnit === 'CNH';
+              case 'europe': return rate.curUnit === 'EUR';
+              default: return rate.curUnit === 'USD';
+            }
+          });
+          
+          if (selectedCurrencyData && selectedCurrencyData.date) {
+            setLastUpdated(selectedCurrencyData.date);
+          }
         } else {
           throw new Error(`선택된 국가(${country})의 환율 데이터를 찾을 수 없습니다.\n사용 가능한 통화: ${exchangeRates.map(r => r.curUnit).join(', ')}\n\n💡 관리자에게 환율 데이터 업데이트를 요청하세요.`);
         }
@@ -548,6 +564,17 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
               현재 {getCountryCurrencyName(country)}/원 환율은 {formatNumberWithUnit(rate, '원')}입니다.
               환율이 낮을수록 원화가 강세이고, 높을수록 원화가 약세입니다.
             </ThemedText>
+            
+            {/* 마지막 업데이트 */}
+            {lastUpdated && (
+              <ThemedText style={styles.lastUpdated}>
+                마지막 업데이트: {new Date(lastUpdated).toLocaleDateString('ko-KR', {
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </ThemedText>
+            )}
           </View>
         </>
       ) : (
@@ -674,6 +701,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#E67E22',
     textAlign: 'center',
+  },
+  lastUpdated: {
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
   },
 });
 

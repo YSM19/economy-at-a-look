@@ -32,14 +32,30 @@ const CPIRecommendations: React.FC = () => {
       
       if (response.data && response.data.success && response.data.data) {
         const cpiData = response.data.data;
+        console.log('🔍 [CPIRecommendations] 받은 CPI 데이터:', cpiData);
+        
         const current = cpiData.currentCPI;
-        const monthly = cpiData.monthlyChange;
-        const yearly = cpiData.yearlyChange;
+        const monthly = cpiData.changeRate || cpiData.monthlyChange;
+        const yearly = cpiData.annualRate || cpiData.yearlyChange;
+        
+        console.log('📊 [CPIRecommendations] 파싱된 데이터:', {
+          current,
+          monthly,
+          yearly,
+          originalData: cpiData
+        });
         
         setCurrentCPI(current);
         setMonthlyChange(monthly);
         setYearlyChange(yearly);
-        setRecommendations(generateRecommendations(yearly, monthly));
+        
+        if (yearly !== null && yearly !== undefined) {
+          const recommendations = generateRecommendations(yearly, monthly || 0);
+          console.log('💡 [CPIRecommendations] 생성된 추천:', recommendations);
+          setRecommendations(recommendations);
+        } else {
+          console.warn('⚠️ [CPIRecommendations] yearly 데이터가 없습니다');
+        }
       }
     } catch (error) {
       console.error('물가 데이터 가져오기 실패:', error);
@@ -49,17 +65,17 @@ const CPIRecommendations: React.FC = () => {
   };
 
   const generateRecommendations = (yearlyChange: number, monthlyChange: number): RecommendationItem[] => {
-    if (yearlyChange >= -1 && yearlyChange < 0) { // 디플레이션 (-1%~0%미만)
+    if (yearlyChange >= -1 && yearlyChange < 0) { // 디플레이션 (-1%~0%)
       return [
         { category: '부동산', status: 'not-recommended', description: '부동산 투자 비추천', icon: 'home' },
         { category: '실물자산', status: 'not-recommended', description: '금/실물자산 비추천', icon: 'gold' },
         { category: '현금 보유', status: 'recommended', description: '현금 보유 추천', icon: 'cash-multiple' },
         { category: '채권', status: 'recommended', description: '장기 채권 추천', icon: 'file-chart' },
         { category: '소비 지출', status: 'not-recommended', description: '불필요한 소비 자제', icon: 'cart' },
-        { category: '내구재 구매', status: 'recommended', description: '내구재 구매 연기', icon: 'car' },
+        { category: '내구재 구매', status: 'not-recommended', description: '내구재 구매 연기', icon: 'car' },
         { category: '주식 투자', status: 'not-recommended', description: '주식 투자 비추천', icon: 'chart-line' }
       ];
-    } else if (yearlyChange >= 0 && yearlyChange < 2.0) { // 저물가 (0%~2%미만)
+    } else if (yearlyChange >= 0 && yearlyChange < 1.0) { // 저물가 (0%~1%)
       return [
         { category: '부동산', status: 'neutral', description: '부동산 투자 관망', icon: 'home' },
         { category: '실물자산', status: 'neutral', description: '금/실물자산 관망', icon: 'gold' },
@@ -69,7 +85,7 @@ const CPIRecommendations: React.FC = () => {
         { category: '내구재 구매', status: 'recommended', description: '내구재 구매 추천', icon: 'car' },
         { category: '주식 투자', status: 'neutral', description: '성장주 투자 관망', icon: 'chart-line' }
       ];
-    } else if (yearlyChange >= 2.0 && yearlyChange < 3.0) { // 안정물가 (2%~3%미만)
+    } else if (yearlyChange >= 1.0 && yearlyChange < 3.0) { // 안정물가 (1%~3%)
       return [
         { category: '부동산', status: 'neutral', description: '부동산 투자 균형', icon: 'home' },
         { category: '실물자산', status: 'neutral', description: '금/실물자산 균형', icon: 'gold' },
@@ -146,8 +162,8 @@ const CPIRecommendations: React.FC = () => {
     // 물가 상황 판단
     let inflationLevel = '';
     if (yearlyChange >= -1 && yearlyChange < 0) inflationLevel = 'deflation';
-    else if (yearlyChange >= 0 && yearlyChange < 2.0) inflationLevel = 'low';
-    else if (yearlyChange >= 2.0 && yearlyChange < 3.0) inflationLevel = 'stable';
+    else if (yearlyChange >= 0 && yearlyChange < 1.0) inflationLevel = 'low';
+    else if (yearlyChange >= 1.0 && yearlyChange < 3.0) inflationLevel = 'stable';
     else if (yearlyChange >= 3.0 && yearlyChange < 5.0) inflationLevel = 'high';
     else if (yearlyChange >= 5.0) inflationLevel = 'very_high';
     else inflationLevel = 'severe_deflation';
@@ -421,28 +437,28 @@ const CPIRecommendations: React.FC = () => {
 
 const styles = StyleSheet.create({
   outerContainer: {
-    marginTop: 24,
+    marginTop: 20,
     marginBottom: 16,
   },
   title: {
     fontSize: 18,
     fontWeight: 'bold',
     marginBottom: 12,
-    marginLeft: 5,
+    marginLeft: 2,
     textAlign: 'left',
   },
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 3.84,
-    elevation: 5,
+    elevation: 4,
   },
   loadingText: {
     textAlign: 'center',
@@ -451,17 +467,24 @@ const styles = StyleSheet.create({
   },
   recommendationsGrid: {
     flexDirection: 'column',
-    gap: 12,
+    gap: 8,
   },
   recommendationCard: {
     width: '100%',
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#f8f9fa',
     borderRadius: 12,
-    paddingVertical: 16,
-    paddingHorizontal: 12,
-    marginBottom: 8,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     borderWidth: 1,
-    borderColor: '#eee',
+    borderColor: '#e9ecef',
+    shadowColor: "#000",
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   cardContent: {
     flexDirection: 'row',
@@ -474,41 +497,43 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   textSection: {
-    marginLeft: 10,
+    marginLeft: 12,
     flex: 1,
   },
   rightSection: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
   },
   categoryText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 15,
+    fontWeight: '600',
+    marginBottom: 2,
+    color: '#212529',
   },
   descriptionText: {
     fontSize: 12,
-    color: '#666',
+    color: '#6c757d',
     lineHeight: 16,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 8,
-    minWidth: 70,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+    minWidth: 68,
     justifyContent: 'center',
   },
   statusBadgeText: {
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#fff',
-    marginLeft: 4,
+    marginLeft: 3,
   },
   infoIcon: {
-    marginLeft: 4,
+    marginLeft: 2,
+    opacity: 0.7,
   },
   modalOverlay: {
     flex: 1,

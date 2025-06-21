@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback } from 'react';
 import { View, StyleSheet, Dimensions, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
 import { ThemedText } from '../ThemedText';
-import { LineChart } from 'react-native-chart-kit';
+import { LineChart } from 'react-native-gifted-charts';
 
 interface CPIDataPoint {
   date: string;
@@ -39,68 +39,81 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
     // 데이터를 날짜 순으로 정렬 (오래된 것부터)하여 최신이 오른쪽에 오도록
     const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
     
-    // 효율적인 레이블 생성: 첫 번째는 YYYY.MM, 이후 월만, 연도 바뀔 때 YYYY.MM
-    const labels = sortedData.map((item, index) => {
-      const fullYear = item.date.slice(0, 4); // 2024
-      const month = item.date.slice(4, 6); // 06
-      
-      if (index === 0) {
-        // 첫 번째는 항상 전체 연도.월 표시
-        return `${fullYear}.${month}`;
-      }
-      
-      const prevFullYear = sortedData[index - 1].date.slice(0, 4);
-      if (fullYear !== prevFullYear) {
-        // 연도가 바뀔 때는 전체 연도.월 표시
-        return `${fullYear}.${month}`;
-      }
-      
-      // 같은 연도 내에서는 월만 표시
-      return month;
-    });
-    
     switch (chartMode) {
       case 'cpi':
         return {
-          labels,
-          datasets: [
-            {
-              data: sortedData.map(item => item.cpi),
-              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-              strokeWidth: 3,
-              withDots: true,
-              withShadow: true,
-            }
-          ],
-          legend: ['소비자물가지수'],
+          data: sortedData.map((item, index) => ({
+            value: item.cpi,
+            label: (() => {
+              const fullYear = item.date.slice(0, 4);
+              const month = item.date.slice(4, 6);
+              
+              if (index === 0) {
+                return `${fullYear}.${month}`;
+              }
+              
+              const prevFullYear = sortedData[index - 1].date.slice(0, 4);
+              if (fullYear !== prevFullYear) {
+                return `${fullYear}.${month}`;
+              }
+              
+              return month;
+            })(),
+            dataPointText: item.cpi.toFixed(1),
+          })),
+          title: '소비자물가지수',
+          yAxisSuffix: '',
+          formatYLabel: (value: number) => value.toFixed(1),
         };
       case 'monthly':
         return {
-          labels,
-          datasets: [
-            {
-              data: sortedData.map(item => item.monthlyChange),
-              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-              strokeWidth: 3,
-              withDots: true,
-              withShadow: true,
-            }
-          ],
-          legend: ['전월대비 변화율(%)'],
+          data: sortedData.map((item, index) => ({
+            value: item.monthlyChange,
+            label: (() => {
+              const fullYear = item.date.slice(0, 4);
+              const month = item.date.slice(4, 6);
+              
+              if (index === 0) {
+                return `${fullYear}.${month}`;
+              }
+              
+              const prevFullYear = sortedData[index - 1].date.slice(0, 4);
+              if (fullYear !== prevFullYear) {
+                return `${fullYear}.${month}`;
+              }
+              
+              return month;
+            })(),
+            dataPointText: item.monthlyChange.toFixed(2) + '%',
+          })),
+          title: '전월대비 변화율(%)',
+          yAxisSuffix: '%',
+          formatYLabel: (value: number) => value.toFixed(1) + '%',
         };
       case 'annual':
         return {
-          labels,
-          datasets: [
-            {
-              data: sortedData.map(item => item.annualChange),
-              color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
-              strokeWidth: 3,
-              withDots: true,
-              withShadow: true,
-            }
-          ],
-          legend: ['전년동월대비 변화율(%)'],
+          data: sortedData.map((item, index) => ({
+            value: item.annualChange,
+            label: (() => {
+              const fullYear = item.date.slice(0, 4);
+              const month = item.date.slice(4, 6);
+              
+              if (index === 0) {
+                return `${fullYear}.${month}`;
+              }
+              
+              const prevFullYear = sortedData[index - 1].date.slice(0, 4);
+              if (fullYear !== prevFullYear) {
+                return `${fullYear}.${month}`;
+              }
+              
+              return month;
+            })(),
+            dataPointText: item.annualChange.toFixed(2) + '%',
+          })),
+          title: '전년동월대비 변화율(%)',
+          yAxisSuffix: '%',
+          formatYLabel: (value: number) => value.toFixed(1) + '%',
         };
     }
   };
@@ -195,26 +208,13 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
   
   // 터치 시작 시 사용자 상호작용 상태 설정
   const handleTouchStart = useCallback(() => {
-    isUserInteracting.current = true;
+    // react-native-gifted-charts에서는 내장 터치 핸들링 사용
   }, []);
   
   // 터치 종료 시 사용자 상호작용 상태 해제
   const handleTouchEnd = useCallback(() => {
-    isUserInteracting.current = false;
-    
-    // 터치가 끝난 후 3초 뒤 자동 숨김
-    if (tooltipPos.visible && autoHideTimeout.current) {
-      clearTimeout(autoHideTimeout.current);
-    }
-    
-    if (tooltipPos.visible) {
-      autoHideTimeout.current = setTimeout(() => {
-        if (!isUserInteracting.current) {
-          setTooltipPos(prev => ({ ...prev, visible: false, index: -1 }));
-        }
-      }, 3000);
-    }
-  }, [tooltipPos.visible]);
+    // react-native-gifted-charts에서는 내장 터치 핸들링 사용
+  }, []);
 
   // 차트 모드에 따른 툴팁 텍스트 생성
   const getTooltipText = (value: number) => {
@@ -230,73 +230,82 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
   };
 
   return (
-    <TouchableWithoutFeedback onPress={handleChartAreaTouch}>
-      <View style={styles.container}>
-        <View
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
+    <View style={styles.container}>
+      {/* 차트 모드 선택 버튼 */}
+      <View style={styles.modeSelector}>
+        <TouchableOpacity
+          style={[styles.modeButton, chartMode === 'cpi' && styles.activeModeButton]}
+          onPress={() => setChartMode('cpi')}
         >
-          <LineChart
-            data={chartData}
-            width={screenWidth}
-            height={220}
-            chartConfig={chartConfig}
-            style={styles.chart}
-            fromZero={false}
-            yAxisSuffix={chartMode === 'cpi' ? '' : '%'}
-            yAxisInterval={1}
-            verticalLabelRotation={0}
-            horizontalLabelRotation={0}
-            withInnerLines={true}
-            withOuterLines={true}
-            withVerticalLines={false}
-            withHorizontalLines={true}
-            withVerticalLabels={true}
-            withHorizontalLabels={true}
-            segments={5}
-            onDataPointClick={handleDataPointClick}
-          />
-        </View>
-        
-        {/* 터치 시 표시되는 툴팁 */}
-        {tooltipPos.visible && (
-          <View
-            style={[
-              styles.tooltip,
-              {
-                left: tooltipPos.x - 30,
-                top: tooltipPos.y - 15,
-              },
-            ]}
-          >
-            <ThemedText style={styles.tooltipText}>
-              {getTooltipText(tooltipPos.value)}
-            </ThemedText>
-          </View>
-        )}
-        
-        <View style={styles.chartSelector}>
-          <TouchableOpacity 
-            style={[styles.selectorItem, chartMode === 'cpi' && styles.activeSelector]}
-            onPress={() => setChartMode('cpi')}
-          >
-            <ThemedText style={chartMode === 'cpi' ? styles.activeSelectorText : styles.selectorText}>CPI 지수</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.selectorItem, chartMode === 'monthly' && styles.activeSelector]}
-            onPress={() => setChartMode('monthly')}
-          >
-            <ThemedText style={chartMode === 'monthly' ? styles.activeSelectorText : styles.selectorText}>전월대비</ThemedText>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.selectorItem, chartMode === 'annual' && styles.activeSelector]}
-            onPress={() => setChartMode('annual')}
-          >
-            <ThemedText style={chartMode === 'annual' ? styles.activeSelectorText : styles.selectorText}>전년동월대비</ThemedText>
-          </TouchableOpacity>
-        </View>
+          <ThemedText style={[styles.modeButtonText, chartMode === 'cpi' && styles.activeModeButtonText]}>
+            지수
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.modeButton, chartMode === 'monthly' && styles.activeModeButton]}
+          onPress={() => setChartMode('monthly')}
+        >
+          <ThemedText style={[styles.modeButtonText, chartMode === 'monthly' && styles.activeModeButtonText]}>
+            월별변화
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.modeButton, chartMode === 'annual' && styles.activeModeButton]}
+          onPress={() => setChartMode('annual')}
+        >
+          <ThemedText style={[styles.modeButtonText, chartMode === 'annual' && styles.activeModeButtonText]}>
+            연간변화
+          </ThemedText>
+        </TouchableOpacity>
       </View>
-    </TouchableWithoutFeedback>
+
+      {/* 차트 제목 */}
+      <ThemedText style={styles.chartTitle}>{chartData.title}</ThemedText>
+
+      {/* 차트 */}
+      <View style={styles.chartContainer}>
+        <LineChart
+          data={chartData.data}
+          width={screenWidth}
+          height={220}
+          color="#3b82f6"
+          thickness={3}
+          dataPointsColor="#3b82f6"
+          dataPointsRadius={4}
+          showDataPointOnPress
+          showStripOnPress
+          showTextOnPress
+          textShiftY={-10}
+          textShiftX={-5}
+          textColor="#333"
+          textFontSize={12}
+          showVerticalLines
+          verticalLinesColor="#e2e8f0"
+          rulesColor="#e2e8f0"
+          rulesType="solid"
+          initialSpacing={10}
+          endSpacing={10}
+          animateOnDataChange
+          animationDuration={1000}
+          onFocus={(item: any, index: number) => {
+            // 포커스 시 처리 (선택사항)
+          }}
+          yAxisColor="#64748b"
+          xAxisColor="#64748b"
+          yAxisThickness={1}
+          xAxisThickness={1}
+          yAxisTextStyle={{
+            color: '#64748b',
+            fontSize: 10,
+          }}
+          xAxisLabelTextStyle={{
+            color: '#64748b',
+            fontSize: 9,
+            textAlign: 'center',
+          }}
+        />
+      </View>
+    </View>
   );
 };
 
@@ -345,5 +354,42 @@ const styles = StyleSheet.create({
   tooltipText: {
     fontSize: 12,
     color: '#fff',
+  },
+  modeSelector: {
+    flexDirection: 'row',
+    marginTop: 8,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+    padding: 4,
+  },
+  modeButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  activeModeButton: {
+    backgroundColor: '#1976D2',
+  },
+  modeButtonText: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 16,
+    paddingVertical: 2,
+  },
+  activeModeButtonText: {
+    fontSize: 12,
+    color: '#fff',
+    fontWeight: 'bold',
+    lineHeight: 16,
+    paddingVertical: 2,
+  },
+  chartTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  chartContainer: {
+    marginVertical: 8,
+    borderRadius: 16,
   },
 }); 
