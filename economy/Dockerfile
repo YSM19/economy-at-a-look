@@ -1,5 +1,5 @@
-# 1. 베이스 이미지 선택 (Java 17 버전에 맞춰 선택)
-FROM openjdk:17-jdk-slim
+# 1. 베이스 이미지 선택 (Java 21 버전에 맞춰 선택)
+FROM openjdk:21-jdk-slim
 
 # 2. JAR 파일이 위치할 경로를 변수로 지정
 ARG JAR_FILE=build/libs/*.jar

@@ -4,7 +4,7 @@ name: CI/CD for Spring Boot App
 
 on:
   push:
-    branches: [ "main" ] # main 브랜치에 푸시될 때마다 실행
+    branches: [ "master" ] # master 브랜치에 푸시될 때마다 실행
 
 env:
   AWS_REGION: ap-northeast-2 # 본인의 AWS 리전
@@ -27,9 +27,10 @@ jobs:
           distribution: 'temurin'
 
       - name: Grant execute permission for gradlew
-        run: chmod +x ./gradlew
+        run: chmod +x ./economy/gradlew
 
       - name: Build with Gradle
+        working-directory: ./economy
         run: ./gradlew bootJar
 
       - name: Configure AWS credentials
@@ -49,6 +50,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }} # 커밋 해시를 이미지 태그로 사용
         run: |
+          cd economy
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
