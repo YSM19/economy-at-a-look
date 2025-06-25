@@ -1,5 +1,5 @@
 # Multi-stage 빌드를 사용하여 빌드와 런타임 환경을 분리
-FROM openjdk:21-jdk-slim AS build
+FROM eclipse-temurin:21-jdk-jammy AS build
 
 # 작업 디렉토리 설정
 WORKDIR /app
@@ -23,7 +23,7 @@ COPY src src
 RUN ./gradlew bootJar --no-daemon
 
 # 런타임 스테이지
-FROM openjdk:21-jre-slim
+FROM eclipse-temurin:21-jre-jammy
 
 # 작업 디렉토리 설정
 WORKDIR /app
