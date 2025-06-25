@@ -1,0 +1,87 @@
+# .github/workflows/deploy.yml
+
+name: CI/CD for Spring Boot App
+
+on:
+  push:
+    branches: [ "main" ] # main 브랜치에 푸시될 때마다 실행
+
+env:
+  AWS_REGION: ap-northeast-2 # 본인의 AWS 리전
+  ECR_REPOSITORY: myserver # 본인이 생성한 ECR 리포지토리 이름
+  EC2_USERNAME: user # Ubuntu의 기본 사용자 이름
+
+jobs:
+  build-and-push-to-ecr:
+    name: Build and Push Docker Image
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./gradlew
+
+      - name: Build with Gradle
+        run: ./gradlew bootJar
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build, tag, and push image to Amazon ECR
+        id: build-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }} # 커밋 해시를 이미지 태그로 사용
+        run: |
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
+
+  deploy-to-ec2:
+    name: Deploy to EC2
+    needs: build-and-push-to-ecr # build-and-push-to-ecr 작업이 성공해야 실행
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get image URI from previous job
+        id: get-image
+        run: echo "IMAGE_URI=${{ needs.build-and-push-to-ecr.outputs.image }}" >> $GITHUB_ENV
+
+      - name: SSH into EC2 and Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_PUBLIC_IP }}
+          username: ${{ env.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # EC2 인스턴스에서 실행될 스크립트
+            # 1. AWS ECR 로그인
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCESS_KEY_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+
+            # 2. 최신 이미지 pull
+            docker pull ${{ env.IMAGE_URI }}
+
+            # 3. 기존 컨테이너가 있으면 중지하고 삭제 (컨테이너 이름을 "my-app"으로 가정)
+            if [ $(docker ps -a -q -f name=my-app) ]; then
+                docker stop my-app
+                docker rm my-app
+            fi
+
+            # 4. 새로운 컨테이너 실행
+            docker run -d --name my-app -p 8080:8080 ${{ env.IMAGE_URI }}

@@ -36,4 +36,6 @@ out/
 ### VS Code ###
 .vscode/
 
+# YAML 파일들을 무시하되, GitHub Actions 워크플로우는 예외 처리
 *.yml
+!.github/workflows/*.yml
