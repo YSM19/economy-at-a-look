@@ -78,9 +78,9 @@ jobs:
             docker pull ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
             
             # 3. 기존 컨테이너가 있으면 중지하고 삭제
-            if [ $(docker ps -a -q -f name=my-app) ]; then
-                docker stop my-app
-                docker rm my-app
+            if [ $(docker ps -a -q -f name=backend) ]; then
+                docker stop backend
+                docker rm backend
             fi
             
             # 4. 새로운 컨테이너 실행
