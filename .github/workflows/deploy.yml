@@ -15,6 +15,9 @@ jobs:
   build-and-push-to-ecr:
     name: Build and Push Docker Image
     runs-on: ubuntu-latest
+    outputs:
+      # 이 잡의 결과를 다른 잡으로 전달하기 위한 설정
+      image_uri: ${{ steps.build-image.outputs.image }}
 
     steps:
       - name: Checkout
@@ -25,6 +28,12 @@ jobs:
         with:
           java-version: '21'
           distribution: 'temurin'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x ./economy/gradlew
+      - name: Build with Gradle
+        working-directory: ./economy
+        run: ./gradlew bootJar
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4
@@ -54,29 +63,25 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Get image URI from previous job
-        id: get-image
-        run: echo "IMAGE_URI=${{ needs.build-and-push-to-ecr.outputs.image }}" >> $GITHUB_ENV
-
       - name: SSH into EC2 and Deploy
-        uses: appleboy/ssh-action@master
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_PUBLIC_IP }}
           username: ${{ env.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
             # EC2 인스턴스에서 실행될 스크립트
-            # 1. AWS ECR 로그인
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCESS_KEY_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
-
-            # 2. 최신 이미지 pull
-            docker pull ${{ env.IMAGE_URI }}
-
-            # 3. 기존 컨테이너가 있으면 중지하고 삭제 (컨테이너 이름을 "my-app"으로 가정)
+            # 1. AWS ECR에 로그인 (ECR 레지스트리 주소가 필요함)
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+            
+            # 2. 최신 이미지 pull (needs context를 사용하여 이전 잡의 output을 가져옴)
+            docker pull ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
+            
+            # 3. 기존 컨테이너가 있으면 중지하고 삭제
             if [ $(docker ps -a -q -f name=my-app) ]; then
                 docker stop my-app
                 docker rm my-app
             fi
-
+            
             # 4. 새로운 컨테이너 실행
-            docker run -d --name my-app -p 8080:8080 ${{ env.IMAGE_URI }}
+            docker run -d --name my-app -p 8080:8080 ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
