@@ -72,7 +72,7 @@ jobs:
           script: |
             # EC2 인스턴스에서 실행될 스크립트
             # 1. AWS ECR에 로그인 (ECR 레지스트리 주소가 필요함)
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin ${{ secrets.AWS_ACCOUNT_ID }}.dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | docker login --username AWS --password-stdin $(aws sts get-caller-identity --query Account --output text).dkr.ecr.${{ env.AWS_REGION }}.amazonaws.com
             
             # 2. 최신 이미지 pull (needs context를 사용하여 이전 잡의 output을 가져옴)
             docker pull ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
