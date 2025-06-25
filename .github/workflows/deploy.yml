@@ -8,8 +8,8 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2 # 본인의 AWS 리전
-  ECR_REPOSITORY: myserver # 본인이 생성한 ECR 리포지토리 이름
-  EC2_USERNAME: user # Ubuntu의 기본 사용자 이름
+  ECR_REPOSITORY: backend/myserver # 실제 ECR 리포지토리 이름
+  EC2_USERNAME: ubuntu # EC2 기본 사용자명 (ubuntu가 일반적)
 
 jobs:
   build-and-push-to-ecr:
