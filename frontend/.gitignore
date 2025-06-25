@@ -38,4 +38,4 @@ yarn-error.*
 app-example
 
 ## Configuration files with sensitive information
-#constants/Config.ts
+constants/Config.ts
