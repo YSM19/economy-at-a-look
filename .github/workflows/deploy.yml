@@ -90,6 +90,6 @@ jobs:
                -e SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }} \
                -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }} \
                -e SPRING_DATASOURCE_DRIVER-CLASS-NAME=com.mysql.cj.jdbc.Driver \
-               -e KOREAEXIM_API_KEY=${{ secrets.KOREAEXIM_API_AUTHKEY }} \
+               -e KOREAEXIM_API_AUTHKEY=${{ secrets.KOREAEXIM_API_AUTHKEY }} \
                -e ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }} \
                ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
