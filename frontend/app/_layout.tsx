@@ -25,6 +25,9 @@ export default function RootLayout() {
   // 뒤로가기 버튼을 표시할 경로들 (상세 화면들)
   const showBackButtonPaths = ['/exchange-rate', '/interest-rate', '/consumer-price-index'];
   const shouldShowBackButton = showBackButtonPaths.includes(pathname);
+  
+  // admin 페이지에서는 네비게이션 버튼을 숨김
+  const isAdminPage = pathname.startsWith('/admin');
 
   useEffect(() => {
     if (loaded) {
@@ -43,13 +46,15 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <View style={styles.container}>
-        <View style={styles.hamburgerContainer}>
-          {shouldShowBackButton ? (
-            <BackButton />
-          ) : (
-            <HamburgerButton onPress={toggleSidebar} />
-          )}
-        </View>
+        {!isAdminPage && (
+          <View style={styles.hamburgerContainer}>
+            {shouldShowBackButton ? (
+              <BackButton />
+            ) : (
+              <HamburgerButton onPress={toggleSidebar} />
+            )}
+          </View>
+        )}
 
         <Sidebar 
           isVisible={sidebarVisible} 
@@ -62,6 +67,8 @@ export default function RootLayout() {
           <Stack.Screen name="exchange-rate" options={{ headerShown: false }} />
           <Stack.Screen name="interest-rate" options={{ headerShown: false }} />
           <Stack.Screen name="consumer-price-index" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/login" options={{ headerShown: false }} />
+          <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
