@@ -83,5 +83,14 @@ jobs:
                 docker rm backend
             fi
             
-            # 4. 새로운 컨테이너 실행
-            docker run -d --name my-app -p 8080:8080 ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
+                         # 4. 새로운 컨테이너 실행 (환경변수 포함)
+             docker run -d --name my-app -p 8080:8080 \
+               -e SPRING_PROFILES_ACTIVE=prod \
+               -e DB_HOST=${{ secrets.DB_HOST }} \
+               -e DB_PORT=${{ secrets.DB_PORT }} \
+               -e DB_NAME=${{ secrets.DB_NAME }} \
+               -e DB_USERNAME=${{ secrets.DB_USERNAME }} \
+               -e DB_PASSWORD=${{ secrets.DB_PASSWORD }} \
+               -e KOREAEXIM_API_KEY=${{ secrets.KOREAEXIM_API_KEY }} \
+               -e ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }} \
+               ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
