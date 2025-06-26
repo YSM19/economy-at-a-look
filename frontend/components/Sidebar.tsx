@@ -4,6 +4,7 @@ import { useRouter } from 'expo-router';
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from '../hooks/useColorScheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface SidebarProps {
   isVisible: boolean;
@@ -18,6 +19,45 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
   const colorScheme = useColorScheme();
   const slideAnim = React.useRef(new Animated.Value(-SIDEBAR_WIDTH)).current;
   const backdropOpacity = React.useRef(new Animated.Value(0)).current;
+  const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+  const [userInfo, setUserInfo] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    checkLoginStatus();
+  }, []);
+
+  const checkLoginStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      const userInfoStr = await AsyncStorage.getItem('userInfo');
+      
+      if (token && userInfoStr) {
+        setIsLoggedIn(true);
+        setUserInfo(JSON.parse(userInfoStr));
+      } else {
+        setIsLoggedIn(false);
+        setUserInfo(null);
+      }
+    } catch (error) {
+      console.error('로그인 상태 확인 오류:', error);
+      setIsLoggedIn(false);
+      setUserInfo(null);
+    }
+  };
+
+  const handleLogout = async () => {
+    try {
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userInfo');
+      await AsyncStorage.removeItem('adminToken');
+      setIsLoggedIn(false);
+      setUserInfo(null);
+      onClose();
+      router.replace('/');
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+    }
+  };
   
   React.useEffect(() => {
     if (isVisible) {
@@ -124,6 +164,68 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
             />
             <ThemedText style={styles.menuText}>물가</ThemedText>
           </TouchableOpacity>
+          
+          <View style={styles.divider} />
+          
+          {isLoggedIn ? (
+            <>
+              <View style={styles.userInfo}>
+                <MaterialCommunityIcons 
+                  name="account-circle" 
+                  size={20} 
+                  color={colorScheme === 'dark' ? '#ffffff' : '#000000'} 
+                />
+                <ThemedText style={styles.userText}>
+                  {userInfo?.username || userInfo?.email} 
+                  {userInfo?.role === 'ADMIN' && ' (관리자)'}
+                </ThemedText>
+              </View>
+              
+              {userInfo?.role === 'ADMIN' && (
+                <TouchableOpacity
+                  style={styles.menuItem}
+                  onPress={() => {
+                    router.push('/admin/dashboard');
+                    onClose();
+                  }}
+                >
+                  <MaterialCommunityIcons 
+                    name="cog" 
+                    size={24} 
+                    color={colorScheme === 'dark' ? '#ffffff' : '#000000'} 
+                  />
+                  <ThemedText style={styles.menuText}>관리자 페이지</ThemedText>
+                </TouchableOpacity>
+              )}
+              
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={handleLogout}
+              >
+                <MaterialCommunityIcons 
+                  name="logout" 
+                  size={24} 
+                  color={colorScheme === 'dark' ? '#ffffff' : '#000000'} 
+                />
+                <ThemedText style={styles.menuText}>로그아웃</ThemedText>
+              </TouchableOpacity>
+            </>
+                     ) : (
+             <TouchableOpacity
+               style={styles.menuItem}
+               onPress={() => {
+                 router.push('/login' as any);
+                 onClose();
+               }}
+             >
+               <MaterialCommunityIcons 
+                 name="login" 
+                 size={24} 
+                 color={colorScheme === 'dark' ? '#ffffff' : '#000000'} 
+               />
+               <ThemedText style={styles.menuText}>로그인</ThemedText>
+             </TouchableOpacity>
+           )}
         </View>
       </Animated.View>
     </View>
@@ -187,5 +289,23 @@ const styles = StyleSheet.create({
   menuText: {
     fontSize: 16,
     marginLeft: 15,
+  },
+  divider: {
+    height: 1,
+    backgroundColor: 'rgba(150, 150, 150, 0.2)',
+    marginVertical: 10,
+    marginHorizontal: 15,
+  },
+  userInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingLeft: 15,
+    marginVertical: 5,
+  },
+  userText: {
+    fontSize: 14,
+    marginLeft: 10,
+    fontWeight: 'bold',
   },
 }); 

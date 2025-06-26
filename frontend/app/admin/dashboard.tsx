@@ -48,16 +48,16 @@ export default function AdminDashboardScreen() {
   // 관리자 인증 확인
   const checkAuthentication = async () => {
     try {
-      const token = await AsyncStorage.getItem('adminToken');
+      const token = await AsyncStorage.getItem('adminToken') || await AsyncStorage.getItem('userToken');
       if (!token) {
         // 토큰이 없으면 로그인 페이지로 리디렉션
-        router.replace('/admin/login');
+        router.replace('/login');
         return;
       }
       setIsAuthenticated(true);
     } catch (error) {
       console.error('인증 확인 에러:', error);
-      router.replace('/admin/login');
+      router.replace('/login');
     }
   };
 
@@ -65,7 +65,9 @@ export default function AdminDashboardScreen() {
   const handleLogout = async () => {
     try {
       await AsyncStorage.removeItem('adminToken');
-      router.replace('/admin/login');
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userInfo');
+      router.replace('/login');
     } catch (error) {
       console.error('로그아웃 에러:', error);
       Alert.alert('오류', '로그아웃 처리 중 오류가 발생했습니다.');
@@ -667,8 +669,18 @@ export default function AdminDashboardScreen() {
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
         <View style={styles.header}>
-          <ThemedText style={styles.headerTitle}>경제 한눈에 보기 - 관리자 페이지</ThemedText>
-          <ThemedText style={styles.headerSubtitle}>데이터 관리 및 API 요청</ThemedText>
+          <View style={styles.headerTop}>
+            <View style={styles.headerInfo}>
+              <ThemedText style={styles.headerTitle}>경제 한눈에 보기 - 관리자 페이지</ThemedText>
+              <ThemedText style={styles.headerSubtitle}>데이터 관리 및 API 요청</ThemedText>
+            </View>
+            <TouchableOpacity 
+              style={styles.logoutButtonMain}
+              onPress={handleLogout}
+            >
+              <ThemedText style={styles.logoutButtonMainText}>로그아웃</ThemedText>
+            </TouchableOpacity>
+          </View>
         </View>
         
         {/* 환율과 금리 데이터 관리 영역 */}
@@ -1024,6 +1036,15 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     alignItems: Platform.OS === 'web' ? 'center' : 'flex-start',
   },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  headerInfo: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
@@ -1033,6 +1054,18 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     fontSize: 16,
     color: '#666',
+  },
+  logoutButtonMain: {
+    backgroundColor: '#dc3545',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    marginLeft: 20,
+  },
+  logoutButtonMainText: {
+    color: 'white',
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   section: {
     backgroundColor: 'white',

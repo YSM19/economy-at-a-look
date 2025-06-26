@@ -67,7 +67,8 @@ export default function RootLayout() {
           <Stack.Screen name="exchange-rate" options={{ headerShown: false }} />
           <Stack.Screen name="interest-rate" options={{ headerShown: false }} />
           <Stack.Screen name="consumer-price-index" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/login" options={{ headerShown: false }} />
+          <Stack.Screen name="login" options={{ headerShown: false }} />
+          <Stack.Screen name="signup" options={{ headerShown: false }} />
           <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
           <Stack.Screen name="+not-found" />
         </Stack>
