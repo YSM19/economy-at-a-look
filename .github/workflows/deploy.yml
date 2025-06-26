@@ -84,7 +84,7 @@ jobs:
             fi
             
                          # 4. 새로운 컨테이너 실행 (환경변수 포함)
-             docker run -d --name my-app -p 8080:8080 \
+             docker run -d --name backend -p 8080:8080 \
                -e SPRING_PROFILES_ACTIVE=prod \
                -e DB_HOST=${{ secrets.DB_HOST }} \
                -e DB_PORT=${{ secrets.DB_PORT }} \
