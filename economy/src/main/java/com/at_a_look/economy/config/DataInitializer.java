@@ -17,9 +17,14 @@ public class DataInitializer implements CommandLineRunner {
     public void run(String... args) throws Exception {
         log.info("🚀 [DataInitializer] 데이터 초기화 시작");
         
-        // 관리자 계정 초기화
-        userService.initializeAdminAccount();
-        
-        log.info("✅ [DataInitializer] 데이터 초기화 완료");
+        try {
+            // 관리자 계정 초기화
+            userService.initializeAdminAccount();
+            log.info("✅ [DataInitializer] 데이터 초기화 완료");
+        } catch (Exception e) {
+            log.error("❌ [DataInitializer] 데이터 초기화 실패: {}", e.getMessage());
+            log.info("📋 [DataInitializer] 테이블이 아직 생성되지 않았을 수 있습니다. 애플리케이션 재시작 후 다시 시도해주세요.");
+            // 예외를 다시 던지지 않아서 애플리케이션이 계속 실행되도록 함
+        }
     }
 } 
