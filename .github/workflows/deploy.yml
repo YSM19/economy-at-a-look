@@ -93,6 +93,6 @@ jobs:
                -e KOREAEXIM_API_AUTHKEY=${{ secrets.KOREAEXIM_API_AUTHKEY }} \
                -e ECOS_API_KEY=${{ secrets.ECOS_API_KEY }} \
                -e ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }} \
-               -e ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }} \
-               -e ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
+               -e ADMIN_ACCOUNT_EMAIL=${{ secrets.ADMIN_EMAIL }} \
+               -e ADMIN_ACCOUNT_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
                ${{ needs.build-and-push-to-ecr.outputs.image_uri }}

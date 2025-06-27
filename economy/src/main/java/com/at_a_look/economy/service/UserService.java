@@ -22,10 +22,10 @@ public class UserService {
 
     private final UserRepository userRepository;
     
-    @Value("${ADMIN_EMAIL}")
+    @Value("${admin.account.email}")
     private String adminEmail;
     
-    @Value("${ADMIN_PASSWORD}")
+    @Value("${admin.account.password}")
     private String adminPassword;
 
     /**
