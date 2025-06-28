@@ -11,5 +11,5 @@ public class EconomyApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(EconomyApplication.class, args);
 	}
-	// login, infra testing
+	// login, infra testing.
 }
