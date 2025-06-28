@@ -9,7 +9,26 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSAppTransportSecurity": {
+          "NSAllowsArbitraryLoads": true,
+          "NSExceptionDomains": {
+            "atalook.kro.kr": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0"
+            },
+            "192.168.0.2": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0"
+            },
+            "localhost": {
+              "NSExceptionAllowsInsecureHTTPLoads": true,
+              "NSExceptionMinimumTLSVersion": "1.0"
+            }
+          }
+        }
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -17,11 +36,21 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.ysm19.atalook",
-      "permissions": [],
+      "permissions": [
+        "android.permission.INTERNET",
+        "android.permission.ACCESS_NETWORK_STATE"
+      ],
       "blockedPermissions": [
       ],
-      "usesCleartextTraffic": true
-
+      "usesCleartextTraffic": true,
+      "networkSecurityConfig": {
+        "domainConfig": [
+          {
+            "domains": ["atalook.kro.kr", "192.168.0.2", "localhost"],
+            "cleartextTrafficPermitted": true
+          }
+        ]
+      }
     },
     "web": {
       "bundler": "metro",

@@ -41,8 +41,16 @@ public class CorsConfig {
             config.addAllowedOrigin("http://localhost:19006");
             config.addAllowedOrigin("http://192.168.0.2:19000");
             config.addAllowedOrigin("http://192.168.0.2:19006");
+            
+            // 모바일 앱 빌드시 접근 허용 (추가)
+            config.addAllowedOriginPattern("capacitor://*");
+            config.addAllowedOriginPattern("ionic://*");
+            config.addAllowedOriginPattern("http://*");
+            config.addAllowedOriginPattern("https://*");
+            config.addAllowedOriginPattern("file://*");
+            
             // credentials를 true로 설정할 경우 와일드카드(*) 오리진을 사용할 수 없음
-            config.setAllowCredentials(true);
+            config.setAllowCredentials(false);  // 모바일 앱에서는 false로 설정
         } else {
             config.setAllowedOrigins(Arrays.asList(allowedOrigins.split(",")));
             config.setAllowCredentials(true);

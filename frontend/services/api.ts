@@ -19,6 +19,8 @@ api.interceptors.request.use(
     // 디버그 모드일 때 요청 정보 로깅
     if (Config.debug) {
       console.log(`🌐 API 요청: ${config.method?.toUpperCase()} ${config.url}`);
+      console.log(`📡 Base URL: ${Config.apiUrl}`);
+      console.log(`🔧 Full URL: ${config.baseURL}${config.url}`);
       if (config.params) {
         console.log('📝 요청 파라미터:', config.params);
       }
@@ -42,6 +44,7 @@ api.interceptors.response.use(
     // 디버그 모드일 때 응답 정보 로깅
     if (Config.debug) {
       console.log(`✅ 응답 성공: ${response.config.method?.toUpperCase()} ${response.config.url}`);
+      console.log('📊 응답 상태:', response.status);
       console.log('📊 응답 데이터:', response.data);
     }
     return response;
@@ -50,14 +53,17 @@ api.interceptors.response.use(
     // 디버그 모드일 때 오류 로깅
     if (Config.debug) {
       console.error('❌ 응답 오류:', error);
+      console.error('🔧 현재 API URL:', Config.apiUrl);
       if (error.response) {
         console.error('📉 오류 상태:', error.response.status);
         console.error('📄 오류 데이터:', error.response.data);
+        console.error('🌐 응답 헤더:', error.response.headers);
       } else if (error.request) {
         console.error('🔌 네트워크 오류: 서버에 연결할 수 없습니다.');
         console.error('📡 요청 정보:', error.request);
         console.error('URL:', error.config?.url);
         console.error('메소드:', error.config?.method);
+        console.error('타임아웃:', error.config?.timeout);
       } else {
         console.error('⚠️ 요청 설정 오류:', error.message);
       }
