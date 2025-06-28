@@ -50,8 +50,20 @@ export default function LoginScreen() {
       console.error('로그인 에러:', error);
       let errorMessage = '로그인 처리 중 오류가 발생했습니다.';
       
-      if (axios.isAxiosError(error) && error.response) {
-        errorMessage = error.response.data?.message || errorMessage;
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          // 서버에서 응답을 받았지만 오류 상태 코드
+          console.error('서버 응답 오류:', error.response.status, error.response.data);
+          errorMessage = error.response.data?.message || `서버 오류 (${error.response.status})`;
+        } else if (error.request) {
+          // 요청은 보냈지만 응답을 받지 못함
+          console.error('네트워크 오류:', error.request);
+          errorMessage = '서버에 연결할 수 없습니다. 네트워크 연결을 확인해주세요.';
+        } else {
+          // 요청 설정 중 오류 발생
+          console.error('요청 설정 오류:', error.message);
+          errorMessage = '요청 처리 중 오류가 발생했습니다.';
+        }
       }
       
       Alert.alert('로그인 실패', errorMessage);
