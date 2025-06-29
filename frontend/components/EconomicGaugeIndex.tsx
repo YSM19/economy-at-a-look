@@ -38,9 +38,9 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
   }, [index]);
 
   const screenWidth = Dimensions.get('window').width;
-  const size = screenWidth - 64;
+  const size = screenWidth - 32;
   const center = size / 2;
-  const radius = size * 0.4;
+  const radius = size * 0.45;
   const strokeWidth = 8;
   
   // 각도 계산 (0~100% → -40~220도, 총 260도 범위)
@@ -110,14 +110,6 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
       <ThemedText style={styles.title}>경제 심리 지수</ThemedText>
       <View style={styles.gaugeContainer}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* 배경 원 */}
-          <Circle 
-            cx={center} 
-            cy={center} 
-            r={radius + 20} 
-            fill="#F5F5F5" 
-          />
-          
           {/* 섹션 그리기 */}
           {sections.map((section, idx) => {
             const isActive = idx === activeSection;
@@ -125,7 +117,7 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
               <Path
                 key={`section-${idx}`}
                 d={createSectionPath(section.start, section.end, radius)}
-                fill={isActive ? section.color : '#F9F9F9'}
+                fill={isActive ? section.color : "#FAFAFA"}
                 stroke="#E0E0E0"
                 strokeWidth={1}
               />
@@ -219,13 +211,13 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
             y1={center}
             x2={needleX}
             y2={needleY}
-            stroke="#333"
+            stroke={sections[activeSection]?.textColor || "#333"}
             strokeWidth={3}
             strokeLinecap="round"
           />
           
           {/* 바늘 중심점 */}
-          <Circle cx={center} cy={center} r={6} fill="#666" />
+          <Circle cx={center} cy={center} r={6} fill={sections[activeSection]?.textColor || "#666"} />
         </Svg>
       </View>
       <View style={styles.indexTextContainer}>

@@ -1,11 +1,14 @@
 package com.at_a_look.economy.controller;
 
+import com.at_a_look.economy.dto.ChangePasswordRequest;
+import com.at_a_look.economy.dto.ChangeUsernameRequest;
 import com.at_a_look.economy.dto.LoginRequest;
 import com.at_a_look.economy.dto.LoginResponse;
 import com.at_a_look.economy.dto.SignupRequest;
 import com.at_a_look.economy.dto.UserResponse;
 import com.at_a_look.economy.dto.response.ApiResponse;
 import com.at_a_look.economy.service.UserService;
+import com.at_a_look.economy.util.JwtTokenUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +30,7 @@ import jakarta.validation.Valid;
 public class AuthController {
 
     private final UserService userService;
+    private final JwtTokenUtil jwtTokenUtil;
 
     @Operation(summary = "회원가입", description = "새로운 사용자 계정을 생성합니다.")
     @PostMapping("/signup")
@@ -102,6 +106,82 @@ public class AuthController {
             log.error("💥 [AuthController] 토큰 검증 중 예상치 못한 오류: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("토큰 검증 처리 중 오류가 발생했습니다."));
+        }
+    }
+
+    @Operation(summary = "닉네임 변경", description = "사용자 닉네임을 변경합니다. (월 1회 제한)")
+    @PutMapping("/change-username")
+    public ResponseEntity<ApiResponse<UserResponse>> changeUsername(
+            @RequestHeader("Authorization") String token,
+            @Valid @RequestBody ChangeUsernameRequest request) {
+        log.info("🔄 [AuthController] 닉네임 변경 요청");
+        
+        try {
+            // "Bearer " 접두사 제거
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            
+            // 토큰에서 이메일 추출
+            String email = jwtTokenUtil.getEmailFromToken(token);
+            if (email == null || !jwtTokenUtil.validateToken(token)) {
+                log.warn("❌ [AuthController] 닉네임 변경 실패: 유효하지 않은 토큰");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("유효하지 않은 토큰입니다."));
+            }
+            
+            UserResponse userResponse = userService.changeUsername(email, request);
+            log.info("✅ [AuthController] 닉네임 변경 성공: email={}, newUsername={}", email, request.getNewUsername());
+            
+            return ResponseEntity.ok(ApiResponse.success("닉네임이 성공적으로 변경되었습니다.", userResponse));
+            
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [AuthController] 닉네임 변경 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+                    
+        } catch (Exception e) {
+            log.error("💥 [AuthController] 닉네임 변경 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("닉네임 변경 처리 중 오류가 발생했습니다."));
+        }
+    }
+
+    @Operation(summary = "비밀번호 변경", description = "사용자 비밀번호를 변경합니다.")
+    @PutMapping("/change-password")
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @RequestHeader("Authorization") String token,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        log.info("🔄 [AuthController] 비밀번호 변경 요청");
+        
+        try {
+            // "Bearer " 접두사 제거
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            
+            // 토큰에서 이메일 추출
+            String email = jwtTokenUtil.getEmailFromToken(token);
+            if (email == null || !jwtTokenUtil.validateToken(token)) {
+                log.warn("❌ [AuthController] 비밀번호 변경 실패: 유효하지 않은 토큰");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("유효하지 않은 토큰입니다."));
+            }
+            
+            userService.changePassword(email, request);
+            log.info("✅ [AuthController] 비밀번호 변경 성공: email={}", email);
+            
+            return ResponseEntity.ok(ApiResponse.success("비밀번호가 성공적으로 변경되었습니다.", null));
+            
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [AuthController] 비밀번호 변경 실패: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+                    
+        } catch (Exception e) {
+            log.error("💥 [AuthController] 비밀번호 변경 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("비밀번호 변경 처리 중 오류가 발생했습니다."));
         }
     }
 } 

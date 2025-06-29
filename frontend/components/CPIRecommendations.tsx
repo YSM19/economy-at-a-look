@@ -323,9 +323,7 @@ const CPIRecommendations: React.FC = () => {
     return (
       <View style={styles.outerContainer}>
         <ThemedText style={styles.title}>물가 기반 추천</ThemedText>
-        <View style={styles.container}>
-          <ThemedText style={styles.loadingText}>추천 정보를 불러오는 중...</ThemedText>
-        </View>
+        <ThemedText style={styles.loadingText}>추천 정보를 불러오는 중...</ThemedText>
       </View>
     );
   }
@@ -333,20 +331,19 @@ const CPIRecommendations: React.FC = () => {
   return (
     <View style={styles.outerContainer}>
       <ThemedText style={styles.title}>물가 기반 추천</ThemedText>
-      <View style={styles.container}>
-        <View style={styles.recommendationsGrid}>
-          {recommendations.map((item, index) => (
-            <TouchableOpacity 
-              key={index} 
-              style={styles.recommendationCard}
-              onPress={() => handleItemPress(item)}
-              activeOpacity={0.7}
-            >
-              <View style={styles.cardContent}>
-                <View style={styles.leftSection}>
-                  <MaterialCommunityIcons 
-                    name={item.icon as any} 
-                    size={24} 
+      <View style={styles.recommendationsGrid}>
+        {recommendations.map((item, index) => (
+          <TouchableOpacity 
+            key={index} 
+            style={styles.recommendationCard}
+            onPress={() => handleItemPress(item)}
+            activeOpacity={0.7}
+          >
+            <View style={styles.cardContent}>
+              <View style={styles.leftSection}>
+                <MaterialCommunityIcons 
+                  name={item.icon as any} 
+                  size={24} 
                     color={getStatusColor(item.status)} 
                   />
                   <View style={styles.textSection}>
@@ -376,7 +373,6 @@ const CPIRecommendations: React.FC = () => {
             </TouchableOpacity>
           ))}
         </View>
-      </View>
 
       {/* 상세 설명 모달 */}
       <Modal
@@ -447,19 +443,6 @@ const styles = StyleSheet.create({
     marginLeft: 2,
     textAlign: 'left',
   },
-  container: {
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 16,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: 3.84,
-    elevation: 4,
-  },
   loadingText: {
     textAlign: 'center',
     color: '#666',
@@ -467,24 +450,24 @@ const styles = StyleSheet.create({
   },
   recommendationsGrid: {
     flexDirection: 'column',
-    gap: 8,
+    gap: 10,
   },
   recommendationCard: {
     width: '100%',
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 16,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
     borderWidth: 1,
     borderColor: '#e9ecef',
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 3,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.12,
+    shadowRadius: 6,
+    elevation: 5,
   },
   cardContent: {
     flexDirection: 'row',
@@ -497,7 +480,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   textSection: {
-    marginLeft: 12,
+    marginLeft: 16,
     flex: 1,
   },
   rightSection: {
@@ -512,17 +495,17 @@ const styles = StyleSheet.create({
     color: '#212529',
   },
   descriptionText: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#6c757d',
     lineHeight: 16,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: 20,
-    minWidth: 68,
+    minWidth: 75,
     justifyContent: 'center',
   },
   statusBadgeText: {

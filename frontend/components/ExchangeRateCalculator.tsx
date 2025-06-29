@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity } from 'react-native';
+import { View, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { economicIndexApi } from '../services/api';
+import { economicIndexApi, exchangeRateHistoryApi } from '../services/api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useToast } from './ToastProvider';
 
 type ExchangeRateCalculatorProps = {
   country: string;
@@ -17,10 +19,28 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
   const [loading, setLoading] = useState(true);
   const [isCalculatingFromKRW, setIsCalculatingFromKRW] = useState(true);
   const [isKRWFirst, setIsKRWFirst] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  
+  const { showToast } = useToast();
 
   useEffect(() => {
     fetchExchangeRate();
+    checkLoginStatus();
+    // 국가 탭 변경 시 입력된 금액들 초기화
+    setKrwAmount('');
+    setForeignAmount('');
   }, [country]);
+
+  const checkLoginStatus = async () => {
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      setIsLoggedIn(!!token);
+    } catch (error) {
+      console.error('로그인 상태 확인 실패:', error);
+      setIsLoggedIn(false);
+    }
+  };
 
   const fetchExchangeRate = async () => {
     setLoading(true);
@@ -267,20 +287,21 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
   const swapCurrencies = () => {
     // 현재 첫 번째 칸의 값을 저장
     const currentFirstValue = isKRWFirst ? krwAmount : foreignAmount;
+    const wasKRWFirst = isKRWFirst; // 변경 전 상태 저장
     
     // 통화 순서만 바꾸기
     setIsKRWFirst(!isKRWFirst);
     
     if (currentFirstValue) {
       setTimeout(() => {
-        if (isKRWFirst) {
-          // 현재 원화가 첫 번째 → 외화가 첫 번째로 바뀜
-          // 원화 값을 첫 번째 칸에 유지하고, 외화로 환전 결과 계산
+        if (wasKRWFirst) {
+          // 원화가 첫 번째였음 → 외화가 첫 번째로 바뀜
+          // 현재 첫 번째 칸의 값을 외화로 설정하고, 원화 계산
           setForeignAmount(currentFirstValue);
           calculateFromForeign(currentFirstValue);
         } else {
-          // 현재 외화가 첫 번째 → 원화가 첫 번째로 바뀜  
-          // 외화 값을 첫 번째 칸에 유지하고, 원화로 환전 결과 계산
+          // 외화가 첫 번째였음 → 원화가 첫 번째로 바뀜  
+          // 현재 첫 번째 칸의 값을 원화로 설정하고, 외화 계산
           setKrwAmount(currentFirstValue);
           calculateFromKRW(currentFirstValue);
         }
@@ -293,10 +314,79 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
     setForeignAmount('');
   };
 
+  const saveExchangeRateHistory = async () => {
+    if (!isLoggedIn) {
+      showToast('로그인 후 저장할 수 있습니다.', 'error');
+      return;
+    }
+
+    if (!krwAmount && !foreignAmount) {
+      showToast('저장할 금액을 입력해주세요.', 'error');
+      return;
+    }
+
+    const rate = getEffectiveRate();
+    if (!rate) {
+      showToast('환율 정보를 확인할 수 없습니다.', 'error');
+      return;
+    }
+
+    setIsSaving(true);
+
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        showToast('로그인 토큰이 없습니다.', 'error');
+        return;
+      }
+
+      const currencyInfo = getCurrencyInfo();
+      
+      const krwValue = parseFloat((krwAmount || '0').replace(/,/g, ''));
+      const foreignValue = parseFloat((foreignAmount || '0').replace(/,/g, ''));
+
+      const requestData = {
+        currencyCode: currencyInfo.symbol,
+        currencyName: currencyInfo.name,
+        exchangeRate: rate,
+        krwAmount: krwValue > 0 ? krwValue : Math.round(foreignValue * rate),
+        foreignAmount: foreignValue > 0 ? foreignValue : Math.round(krwValue / rate * 100) / 100,
+        memo: '',
+        isKrwFirst: isKRWFirst
+      };
+
+      console.log('저장하는 데이터:', requestData);
+      console.log('isKRWFirst 값:', isKRWFirst);
+
+      const response = await exchangeRateHistoryApi.saveHistory(requestData, token);
+
+      if (response.data.success) {
+        showToast('환율이 저장되었습니다!', 'success');
+      } else {
+        showToast(response.data.message || '저장에 실패했습니다.', 'error');
+      }
+    } catch (error: any) {
+      console.error('환율 저장 실패:', error);
+      if (error?.response) {
+        // 서버에서 응답을 받았지만 오류 상태 코드인 경우
+        const errorMessage = error.response.data?.message || '서버 오류가 발생했습니다.';
+        showToast(errorMessage, 'error');
+      } else if (error?.request) {
+        // 요청을 보냈지만 응답을 받지 못한 경우 (네트워크 오류)
+        showToast('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.', 'error');
+      } else {
+        // 요청 설정 중 오류가 발생한 경우
+        showToast('요청 설정 오류가 발생했습니다.', 'error');
+      }
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <View style={styles.outerContainer}>
-        <ThemedText style={styles.title}>환율 계산기</ThemedText>
+        <ThemedText style={styles.title}>환율 계산기, 저장</ThemedText>
         <View style={styles.container}>
           <ThemedText style={styles.loadingText}>환율 정보를 불러오는 중...</ThemedText>
         </View>
@@ -306,7 +396,7 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
 
   return (
     <View style={styles.outerContainer}>
-      <ThemedText style={styles.title}>환율 계산기</ThemedText>
+      <ThemedText style={styles.title}>환율 계산기, 저장</ThemedText>
       <View style={styles.container}>
         {/* 현재 환율 표시 */}
         <View style={styles.rateDisplay}>
@@ -407,6 +497,22 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
 
         {/* 액션 버튼들 */}
         <View style={styles.actionContainer}>
+          {isLoggedIn && (krwAmount || foreignAmount) && (
+            <TouchableOpacity 
+              style={[styles.saveButton, isSaving && styles.disabledButton]} 
+              onPress={saveExchangeRateHistory}
+              disabled={isSaving}
+            >
+              <MaterialCommunityIcons 
+                name={isSaving ? "loading" : "content-save"} 
+                size={16} 
+                color="#fff" 
+              />
+              <ThemedText style={styles.saveButtonText}>
+                {isSaving ? '저장 중...' : '저장'}
+              </ThemedText>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity style={styles.clearButton} onPress={clearAll}>
             <MaterialCommunityIcons name="refresh" size={16} color="#666" />
             <ThemedText style={styles.clearButtonText}>초기화</ThemedText>
@@ -432,10 +538,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 12,
     marginLeft: 5,
     textAlign: 'left',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
   },
   container: {
     backgroundColor: '#fff',
@@ -454,6 +563,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     color: '#666',
     fontSize: 14,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
   },
   rateDisplay: {
     backgroundColor: '#f0f8ff',
@@ -590,6 +703,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#2196F3',
     marginLeft: 4,
+  },
+  saveButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    backgroundColor: '#4CAF50',
+    marginRight: 8,
+  },
+  saveButtonText: {
+    fontSize: 12,
+    color: '#fff',
+    marginLeft: 4,
+    fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+    opacity: 0.7,
   },
 });
 

@@ -3,6 +3,7 @@ import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
+import { ThemedView } from '../components/ThemedView';
 import { useState, useEffect } from 'react';
 import { economicIndexApi } from '../services/api';
 import { CPIChart } from '../components/charts/CPIChart';
@@ -66,7 +67,8 @@ export default function ConsumerPriceIndexScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemedView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
       <Stack.Screen 
         options={{
           title: "소비자물가지수",
@@ -232,7 +234,8 @@ export default function ConsumerPriceIndexScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
@@ -251,21 +254,30 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 6,
-    paddingTop: 0,
-    lineHeight: 32,
+    fontSize: 28,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 34,
   },
   subtitle: {
-    fontSize: 14,
-    opacity: 0.7,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#666',
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   currentRates: {
     marginBottom: 16,
   },
   rateItem: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -292,7 +304,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   chartContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 16,
     marginVertical: 16,
@@ -326,7 +338,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#d32f2f',
     textAlign: 'center',
-    lineHeight: 24,
+    marginVertical: 20,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   noDataContainer: {
     padding: 20,
@@ -340,7 +356,7 @@ const styles = StyleSheet.create({
   infoContainer: {
     marginBottom: 24,
     padding: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F6F8FE',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e9ecef',
@@ -357,7 +373,7 @@ const styles = StyleSheet.create({
     color: '#555',
   },
   analysisContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 16,
     marginVertical: 8,
@@ -396,7 +412,7 @@ const styles = StyleSheet.create({
     color: '#4CAF50',
   },
   levelsContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 16,
     marginVertical: 8,
@@ -445,7 +461,7 @@ const styles = StyleSheet.create({
     color: '#555',
   },
   noticeContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 16,
     marginTop: 16,
@@ -468,5 +484,66 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     lineHeight: 20,
+  },
+  tabText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  inactiveTabText: {
+    color: '#666',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 24,
+    marginBottom: 16,
+    marginLeft: 5,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
+  },
+  interpretationTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
+  },
+  interpretationText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
+  },
+  definitionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 8,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
+  },
+  definitionText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#666',
+    marginBottom: 16,
+    lineHeight: 20,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
 }); 

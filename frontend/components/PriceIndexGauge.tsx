@@ -35,9 +35,9 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
   }, [rate]);
 
   const screenWidth = Dimensions.get('window').width;
-  const size = screenWidth - 64;
+  const size = screenWidth - 32;
   const center = size / 2;
-  const radius = size * 0.4;
+  const radius = size * 0.45;
   
   // 각도 계산 (0~8% → 8시~4시 방향, 총 180도 범위)
   const startAngle = 150; // 8시 방향(150도)
@@ -113,14 +113,6 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
       <ThemedText style={styles.title}>소비자 물가 상승률</ThemedText>
       <View style={styles.gaugeContainer}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* 배경 원 */}
-          <Circle 
-            cx={center} 
-            cy={center} 
-            r={radius + 20} 
-            fill="#F5F5F5" 
-          />
-          
           {/* 섹션 그리기 */}
           {sections.map((section, idx) => {
             const isActive = idx === activeSection;
@@ -128,7 +120,7 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
               <Path
                 key={`section-${idx}`}
                 d={createSectionPath(section.start, section.end, radius)}
-                fill={isActive ? section.color : '#F9F9F9'}
+                fill={isActive ? section.color : "#FAFAFA"}
                 stroke="#E0E0E0"
                 strokeWidth={1}
               />
@@ -223,13 +215,13 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
             y1={center}
             x2={needleX}
             y2={needleY}
-            stroke="#333"
+            stroke={sections[activeSection]?.textColor || "#333"}
             strokeWidth={3}
             strokeLinecap="round"
           />
           
           {/* 바늘 중심점 */}
-          <Circle cx={center} cy={center} r={6} fill="#666" />
+          <Circle cx={center} cy={center} r={6} fill={sections[activeSection]?.textColor || "#666"} />
         </Svg>
       </View>
       <View style={styles.infoContainer}>
@@ -269,7 +261,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 30,
     marginBottom: 16,
-    height: 270,
+    height: 320,
     width: '100%',
     paddingHorizontal: 10,
   },

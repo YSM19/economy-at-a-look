@@ -28,7 +28,7 @@ public class User {
     private String username;
 
     @Column(nullable = false)
-    private String password; // 실제 운영에서는 암호화 필요
+    private String password; // BCrypt로 암호화된 비밀번호
 
     @Column(nullable = false, unique = true, length = 100)
     private String email;
@@ -44,6 +44,9 @@ public class User {
 
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
+
+    @Column(name = "last_username_change_date")
+    private LocalDateTime lastUsernameChangeDate;
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default

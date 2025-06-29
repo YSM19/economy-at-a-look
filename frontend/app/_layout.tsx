@@ -10,6 +10,7 @@ import { View, StyleSheet } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { HamburgerButton, BackButton } from '../components/HamburgerButton';
 import { Sidebar } from '../components/Sidebar';
+import { ToastProvider } from '../components/ToastProvider';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -23,7 +24,7 @@ export default function RootLayout() {
   const pathname = usePathname();
 
   // 뒤로가기 버튼을 표시할 경로들 (상세 화면들)
-  const showBackButtonPaths = ['/exchange-rate', '/interest-rate', '/consumer-price-index'];
+  const showBackButtonPaths = ['/exchange-rate', '/interest-rate', '/consumer-price-index', '/mypage', '/exchange-rate-history'];
   const shouldShowBackButton = showBackButtonPaths.includes(pathname);
   
   // admin 페이지에서는 네비게이션 버튼을 숨김
@@ -44,37 +45,41 @@ export default function RootLayout() {
   };
 
   return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <View style={styles.container}>
-        {!isAdminPage && (
-          <View style={styles.hamburgerContainer}>
-            {shouldShowBackButton ? (
-              <BackButton />
-            ) : (
-              <HamburgerButton onPress={toggleSidebar} />
-            )}
-          </View>
-        )}
+    <ToastProvider>
+      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+        <View style={styles.container}>
+          {!isAdminPage && (
+            <View style={styles.hamburgerContainer}>
+              {shouldShowBackButton ? (
+                <BackButton />
+              ) : (
+                <HamburgerButton onPress={toggleSidebar} />
+              )}
+            </View>
+          )}
 
-        <Sidebar 
-          isVisible={sidebarVisible} 
-          onClose={() => setSidebarVisible(false)} 
-        />
+          <Sidebar 
+            isVisible={sidebarVisible} 
+            onClose={() => setSidebarVisible(false)} 
+          />
 
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="index" options={{ headerShown: false }} />
-          <Stack.Screen name="exchange-rate" options={{ headerShown: false }} />
-          <Stack.Screen name="interest-rate" options={{ headerShown: false }} />
-          <Stack.Screen name="consumer-price-index" options={{ headerShown: false }} />
-          <Stack.Screen name="login" options={{ headerShown: false }} />
-          <Stack.Screen name="signup" options={{ headerShown: false }} />
-          <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
-          <Stack.Screen name="+not-found" />
-        </Stack>
-        <StatusBar style="auto" />
-      </View>
-    </ThemeProvider>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="index" options={{ headerShown: false }} />
+            <Stack.Screen name="exchange-rate" options={{ headerShown: false }} />
+            <Stack.Screen name="interest-rate" options={{ headerShown: false }} />
+            <Stack.Screen name="consumer-price-index" options={{ headerShown: false }} />
+            <Stack.Screen name="login" options={{ headerShown: false }} />
+            <Stack.Screen name="signup" options={{ headerShown: false }} />
+            <Stack.Screen name="mypage" options={{ headerShown: false }} />
+            <Stack.Screen name="exchange-rate-history" options={{ headerShown: false }} />
+            <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
+            <Stack.Screen name="+not-found" />
+          </Stack>
+          <StatusBar style="auto" />
+        </View>
+      </ThemeProvider>
+    </ToastProvider>
   );
 }
 

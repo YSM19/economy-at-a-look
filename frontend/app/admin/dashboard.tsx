@@ -1047,9 +1047,12 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontWeight: '700',
     color: '#0066CC',
     marginBottom: 8,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 30,
   },
   headerSubtitle: {
     fontSize: 16,
@@ -1064,8 +1067,11 @@ const styles = StyleSheet.create({
   },
   logoutButtonMainText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   section: {
     backgroundColor: 'white',
@@ -1080,9 +1086,12 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 15,
     color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
   },
   sectionDescription: {
     fontSize: 14,
@@ -1101,8 +1110,11 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontWeight: 'bold',
+    fontWeight: '700',
     fontSize: 16,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   disabledButton: {
     opacity: 0.7,

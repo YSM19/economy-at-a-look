@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
+import { ThemedView } from '../components/ThemedView';
 import axios from 'axios';
 import Config from '../constants/Config';
+import { useToast } from '../components/ToastProvider';
 
 export default function SignupScreen() {
   const [username, setUsername] = useState('');
@@ -11,41 +13,42 @@ export default function SignupScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { showToast } = useToast();
 
   const validateForm = () => {
     if (!email.trim()) {
-      Alert.alert('입력 오류', '이메일을 입력해주세요.');
+      showToast('이메일을 입력해주세요.', 'error');
       return false;
     }
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('입력 오류', '올바른 이메일 형식을 입력해주세요.');
+      showToast('올바른 이메일 형식을 입력해주세요.', 'error');
       return false;
     }
     
     if (!password.trim()) {
-      Alert.alert('입력 오류', '비밀번호를 입력해주세요.');
+      showToast('비밀번호를 입력해주세요.', 'error');
       return false;
     }
     
     if (password.length < 6) {
-      Alert.alert('입력 오류', '비밀번호는 6자 이상이어야 합니다.');
+      showToast('비밀번호는 6자 이상이어야 합니다.', 'error');
       return false;
     }
     
     if (password !== confirmPassword) {
-      Alert.alert('입력 오류', '비밀번호가 일치하지 않습니다.');
+      showToast('비밀번호가 일치하지 않습니다.', 'error');
       return false;
     }
     
     if (!username.trim()) {
-      Alert.alert('입력 오류', '닉네임을 입력해주세요.');
+      showToast('닉네임을 입력해주세요.', 'error');
       return false;
     }
     
     if (username.length < 2) {
-      Alert.alert('입력 오류', '닉네임은 2자 이상이어야 합니다.');
+      showToast('닉네임은 2자 이상이어야 합니다.', 'error');
       return false;
     }
     
@@ -67,14 +70,12 @@ export default function SignupScreen() {
       });
 
       if (response.data.success) {
-        Alert.alert('성공', '회원가입이 완료되었습니다.', [
-          {
-            text: '확인',
-            onPress: () => router.replace('/login')
-          }
-        ]);
+        showToast('회원가입이 완료되었습니다!', 'success', 2500);
+        
+        // 바로 로그인 페이지로 이동
+        router.replace('/login');
       } else {
-        Alert.alert('회원가입 실패', response.data.message || '회원가입에 실패했습니다.');
+        showToast(response.data.message || '회원가입에 실패했습니다.', 'error');
       }
     } catch (error) {
       console.error('회원가입 에러:', error);
@@ -84,14 +85,15 @@ export default function SignupScreen() {
         errorMessage = error.response.data?.message || errorMessage;
       }
       
-      Alert.alert('회원가입 실패', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ThemedView style={{ flex: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Stack.Screen options={{ title: '회원가입' }} />
       
       <View style={styles.formContainer}>
@@ -159,14 +161,15 @@ export default function SignupScreen() {
           <ThemedText style={styles.backButtonText}>홈으로 돌아가기</ThemedText>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8F9FE',
   },
   contentContainer: {
     flexGrow: 1,
@@ -179,9 +182,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#0066CC',
+    fontWeight: '800',
+    marginBottom: 32,
+    textAlign: 'center',
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 32,
   },
   subtitle: {
     fontSize: 18,
@@ -209,17 +216,24 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   signupButtonText: {
-    color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#fff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   loginButton: {
     marginTop: 20,
     padding: 10,
   },
   loginButtonText: {
-    color: '#0066CC',
-    fontSize: 14,
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#007AFF',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   backButton: {
     marginTop: 10,
@@ -231,5 +245,24 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     opacity: 0.7,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#333',
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginTop: 8,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
   },
 }); 

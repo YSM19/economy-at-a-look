@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
+import { ThemedView } from '../components/ThemedView';
 import { useState, useEffect } from 'react';
 import { ExchangeRateChart } from '../components/charts/ExchangeRateChart';
 import { economicIndexApi } from '../services/api';
@@ -150,7 +151,8 @@ export default function ExchangeRateScreen() {
   }, [country]);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemedView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
       <Stack.Screen 
         options={{
           title: countryInfo.title,
@@ -234,7 +236,8 @@ export default function ExchangeRateScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
@@ -253,21 +256,30 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 6,
-    paddingTop: 0,
-    lineHeight: 32,
+    fontSize: 28,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 34,
   },
   subtitle: {
-    fontSize: 14,
-    opacity: 0.7,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#666',
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   currentRates: {
     marginBottom: 16,
   },
   rateItem: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -299,7 +311,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   chartContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 16,
     marginVertical: 16,
@@ -338,8 +350,13 @@ const styles = StyleSheet.create({
   },
   errorText: {
     fontSize: 16,
-    color: '#f44336',
+    color: '#d32f2f',
     textAlign: 'center',
+    marginVertical: 20,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   noDataContainer: {
     padding: 20,
@@ -353,7 +370,7 @@ const styles = StyleSheet.create({
   infoContainer: {
     marginBottom: 24,
     padding: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F6F8FE',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e9ecef',
@@ -368,5 +385,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     lineHeight: 20,
     color: '#555',
+  },
+  tabText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  inactiveTabText: {
+    color: '#666',
+  },
+  countryTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 20,
+    textAlign: 'center',
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 26,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 24,
+    marginBottom: 16,
+    marginLeft: 5,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
   },
 }); 

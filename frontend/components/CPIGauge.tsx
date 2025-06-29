@@ -140,9 +140,9 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
   }, [cpiRate]);
 
   const screenWidth = Dimensions.get('window').width;
-  const size = screenWidth - 64;
+  const size = screenWidth - 32;
   const center = size / 2;
-  const radius = size * 0.4;
+  const radius = size * 0.45;
   
   // 각도 계산 - SVG 좌표계 기준으로 8시(약 150도)에서 4시(약 30도)까지
   const startAngle = 150; // 8시 방향
@@ -275,14 +275,6 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
       <ThemedText style={styles.title}>소비자물가지수</ThemedText>
       <View style={styles.gaugeContainer}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* 배경 원 */}
-          <Circle 
-            cx={center} 
-            cy={center} 
-            r={radius + 20} 
-            fill="#F5F5F5" 
-          />
-          
           {/* 섹션 그리기 */}
           {sections.map((section, idx) => {
             const isActive = idx === activeSection;
@@ -290,7 +282,7 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
               <Path
                 key={`section-${idx}`}
                 d={createSectionPath(section.start, section.end, radius)}
-                fill={isActive ? section.color : '#F9F9F9'}
+                fill={isActive ? section.color : "#FAFAFA"}
                 stroke="#E0E0E0"
                 strokeWidth={1}
               />
@@ -369,7 +361,7 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
             y1={center}
             x2={needleX}
             y2={needleY}
-            stroke={rateColor}
+            stroke={sections[activeSection]?.textColor || "#333"}
             strokeWidth={3}
             strokeLinecap="round"
           />
@@ -379,7 +371,7 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
             cx={center} 
             cy={center} 
             r={8} 
-            fill={rateColor} 
+            fill={sections[activeSection]?.textColor || "#333"} 
           />
         </Svg>
         
@@ -431,10 +423,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    marginBottom: 8,
     textAlign: 'center',
-    marginBottom: 16,
     color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   gaugeContainer: {
     alignItems: 'center',
@@ -450,11 +445,12 @@ const styles = StyleSheet.create({
   },
   valueText: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#333',
     textAlign: 'center',
-    lineHeight: 36,
-    marginVertical: 0,
-    paddingVertical: 0,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 38,
   },
   labelText: {
     fontSize: 20,
@@ -484,11 +480,13 @@ const styles = StyleSheet.create({
     height: 200,
   },
   errorText: {
-    color: '#F44336',
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 13,
+    color: '#d32f2f',
     textAlign: 'center',
-    marginBottom: 8,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 18,
   },
   description: {
     color: '#666',
@@ -496,12 +494,14 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   descriptionText: {
-    fontSize: 13,
-    color: '#666',
+    fontSize: 11,
+    color: '#999',
     textAlign: 'center',
-    marginTop: -8,
-    paddingHorizontal: 16,
-    lineHeight: 18,
+    marginTop: 4,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 15,
   },
   lastUpdated: {
     fontSize: 10,

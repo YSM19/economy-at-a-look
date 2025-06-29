@@ -102,9 +102,9 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
   }, [rate]);
 
   const screenWidth = Dimensions.get('window').width;
-  const size = screenWidth - 64;
+  const size = screenWidth - 32;
   const center = size / 2;
-  const radius = size * 0.4;
+  const radius = size * 0.45;
   
   // 각도 계산 - SVG 좌표계 기준으로 8시(약 150도)에서 4시(약 30도)까지
   const startAngle = 150; // 8시 방향
@@ -207,14 +207,6 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
       <ThemedText style={styles.title}>{bankName}</ThemedText>
       <View style={styles.gaugeContainer}>
         <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* 배경 원 */}
-          <Circle 
-            cx={center} 
-            cy={center} 
-            r={radius + 20} 
-            fill="#F5F5F5" 
-          />
-          
           {/* 섹션 그리기 */}
           {sections.map((section, idx) => {
             const isActive = idx === activeSection;
@@ -222,7 +214,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
               <Path
                 key={`section-${idx}`}
                 d={createSectionPath(section.start, section.end, radius)}
-                fill={isActive ? section.color : '#F9F9F9'}
+                fill={isActive ? section.color : "#FAFAFA"}
                 stroke="#E0E0E0"
                 strokeWidth={1}
               />
@@ -299,7 +291,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
           <SvgText 
             x={center} 
             y={center + radius * 0.6}
-            fontSize="26" 
+            fontSize="32" 
             fontWeight="bold" 
             fill={rateColor} 
             textAnchor="middle"
@@ -308,8 +300,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
             {formatNumberWithUnit(rate, '%')}
           </SvgText>
           
-          {/* 중앙 원은 유지하되 숫자 제거 */}
-          <Circle cx={center} cy={center} r={30} fill="#FFF" stroke="#DDD" strokeWidth={1} />
+
           
           {/* 바늘 */}
           <Line
@@ -317,13 +308,13 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
             y1={center}
             x2={needleX}
             y2={needleY}
-            stroke="#333"
+            stroke={sections[activeSection]?.textColor || "#333"}
             strokeWidth={3}
             strokeLinecap="round"
           />
           
           {/* 바늘 중심점 */}
-          <Circle cx={center} cy={center} r={6} fill="#666" />
+          <Circle cx={center} cy={center} r={6} fill={sections[activeSection]?.textColor || "#666"} />
         </Svg>
       </View>
       <View style={styles.infoContainer}>
@@ -359,27 +350,34 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontWeight: '700',
+    marginBottom: 8,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
   },
   gaugeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
     marginTop: 30,
     marginBottom: 16,
-    height: 270,
+    height: 320,
     width: '100%',
     paddingHorizontal: 10,
   },
   infoContainer: {
     alignItems: 'center',
-    marginTop: -8,
+    marginTop: -24,
   },
   infoText: {
-    fontSize: 22,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#333',
+    marginBottom: 24,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 26,
   },
   description: {
     fontSize: 12,
@@ -414,6 +412,44 @@ const styles = StyleSheet.create({
     color: '#999',
     textAlign: 'center',
     marginTop: 4,
+  },
+  rateValue: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 28,
+  },
+  rateUnit: {
+    fontSize: 12,
+    color: '#666',
+    textAlign: 'center',
+    marginTop: 4,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 16,
+  },
+  labelText: {
+    fontSize: 14,
+    color: '#333',
+    textAlign: 'center',
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
+  },
+  updateText: {
+    fontSize: 10,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: 8,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 14,
   },
 });
 

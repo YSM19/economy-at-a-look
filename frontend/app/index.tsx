@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { View, ScrollView, SafeAreaView, StyleSheet, Platform, TouchableOpacity } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { ThemedText } from '../components/ThemedText';
+import { ThemedView } from '../components/ThemedView';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Stack } from 'expo-router';
 import InterestRateGauge from '../components/InterestRateGauge';
@@ -195,8 +196,9 @@ export default function HomeScreen() {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen 
+    <ThemedView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
+        <Stack.Screen 
         options={{
           title: getTabTitle(),
           headerRight: () => (
@@ -341,7 +343,8 @@ export default function HomeScreen() {
           </View>
         )}
       </View>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
@@ -367,7 +370,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
     paddingVertical: 12,
     paddingHorizontal: 16,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#F8F9FE',
     borderRadius: 10,
   },
   subtitle: {
@@ -379,10 +382,13 @@ const styles = StyleSheet.create({
   },
   gaugeLabel: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 5,
     marginLeft: 5,
     color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
   },
   fixedCountryTabContainer: {
     position: 'absolute',
@@ -390,7 +396,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     flexDirection: 'row',
-    backgroundColor: '#fff',
+    backgroundColor: '#FCFDFF',
     borderTopLeftRadius: 10,
     borderTopRightRadius: 10,
     shadowColor: "#000",
@@ -413,16 +419,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   activeCountryTab: {
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#F0F3FE',
     borderRadius: 8,
   },
   countryTabText: {
     fontSize: 14,
+    fontWeight: '500',
     color: '#666',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   activeCountryTabText: {
     color: '#1976D2',
-    fontWeight: 'bold',
+    fontWeight: '700',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
   },
   sectionTitle: {
     marginTop: 24,
@@ -430,7 +441,10 @@ const styles = StyleSheet.create({
   },
   sectionTitleText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   cardsContainer: {
     gap: 12,
@@ -438,7 +452,7 @@ const styles = StyleSheet.create({
   cardItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 12,
     padding: 16,
     marginVertical: 4,
@@ -464,19 +478,26 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
     marginBottom: 4,
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   cardSubtitle: {
     fontSize: 14,
+    fontWeight: '500',
     color: '#666',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
   },
   adminButton: {
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
     borderRadius: 20,
-    backgroundColor: '#E3F2FD',
+    backgroundColor: '#F0F3FE',
     marginRight: 8,
   },
   adminButtonText: {
@@ -486,7 +507,7 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   priceChartContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 16,
     marginVertical: 16,
@@ -525,7 +546,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     paddingVertical: 12,
     paddingHorizontal: 8,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: '#F6F8FE',
     borderRadius: 12,
   },
   cpiInfoItem: {

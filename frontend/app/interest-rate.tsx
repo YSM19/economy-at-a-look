@@ -3,6 +3,7 @@ import { View, StyleSheet, SafeAreaView, ScrollView } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Stack } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
+import { ThemedView } from '../components/ThemedView';
 import { useState, useEffect } from 'react';
 import { economicIndexApi } from '../services/api';
 import { InterestRateChart } from '../components/charts/InterestRateChart';
@@ -61,7 +62,8 @@ export default function InterestRateScreen() {
   }, []);
 
   return (
-    <SafeAreaView style={styles.container}>
+    <ThemedView style={{ flex: 1 }}>
+      <SafeAreaView style={styles.container}>
       <Stack.Screen 
         options={{
           title: "금리 정보",
@@ -115,7 +117,8 @@ export default function InterestRateScreen() {
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+      </SafeAreaView>
+    </ThemedView>
   );
 }
 
@@ -134,21 +137,30 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 6,
-    paddingTop: 0,
-    lineHeight: 32,
+    fontSize: 28,
+    fontWeight: '800',
+    textAlign: 'center',
+    marginBottom: 20,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 34,
   },
   subtitle: {
-    fontSize: 14,
-    opacity: 0.7,
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#666',
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   currentRates: {
     marginBottom: 16,
   },
   rateItem: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 20,
     alignItems: 'center',
@@ -176,7 +188,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   chartContainer: {
-    backgroundColor: '#fff',
+    backgroundColor: '#FBFCFF',
     borderRadius: 16,
     padding: 16,
     marginVertical: 16,
@@ -195,7 +207,7 @@ const styles = StyleSheet.create({
   infoContainer: {
     marginBottom: 24,
     padding: 16,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F6F8FE',
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#e9ecef',
@@ -219,5 +231,40 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
+  },
+  tabText: {
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
+  },
+  activeTabText: {
+    color: '#fff',
+  },
+  inactiveTabText: {
+    color: '#666',
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginTop: 24,
+    marginBottom: 16,
+    marginLeft: 5,
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginVertical: 20,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
 }); 

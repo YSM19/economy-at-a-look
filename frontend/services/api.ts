@@ -167,4 +167,43 @@ export const economicIndexApi = {
     api.get('/api/economic/interest-rate/announcements')
   ),
   getConsumerPriceIndex: () => withRetry(() => api.get('/api/economic/consumer-price-index')),
+};
+
+// 환율 저장 기록 관련 API 호출
+export const exchangeRateHistoryApi = {
+  saveHistory: (data: any, token: string) => withRetry(() => 
+    api.post('/api/exchange-rate-history/save', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  getMyHistory: (token: string) => withRetry(() => 
+    api.get('/api/exchange-rate-history/my-history', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  deleteHistory: (historyId: number, token: string) => withRetry(() => 
+    api.delete(`/api/exchange-rate-history/${historyId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  deleteAllHistory: (token: string) => withRetry(() => 
+    api.delete('/api/exchange-rate-history/all', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  getHistoryCount: (token: string) => withRetry(() => 
+    api.get('/api/exchange-rate-history/count', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
 }; 

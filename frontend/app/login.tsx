@@ -2,18 +2,21 @@ import React, { useState } from 'react';
 import { StyleSheet, View, TextInput, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
+import { ThemedView } from '../components/ThemedView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import Config from '../constants/Config';
+import { useToast } from '../components/ToastProvider';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { showToast } = useToast();
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('입력 오류', '이메일과 비밀번호를 모두 입력해주세요.');
+      showToast('이메일과 비밀번호를 모두 입력해주세요.', 'error');
       return;
     }
 
@@ -30,21 +33,21 @@ export default function LoginScreen() {
         await AsyncStorage.setItem('userToken', response.data.data.token);
         await AsyncStorage.setItem('userInfo', JSON.stringify(response.data.data.user));
         
-        Alert.alert('성공', '로그인되었습니다.', [
-          {
-            text: '확인',
-            onPress: () => {
-              // 관리자라면 관리자 페이지로, 일반 사용자라면 홈으로
-              if (response.data.data.user.role === 'ADMIN') {
-                router.replace('/admin/dashboard');
-              } else {
-                router.replace('/');
-              }
-            }
-          }
-        ]);
+        // 로그인 성공 토스트 표시하고 바로 이동
+        showToast(
+          `${response.data.data.user.username}님, 환영합니다!`,
+          'success',
+          2000
+        );
+        
+        // 바로 페이지 이동
+        if (response.data.data.user.role === 'ADMIN') {
+          router.replace('/admin/dashboard');
+        } else {
+          router.replace('/');
+        }
       } else {
-        Alert.alert('로그인 실패', response.data.message || '로그인에 실패했습니다.');
+        showToast(response.data.message || '로그인에 실패했습니다.', 'error');
       }
     } catch (error) {
       console.error('로그인 에러:', error);
@@ -66,7 +69,7 @@ export default function LoginScreen() {
         }
       }
       
-      Alert.alert('로그인 실패', errorMessage);
+      showToast(errorMessage, 'error');
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +80,8 @@ export default function LoginScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+    <ThemedView style={{ flex: 1 }}>
+      <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
       <Stack.Screen options={{ title: '로그인' }} />
       
       <View style={styles.formContainer}>
@@ -126,14 +130,15 @@ export default function LoginScreen() {
           <ThemedText style={styles.backButtonText}>홈으로 돌아가기</ThemedText>
         </TouchableOpacity>
       </View>
-    </ScrollView>
+      </ScrollView>
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#F8F9FE',
   },
   contentContainer: {
     flexGrow: 1,
@@ -146,14 +151,23 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: '#0066CC',
+    fontWeight: '800',
+    marginBottom: 8,
+    textAlign: 'center',
+    color: '#333',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 32,
   },
   subtitle: {
     fontSize: 18,
-    marginBottom: 30,
-    color: '#555',
+    marginBottom: 32,
+    textAlign: 'center',
+    color: '#666',
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 24,
   },
   input: {
     width: Platform.OS === 'web' ? 300 : '100%',
@@ -176,9 +190,12 @@ const styles = StyleSheet.create({
     marginTop: 10,
   },
   loginButtonText: {
-    color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: '#fff',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   signupButton: {
     width: Platform.OS === 'web' ? 300 : '100%',
@@ -190,9 +207,12 @@ const styles = StyleSheet.create({
     marginTop: 15,
   },
   signupButtonText: {
-    color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontWeight: '700',
+    color: 'white',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   backButton: {
     marginTop: 20,
@@ -201,8 +221,31 @@ const styles = StyleSheet.create({
   backButtonText: {
     color: '#666',
     fontSize: 14,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
   },
   disabledButton: {
     opacity: 0.7,
+  },
+  label: {
+    fontSize: 16,
+    marginBottom: 8,
+    color: '#333',
+    fontWeight: '600',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
+  },
+  errorText: {
+    fontSize: 14,
+    color: '#d32f2f',
+    textAlign: 'center',
+    marginTop: 8,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 20,
   },
 }); 
