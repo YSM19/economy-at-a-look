@@ -522,7 +522,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
               {/* 현재 환율 값을 하단 여유 공간에 크게 표시 */}
               <SvgText 
                 x={center} 
-                y={center + radius * 0.6}
+                y={center + radius * 0.35}
                 fontSize="26" 
                 fontWeight="bold" 
                 fill={rateColor} 
@@ -640,22 +640,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 30,
     marginBottom: 16,
-    height: 320,
+    height: 280,
     width: '100%',
     paddingHorizontal: 10,
   },
   infoContainer: {
     alignItems: 'center',
-    marginTop: -20,
+    marginTop: -50,
   },
   infoText: {
-    fontSize: 16,
+    fontSize: 20,
     color: '#666',
     marginLeft: 5,
+    marginBottom: 12,
     fontWeight: '600',
     includeFontPadding: false,
     textAlignVertical: 'center',
-    lineHeight: 22,
+    lineHeight: 26,
   },
   description: {
     fontSize: 12,

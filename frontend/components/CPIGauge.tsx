@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#999',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: -38,
     fontWeight: '500',
     includeFontPadding: false,
     textAlignVertical: 'center',
