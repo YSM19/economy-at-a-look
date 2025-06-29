@@ -290,7 +290,7 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
           {/* 현재 금리 값을 하단 여유 공간에 크게 표시 */}
           <SvgText 
             x={center} 
-            y={center + radius * 0.6}
+            y={center + radius * 0.35}
             fontSize="32" 
             fontWeight="bold" 
             fill={rateColor} 
@@ -368,7 +368,7 @@ const styles = StyleSheet.create({
   },
   infoContainer: {
     alignItems: 'center',
-    marginTop: -24,
+    marginTop: -70,
   },
   infoText: {
     fontSize: 20,

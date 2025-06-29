@@ -629,7 +629,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: '700',
-    marginBottom: 0,
+    marginBottom: 8,
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
