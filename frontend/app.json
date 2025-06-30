@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "한눈에 환율, 금리, 물가",
-    "slug": "at-a-look",
+    "name": "경제 한눈에",
+    "slug": "economy-at-a-look",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",

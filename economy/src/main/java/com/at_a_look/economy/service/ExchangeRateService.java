@@ -49,7 +49,7 @@ public class ExchangeRateService {
     @Value("${koreaexim.api.use-mock:false}")
     private boolean useMock;
     
-    private static final String API_URL = "https://www.koreaexim.go.kr/site/program/financial/exchangeJSON";
+    private static final String API_URL = "https://oapi.koreaexim.go.kr/site/program/financial/exchangeJSON";
     private static final String DATA_TYPE = "AP01"; // 환율 정보 타입
     private static final List<String> MAJOR_CURRENCIES = Arrays.asList("USD", "EUR", "JPY(100)", "CNH");
 

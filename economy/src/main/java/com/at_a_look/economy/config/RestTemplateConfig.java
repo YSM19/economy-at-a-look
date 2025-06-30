@@ -35,7 +35,7 @@ public class RestTemplateConfig {
                 connection.setRequestProperty("Accept-Encoding", "gzip, deflate, br");
                 connection.setRequestProperty("Connection", "keep-alive");
                 connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
-                connection.setRequestProperty("Referer", "https://www.koreaexim.go.kr/");
+                connection.setRequestProperty("Referer", "https://oapi.koreaexim.go.kr/");
                 connection.setRequestProperty("Cache-Control", "no-cache");
                 connection.setRequestProperty("Pragma", "no-cache");
             }
@@ -62,7 +62,7 @@ public class RestTemplateConfig {
                 @Override
                 public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
                     // 추가 헤더만 설정 (기본 헤더는 이미 prepareConnection에서 설정됨)
-                    request.getHeaders().set("Host", "www.koreaexim.go.kr");
+                    request.getHeaders().set("Host", "oapi.koreaexim.go.kr");
                     
                     return execution.execute(request, body);
                 }
@@ -87,7 +87,7 @@ public class RestTemplateConfig {
                 @Override
                 public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
                     // 추가 헤더만 설정 (기본 헤더는 이미 prepareConnection에서 설정됨)
-                    request.getHeaders().set("Host", "www.koreaexim.go.kr");
+                    request.getHeaders().set("Host", "oapi.koreaexim.go.kr");
                     
                     return execution.execute(request, body);
                 }
@@ -112,7 +112,7 @@ public class RestTemplateConfig {
                 @Override
                 public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
                     // 호스트 헤더만 추가 설정
-                    request.getHeaders().set("Host", "www.koreaexim.go.kr");
+                    request.getHeaders().set("Host", "oapi.koreaexim.go.kr");
                     
                     return execution.execute(request, body);
                 }
