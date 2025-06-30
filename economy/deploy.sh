@@ -14,12 +14,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "${SCRIPT_DIR}"
 
 # 필수 환경 변수 확인
-if [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$KOREAEXIM_API_KEY" ] || [ -z "$ADMIN_ACCOUNT_EMAIL" ] || [ -z "$ADMIN_ACCOUNT_PASSWORD" ]; then
+if [ -z "$DB_USERNAME" ] || [ -z "$DB_PASSWORD" ] || [ -z "$KOREAEXIM_API_AUTHKEY" ] || [ -z "$ADMIN_ACCOUNT_EMAIL" ] || [ -z "$ADMIN_ACCOUNT_PASSWORD" ]; then
     echo "오류: 필수 환경 변수가 설정되지 않았습니다."
     echo "다음 환경 변수를 설정해야 합니다:"
     echo "  - DB_USERNAME (데이터베이스 사용자명)"
     echo "  - DB_PASSWORD (데이터베이스 비밀번호)" 
-    echo "  - KOREAEXIM_API_KEY (한국수출입은행 API 키)"
+    echo "  - KOREAEXIM_API_AUTHKEY (한국수출입은행 API 키)"
     echo "  - ADMIN_ACCOUNT_EMAIL (관리자 계정 이메일)"
     echo "  - ADMIN_ACCOUNT_PASSWORD (관리자 계정 비밀번호)"
     exit 1

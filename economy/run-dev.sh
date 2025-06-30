@@ -15,10 +15,10 @@ cd "${SCRIPT_DIR}"
 
 # 환경 변수 설정 (개발 환경)
 export SPRING_PROFILES_ACTIVE=dev
-export KOREAEXIM_API_KEY=${KOREAEXIM_API_KEY:-"REDACTED"}
+export KOREAEXIM_API_AUTHKEY=${KOREAEXIM_API_AUTHKEY:-"REDACTED"}
 
 echo "개발 환경 프로필로 실행합니다: $SPRING_PROFILES_ACTIVE"
-echo "API 키: ${KOREAEXIM_API_KEY:0:5}..."
+echo "API 키: ${KOREAEXIM_API_AUTHKEY:0:5}..."
 echo "MySQL 데이터베이스를 사용합니다. MySQL 서버가 실행 중인지 확인하세요."
 echo "필요한 데이터베이스가 없다면 다음 명령어로 생성하세요:"
 echo "CREATE DATABASE IF NOT EXISTS economy CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
