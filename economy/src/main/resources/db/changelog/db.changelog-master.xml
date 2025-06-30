@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <!--
+        여기에 다른 changelog 파일들을 포함시킵니다.
+        이렇게 하면 파일별로 변경 내역을 관리하기 용이합니다.
+    -->
+    <include file="db/changelog/001-create-users-table.xml"/>
+    <include file="db/changelog/002-create-exchange-rates-table.xml"/>
+    <include file="db/changelog/003-create-interest-rate-table.xml"/>
+    <include file="db/changelog/004-create-consumer-price-index-table.xml"/>
+    <include file="db/changelog/005-create-economic-index-table.xml"/>
+    <include file="db/changelog/006-create-exchange-rate-history-table.xml"/>
+    
+    <!-- 인덱스 및 제약조건 추가 -->
+    <include file="db/changelog/007-add-indexes.xml"/>
+
+</databaseChangeLog>

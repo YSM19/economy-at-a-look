@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="003-create-interest-rate-table" author="developer">
+        <createTable tableName="interest_rate">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="country_code" type="VARCHAR(2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="country_name" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="interest_rate" type="DECIMAL(5,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bank_name" type="VARCHAR(100)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="rate_type" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="is_announcement_date" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        
+        <!-- 복합 유니크 제약조건 추가 -->
+        <addUniqueConstraint tableName="interest_rate" 
+                           columnNames="date,country_code" 
+                           constraintName="uk_interest_rate_date_country"/>
+        
+        <rollback>
+            <dropTable tableName="interest_rate"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog> 

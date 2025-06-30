@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="002-create-exchange-rates-table" author="developer">
+        <createTable tableName="exchange_rates">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="search_date" type="DATE">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cur_unit" type="VARCHAR(10)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cur_nm" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="ttb" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="tts" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="deal_basr" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="bkpr" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="yee_fee_r" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="ten_dd_efee_r" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="kftc_deal_bas_rate" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+            <column name="kftc_bkpr" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+        </createTable>
+        
+        <!-- 복합 유니크 제약조건 추가 -->
+        <addUniqueConstraint tableName="exchange_rates" 
+                           columnNames="search_date,cur_unit" 
+                           constraintName="uk_exchange_rates_date_currency"/>
+        
+        <rollback>
+            <dropTable tableName="exchange_rates"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog> 

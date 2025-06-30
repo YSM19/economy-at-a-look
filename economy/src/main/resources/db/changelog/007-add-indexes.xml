@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="007-add-indexes" author="developer">
+        
+        <!-- 사용자 테이블 인덱스 -->
+        <createIndex tableName="users" indexName="idx_users_email">
+            <column name="email"/>
+        </createIndex>
+        
+        <createIndex tableName="users" indexName="idx_users_username">
+            <column name="username"/>
+        </createIndex>
+        
+        <createIndex tableName="users" indexName="idx_users_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        
+        <!-- 환율 테이블 인덱스 -->
+        <createIndex tableName="exchange_rates" indexName="idx_exchange_rates_search_date">
+            <column name="search_date"/>
+        </createIndex>
+        
+        <createIndex tableName="exchange_rates" indexName="idx_exchange_rates_cur_unit">
+            <column name="cur_unit"/>
+        </createIndex>
+        
+        <!-- 금리 테이블 인덱스 -->
+        <createIndex tableName="interest_rate" indexName="idx_interest_rate_date">
+            <column name="date"/>
+        </createIndex>
+        
+        <createIndex tableName="interest_rate" indexName="idx_interest_rate_country_code">
+            <column name="country_code"/>
+        </createIndex>
+        
+        <createIndex tableName="interest_rate" indexName="idx_interest_rate_announcement">
+            <column name="is_announcement_date"/>
+        </createIndex>
+        
+        <!-- 소비자물가지수 테이블 인덱스 -->
+        <createIndex tableName="consumer_price_index" indexName="idx_consumer_price_index_date">
+            <column name="date"/>
+        </createIndex>
+        
+        <!-- 경제지수 테이블 인덱스 -->
+        <createIndex tableName="economic_index" indexName="idx_economic_index_date">
+            <column name="date"/>
+        </createIndex>
+        
+        <createIndex tableName="economic_index" indexName="idx_economic_index_status">
+            <column name="index_status"/>
+        </createIndex>
+        
+        <!-- 환율 계산 이력 테이블 인덱스 -->
+        <createIndex tableName="exchange_rate_history" indexName="idx_exchange_rate_history_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        
+        <createIndex tableName="exchange_rate_history" indexName="idx_exchange_rate_history_currency_code">
+            <column name="currency_code"/>
+        </createIndex>
+        
+        <createIndex tableName="exchange_rate_history" indexName="idx_exchange_rate_history_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        
+        <createIndex tableName="exchange_rate_history" indexName="idx_exchange_rate_history_user_created">
+            <column name="user_id"/>
+            <column name="created_at"/>
+        </createIndex>
+        
+        <rollback>
+            <dropIndex tableName="users" indexName="idx_users_email"/>
+            <dropIndex tableName="users" indexName="idx_users_username"/>
+            <dropIndex tableName="users" indexName="idx_users_created_at"/>
+            <dropIndex tableName="exchange_rates" indexName="idx_exchange_rates_search_date"/>
+            <dropIndex tableName="exchange_rates" indexName="idx_exchange_rates_cur_unit"/>
+            <dropIndex tableName="interest_rate" indexName="idx_interest_rate_date"/>
+            <dropIndex tableName="interest_rate" indexName="idx_interest_rate_country_code"/>
+            <dropIndex tableName="interest_rate" indexName="idx_interest_rate_announcement"/>
+            <dropIndex tableName="consumer_price_index" indexName="idx_consumer_price_index_date"/>
+            <dropIndex tableName="economic_index" indexName="idx_economic_index_date"/>
+            <dropIndex tableName="economic_index" indexName="idx_economic_index_status"/>
+            <dropIndex tableName="exchange_rate_history" indexName="idx_exchange_rate_history_user_id"/>
+            <dropIndex tableName="exchange_rate_history" indexName="idx_exchange_rate_history_currency_code"/>
+            <dropIndex tableName="exchange_rate_history" indexName="idx_exchange_rate_history_created_at"/>
+            <dropIndex tableName="exchange_rate_history" indexName="idx_exchange_rate_history_user_created"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog> 
