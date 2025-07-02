@@ -42,15 +42,15 @@ public class ExchangeRate { // 환율
     @Column
     private Double bkpr; // 장부가격 (Book Price)
 
-    @Column
+    @Column(name = "yee_fee_r")
     private Double yeefeR; // 연간 수수료율 (Yearly Effective Fee Rate)
 
-    @Column
+    @Column(name = "ten_dd_efee_r")
     private Double tenDdEfeeR; // 10일 유효 수수료율 (10 Days Effective Fee Rate)
 
-    @Column
+    @Column(name = "kftc_deal_bas_rate")
     private Double kftcDealBasRate; // 금융결제원 거래 기준율
 
-    @Column
+    @Column(name = "kftc_bkpr")
     private Double kftcBkpr; // 금융결제원 기준율
 } 
