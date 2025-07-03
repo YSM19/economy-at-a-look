@@ -82,6 +82,13 @@ export default function ExchangeRateScreen() {
 
   const countryInfo = getCountryInfo();
 
+  // 달력 기준으로 n일 전 날짜 계산 (더 많은 데이터를 가져오기 위해)
+  const getDaysAgo = (days: number): string => {
+    const date = new Date();
+    date.setDate(date.getDate() - days);
+    return date.toISOString().split('T')[0];
+  };
+
   // 주말 제외 날짜 계산 함수
   const getBusinessDaysAgo = (days: number): string => {
     const today = new Date();
@@ -121,22 +128,44 @@ export default function ExchangeRateScreen() {
           setExchangeRateData(transformedData);
         }
 
-        // 7일 데이터 가져오기 (주말 제외)
-        const weekStartDate = getBusinessDaysAgo(7);
+        // 7일 데이터 가져오기 (주말 제외) - 달력 기준 14일 전부터 가져와서 충분한 영업일 확보
+        const weekStartDate = getDaysAgo(14);
         const weekEndDate = getToday();
+        console.log('7일 데이터 요청 범위:', weekStartDate, '~', weekEndDate);
         const weeklyResponse = await economicIndexApi.getExchangeRateByPeriod(weekStartDate, weekEndDate);
         
         if (weeklyResponse.data && weeklyResponse.data.success && weeklyResponse.data.data) {
-          setWeeklyData(weeklyResponse.data.data);
+          console.log('받은 7일 데이터 개수:', weeklyResponse.data.data.length);
+          // 영업일만 필터링 후 최근 7개만 표시
+          const allWeeklyData = weeklyResponse.data.data;
+          const filteredData = allWeeklyData.filter((item: PeriodData) => {
+            const date = new Date(item.date);
+            const dayOfWeek = date.getDay();
+            return dayOfWeek !== 0 && dayOfWeek !== 6; // 주말 제외
+          });
+          const recentSevenDays = filteredData.length >= 7 ? filteredData.slice(-7) : filteredData;
+          console.log('필터링 후 표시할 7일 데이터 개수:', recentSevenDays.length);
+          setWeeklyData(recentSevenDays);
         }
 
-        // 30일 데이터 가져오기 (주말 제외)
-        const monthStartDate = getBusinessDaysAgo(30);
+        // 30일 데이터 가져오기 (주말 제외) - 달력 기준 45일 전부터 가져와서 충분한 영업일 확보
+        const monthStartDate = getDaysAgo(45);
         const monthEndDate = getToday();
+        console.log('30일 데이터 요청 범위:', monthStartDate, '~', monthEndDate);
         const monthlyResponse = await economicIndexApi.getExchangeRateByPeriod(monthStartDate, monthEndDate);
         
         if (monthlyResponse.data && monthlyResponse.data.success && monthlyResponse.data.data) {
-          setMonthlyData(monthlyResponse.data.data);
+          console.log('받은 30일 데이터 개수:', monthlyResponse.data.data.length);
+          // 영업일만 필터링 후 최근 30개만 표시
+          const allMonthlyData = monthlyResponse.data.data;
+          const filteredData = allMonthlyData.filter((item: PeriodData) => {
+            const date = new Date(item.date);
+            const dayOfWeek = date.getDay();
+            return dayOfWeek !== 0 && dayOfWeek !== 6; // 주말 제외
+          });
+          const recentThirtyDays = filteredData.length >= 30 ? filteredData.slice(-30) : filteredData;
+          console.log('필터링 후 표시할 30일 데이터 개수:', recentThirtyDays.length);
+          setMonthlyData(recentThirtyDays);
         }
 
       } catch (err) {

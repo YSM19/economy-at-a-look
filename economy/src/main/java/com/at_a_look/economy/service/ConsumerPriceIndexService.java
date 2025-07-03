@@ -197,8 +197,14 @@ public class ConsumerPriceIndexService {
             String response = restTemplate.getForObject(url, String.class);
             
             if (response == null) {
-                log.error("❌ API 응답이 null입니다. URL을 확인하세요.");
-                return;
+                throw new RuntimeException("한국은행 API로부터 응답을 받지 못했습니다.");
+            }
+            
+            // API 응답 검증
+            String errorMessage = validateCPIEcosApiResponse(response);
+            if (errorMessage != null) {
+                log.error("❌ ECOS API 에러 응답: {}", errorMessage);
+                throw new RuntimeException("한국은행 API 에러: " + errorMessage);
             }
             
             log.info("✅ API 응답 수신 완료 (길이: {} 문자)", response.length());
@@ -207,9 +213,7 @@ public class ConsumerPriceIndexService {
             List<ConsumerPriceIndex> cpiData = parseEcosResponse(response);
             
             if (cpiData.isEmpty()) {
-                log.error("❌ 파싱된 CPI 데이터가 없습니다. API 응답을 확인하세요.");
-                log.info("📝 전체 API 응답: {}", response);
-                return;
+                throw new RuntimeException("파싱된 소비자물가지수 데이터가 없습니다. 요청한 기간에 데이터가 없거나 API 응답 형식이 변경되었을 가능성이 있습니다.");
             }
             
             log.info("🔧 파싱 완료: {}개 데이터 추출", cpiData.size());
@@ -220,8 +224,124 @@ public class ConsumerPriceIndexService {
             log.info("✅ 소비자물가지수 데이터 저장 완료: {}개", cpiData.size());
             
         } catch (Exception e) {
-            log.error("❌ 소비자물가지수 API 호출 실패: {}", e.getMessage(), e);
+            String errorMsg;
+            
+            // 이미 한국은행 API 에러인 경우 (에러 코드 포함)
+            if (e.getMessage() != null && e.getMessage().startsWith("한국은행 API 에러:")) {
+                errorMsg = e.getMessage();
+                log.error("❌ ECOS API 에러: {}", errorMsg);
+            } else if (e.getMessage() != null && (e.getMessage().contains("ecos.bok.or.kr") || e.getMessage().contains("I/O error"))) {
+                // 네트워크 에러인 경우
+                errorMsg = "한국은행 서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.";
+                log.error("❌ 네트워크 에러: {}", e.getMessage());
+            } else {
+                // 기타 에러
+                errorMsg = "소비자물가지수 데이터 조회 실패: " + e.getMessage();
+                log.error("❌ 소비자물가지수 API 호출 실패: {}", e.getMessage(), e);
+            }
+            
+            throw new RuntimeException(errorMsg, e);
         }
+    }
+
+    /**
+     * ECOS API 응답 검증 및 에러 메시지 추출
+     */
+    private String validateCPIEcosApiResponse(String response) {
+        if (response == null || response.trim().isEmpty()) {
+            return "한국은행 API로부터 응답을 받지 못했습니다.";
+        }
+        
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            
+            // 에러 정보 확인
+            if (root.has("RESULT")) {
+                JsonNode result = root.get("RESULT");
+                if (result.has("CODE")) {
+                    String code = result.get("CODE").asText();
+                    String message = result.has("MESSAGE") ? result.get("MESSAGE").asText() : "";
+                    
+                    // 성공이 아닌 경우 에러 메시지 반환
+                    if (!"INFO-000".equals(code)) {
+                        return getCPIEcosErrorMessage(code, message);
+                    }
+                }
+            }
+            
+            // StatisticSearch가 있는지 확인 (정상 응답)
+            if (root.has("StatisticSearch")) {
+                JsonNode search = root.get("StatisticSearch");
+                if (search.has("RESULT")) {
+                    JsonNode result = search.get("RESULT");
+                    if (result.has("CODE")) {
+                        String code = result.get("CODE").asText();
+                        String message = result.has("MESSAGE") ? result.get("MESSAGE").asText() : "";
+                        
+                        if (!"INFO-000".equals(code)) {
+                            return getCPIEcosErrorMessage(code, message);
+                        }
+                    }
+                }
+            }
+            
+            return null; // 에러 없음
+            
+        } catch (Exception e) {
+            log.warn("⚠️ API 응답 파싱 중 오류 발생: {}", e.getMessage());
+            return null; // 파싱 실패시 기존 로직 계속 진행
+        }
+    }
+    
+    /**
+     * ECOS API 에러 코드를 사용자 친화적인 메시지로 변환
+     */
+    private String getCPIEcosErrorMessage(String code, String originalMessage) {
+        String userMessage;
+        switch (code) {
+            case "INFO-100":
+                userMessage = "인증키가 유효하지 않습니다. API 키를 확인해주세요.";
+                break;
+            case "INFO-200":
+                userMessage = "요청하신 기간에 해당하는 소비자물가지수 데이터가 없습니다. 다른 기간을 선택해주세요.";
+                break;
+            case "ERROR-100":
+                userMessage = "필수 파라미터가 누락되었습니다. 요청 정보를 확인해주세요.";
+                break;
+            case "ERROR-101":
+                userMessage = "날짜 형식이 올바르지 않습니다. 날짜 형식을 확인해주세요.";
+                break;
+            case "ERROR-200":
+                userMessage = "파일 타입 값이 유효하지 않습니다.";
+                break;
+            case "ERROR-300":
+                userMessage = "조회 건수 값이 누락되었습니다.";
+                break;
+            case "ERROR-301":
+                userMessage = "조회 건수 값의 타입이 유효하지 않습니다.";
+                break;
+            case "ERROR-400":
+                userMessage = "검색 범위가 너무 큽니다. 기간을 줄여서 다시 시도해주세요.";
+                break;
+            case "ERROR-500":
+                userMessage = "한국은행 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+                break;
+            case "ERROR-600":
+                userMessage = "한국은행 데이터베이스 연결 오류가 발생했습니다.";
+                break;
+            case "ERROR-601":
+                userMessage = "한국은행 데이터베이스 SQL 오류가 발생했습니다.";
+                break;
+            case "ERROR-602":
+                userMessage = "과도한 API 호출로 이용이 제한되었습니다. 잠시 후 다시 시도해주세요.";
+                break;
+            default:
+                userMessage = originalMessage != null && !originalMessage.isEmpty() ? originalMessage : "알 수 없는 오류가 발생했습니다.";
+                break;
+        }
+        
+        // 에러 코드와 메시지를 함께 반환
+        return String.format("[%s] %s", code, userMessage);
     }
 
     /**
@@ -232,18 +352,6 @@ public class ConsumerPriceIndexService {
         
         try {
             JsonNode root = objectMapper.readTree(response);
-            
-            // ECOS API 에러 확인
-            if (root.has("RESULT")) {
-                JsonNode result = root.path("RESULT");
-                String resultCode = result.path("ERR_CODE").asText();
-                String resultMsg = result.path("ERR_MSG").asText();
-                
-                if (!"INFO-000".equals(resultCode)) {
-                    log.error("❌ ECOS API 에러: 코드={}, 메시지={}", resultCode, resultMsg);
-                    return cpiList;
-                }
-            }
             
             JsonNode dataArray = root.path("StatisticSearch").path("row");
             
@@ -447,15 +555,20 @@ public class ConsumerPriceIndexService {
     public void fetchAndSave2YearsData() {
         log.info("📅 최근 2년간 소비자물가지수 데이터 수동 호출");
         
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusYears(2);
-        
-        String startDateStr = startDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
-        String endDateStr = endDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
-        
-        fetchAndSaveCPIData(startDateStr, endDateStr, "M");
-        
-        log.info("📈 최근 2년간 소비자물가지수 데이터 호출 완료");
+        try {
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = endDate.minusYears(2);
+            
+            String startDateStr = startDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
+            String endDateStr = endDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
+            
+            fetchAndSaveCPIData(startDateStr, endDateStr, "M");
+            
+            log.info("📈 최근 2년간 소비자물가지수 데이터 호출 완료");
+        } catch (Exception e) {
+            log.error("❌ 최근 2년간 소비자물가지수 데이터 호출 실패: {}", e.getMessage());
+            throw new RuntimeException("2년간 소비자물가지수 데이터 가져오기 실패: " + e.getMessage(), e);
+        }
     }
 
     /**
@@ -465,14 +578,19 @@ public class ConsumerPriceIndexService {
     public void fetchAndSave1YearData() {
         log.info("📅 최근 1년간 소비자물가지수 데이터 수동 호출");
         
-        LocalDate endDate = LocalDate.now();
-        LocalDate startDate = endDate.minusYears(1);
-        
-        String startDateStr = startDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
-        String endDateStr = endDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
-        
-        fetchAndSaveCPIData(startDateStr, endDateStr, "M");
-        
-        log.info("📈 최근 1년간 소비자물가지수 데이터 호출 완료");
+        try {
+            LocalDate endDate = LocalDate.now();
+            LocalDate startDate = endDate.minusYears(1);
+            
+            String startDateStr = startDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
+            String endDateStr = endDate.format(DateTimeFormatter.ofPattern("yyyyMM"));
+            
+            fetchAndSaveCPIData(startDateStr, endDateStr, "M");
+            
+            log.info("📈 최근 1년간 소비자물가지수 데이터 호출 완료");
+        } catch (Exception e) {
+            log.error("❌ 최근 1년간 소비자물가지수 데이터 호출 실패: {}", e.getMessage());
+            throw new RuntimeException("1년간 소비자물가지수 데이터 가져오기 실패: " + e.getMessage(), e);
+        }
     }
 } 

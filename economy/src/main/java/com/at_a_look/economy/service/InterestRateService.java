@@ -177,18 +177,37 @@ public class InterestRateService {
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = endDate.minusYears(1);
         
+        Exception lastError = null;
+        int successCount = 0;
+        int totalCount = COUNTRIES.size();
+        
         for (Map.Entry<String, CountryInfo> entry : COUNTRIES.entrySet()) {
             String countryCode = entry.getKey();
             CountryInfo countryInfo = entry.getValue();
             
             try {
                 fetchAndSaveCountryData(countryCode, countryInfo, startDate, endDate);
+                successCount++;
+                log.info("✅ {} 국가 데이터 처리 성공", countryCode);
             } catch (Exception e) {
-                log.warn("⚠️ {} 국가 데이터 처리 실패: {}", countryCode, e.getMessage());
+                lastError = e;
+                log.error("❌ {} 국가 데이터 처리 실패: {}", countryCode, e.getMessage());
             }
         }
         
-        log.info("📈 최근 1년간 금리 데이터 조회 완료");
+        // 모든 국가가 실패했으면 예외 던지기
+        if (successCount == 0 && lastError != null) {
+            throw new RuntimeException("모든 국가의 금리 데이터 조회에 실패했습니다: " + lastError.getMessage(), lastError);
+        }
+        
+        // 일부만 성공했으면 경고
+        if (successCount < totalCount && lastError != null) {
+            log.warn("⚠️ {}개 국가 중 {}개만 성공. 마지막 에러: {}", totalCount, successCount, lastError.getMessage());
+            throw new RuntimeException(String.format("%d개 국가 중 %d개만 성공했습니다. 마지막 에러: %s", 
+                    totalCount, successCount, lastError.getMessage()), lastError);
+        }
+        
+        log.info("📈 최근 1년간 금리 데이터 조회 완료 ({}개 국가 성공)", successCount);
     }
 
     /**
@@ -201,18 +220,84 @@ public class InterestRateService {
         LocalDate endDate = LocalDate.now();
         LocalDate startDate = endDate.minusMonths(1);
         
+        Exception lastError = null;
+        int successCount = 0;
+        int totalCount = COUNTRIES.size();
+        
         for (Map.Entry<String, CountryInfo> entry : COUNTRIES.entrySet()) {
             String countryCode = entry.getKey();
             CountryInfo countryInfo = entry.getValue();
             
             try {
                 fetchAndSaveCountryData(countryCode, countryInfo, startDate, endDate);
+                successCount++;
+                log.info("✅ {} 국가 데이터 처리 성공", countryCode);
             } catch (Exception e) {
-                log.warn("⚠️ {} 국가 데이터 처리 실패: {}", countryCode, e.getMessage());
+                lastError = e;
+                log.error("❌ {} 국가 데이터 처리 실패: {}", countryCode, e.getMessage());
             }
         }
         
-        log.info("📈 최근 1개월간 금리 데이터 조회 완료");
+        // 모든 국가가 실패했으면 예외 던지기
+        if (successCount == 0 && lastError != null) {
+            throw new RuntimeException("모든 국가의 금리 데이터 조회에 실패했습니다: " + lastError.getMessage(), lastError);
+        }
+        
+        // 일부만 성공했으면 경고
+        if (successCount < totalCount && lastError != null) {
+            log.warn("⚠️ {}개 국가 중 {}개만 성공. 마지막 에러: {}", totalCount, successCount, lastError.getMessage());
+            throw new RuntimeException(String.format("%d개 국가 중 %d개만 성공했습니다. 마지막 에러: %s", 
+                    totalCount, successCount, lastError.getMessage()), lastError);
+        }
+        
+        log.info("📈 최근 1개월간 금리 데이터 조회 완료 ({}개 국가 성공)", successCount);
+    }
+
+    /**
+     * 커스텀 연도만큼의 금리 데이터 조회 및 저장 (어드민 전용)
+     */
+    @Transactional
+    public void fetchAndSaveCustomYearsRates(int years) {
+        log.info("📅 최근 {}년간 금리 데이터 조회 시작", years);
+        
+        if (years < 1 || years > 10) {
+            throw new IllegalArgumentException("연도는 1년에서 10년 사이여야 합니다: " + years);
+        }
+        
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusYears(years);
+        
+        Exception lastError = null;
+        int successCount = 0;
+        int totalCount = COUNTRIES.size();
+        
+        for (Map.Entry<String, CountryInfo> entry : COUNTRIES.entrySet()) {
+            String countryCode = entry.getKey();
+            CountryInfo countryInfo = entry.getValue();
+            
+            try {
+                fetchAndSaveCountryData(countryCode, countryInfo, startDate, endDate);
+                successCount++;
+                log.info("✅ {} 국가 데이터 처리 성공", countryCode);
+            } catch (Exception e) {
+                lastError = e;
+                log.error("❌ {} 국가 데이터 처리 실패: {}", countryCode, e.getMessage());
+            }
+        }
+        
+        // 모든 국가가 실패했으면 예외 던지기
+        if (successCount == 0 && lastError != null) {
+            throw new RuntimeException("모든 국가의 금리 데이터 조회에 실패했습니다: " + lastError.getMessage(), lastError);
+        }
+        
+        // 일부만 성공했으면 경고
+        if (successCount < totalCount && lastError != null) {
+            log.warn("⚠️ {}개 국가 중 {}개만 성공. 마지막 에러: {}", totalCount, successCount, lastError.getMessage());
+            throw new RuntimeException(String.format("%d개 국가 중 %d개만 성공했습니다. 마지막 에러: %s", 
+                    totalCount, successCount, lastError.getMessage()), lastError);
+        }
+        
+        log.info("📈 최근 {}년간 금리 데이터 조회 완료 ({}개 국가 성공)", years, successCount);
     }
 
     /**
@@ -262,6 +347,14 @@ public class InterestRateService {
         
         try {
             String response = restTemplate.getForObject(url, String.class);
+            
+            // API 응답 검증
+            String errorMessage = validateEcosApiResponse(response);
+            if (errorMessage != null) {
+                log.error("❌ ECOS API 에러 응답: {}", errorMessage);
+                throw new RuntimeException("한국은행 API 에러: " + errorMessage);
+            }
+            
             List<InterestRate> rateData = parseEcosDailyResponse(response, countryInfo);
             
             // 실제 데이터만 저장 (발표일 식별)
@@ -270,8 +363,24 @@ public class InterestRateService {
             log.info("✅ {} 국가 일별 데이터 처리 완료: {}일", countryCode, rateData.size());
             
         } catch (Exception e) {
-            log.error("❌ {} 국가 일별 데이터 조회 실패: {}", countryCode, e.getMessage());
-            // 한국만 지원하므로 실패시 더 이상 대체 방법 없음
+            String errorMsg;
+            
+            // ECOS API 에러인지 확인 (이미 에러 코드가 포함된 메시지)
+            if (e.getMessage() != null && e.getMessage().startsWith("한국은행 API 에러:")) {
+                // ECOS API 에러 메시지를 그대로 사용 (에러 코드 포함)
+                errorMsg = e.getMessage();
+                log.error("❌ {} 국가 ECOS API 에러: {}", countryCode, errorMsg);
+            } else if (e.getMessage() != null && (e.getMessage().contains("ecos.bok.or.kr") || e.getMessage().contains("I/O error"))) {
+                // 네트워크 에러인 경우
+                errorMsg = "한국은행 서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.";
+                log.error("❌ {} 국가 네트워크 에러: {}", countryCode, e.getMessage());
+            } else {
+                // 기타 에러
+                errorMsg = "한국은행 기준금리 데이터 조회 실패: " + e.getMessage();
+                log.error("❌ {} 국가 일별 데이터 조회 실패: {}", countryCode, errorMsg);
+            }
+            
+            throw new RuntimeException(errorMsg, e);
         }
     }
 
@@ -352,6 +461,106 @@ public class InterestRateService {
         } else {
             throw new IllegalArgumentException("한국만 지원됩니다: " + countryCode);
         }
+    }
+
+    /**
+     * ECOS API 응답 검증 및 에러 메시지 추출
+     */
+    private String validateEcosApiResponse(String response) {
+        if (response == null || response.trim().isEmpty()) {
+            return "한국은행 API로부터 응답을 받지 못했습니다.";
+        }
+        
+        try {
+            JsonNode root = objectMapper.readTree(response);
+            
+            // 에러 정보 확인
+            if (root.has("RESULT")) {
+                JsonNode result = root.get("RESULT");
+                if (result.has("CODE")) {
+                    String code = result.get("CODE").asText();
+                    String message = result.has("MESSAGE") ? result.get("MESSAGE").asText() : "";
+                    
+                    // 성공이 아닌 경우 에러 메시지 반환
+                    if (!"INFO-000".equals(code)) {
+                        return getEcosErrorMessage(code, message);
+                    }
+                }
+            }
+            
+            // StatisticSearch가 있는지 확인 (정상 응답)
+            if (root.has("StatisticSearch")) {
+                JsonNode search = root.get("StatisticSearch");
+                if (search.has("RESULT")) {
+                    JsonNode result = search.get("RESULT");
+                    if (result.has("CODE")) {
+                        String code = result.get("CODE").asText();
+                        String message = result.has("MESSAGE") ? result.get("MESSAGE").asText() : "";
+                        
+                        if (!"INFO-000".equals(code)) {
+                            return getEcosErrorMessage(code, message);
+                        }
+                    }
+                }
+            }
+            
+            return null; // 에러 없음
+            
+        } catch (Exception e) {
+            log.warn("⚠️ API 응답 파싱 중 오류 발생: {}", e.getMessage());
+            return null; // 파싱 실패시 기존 로직 계속 진행
+        }
+    }
+    
+    /**
+     * ECOS API 에러 코드를 사용자 친화적인 메시지로 변환
+     */
+    private String getEcosErrorMessage(String code, String originalMessage) {
+        String userMessage;
+        switch (code) {
+            case "INFO-100":
+                userMessage = "인증키가 유효하지 않습니다. API 키를 확인해주세요.";
+                break;
+            case "INFO-200":
+                userMessage = "요청하신 기간에 해당하는 금리 데이터가 없습니다. 다른 기간을 선택해주세요.";
+                break;
+            case "ERROR-100":
+                userMessage = "필수 파라미터가 누락되었습니다. 요청 정보를 확인해주세요.";
+                break;
+            case "ERROR-101":
+                userMessage = "날짜 형식이 올바르지 않습니다. 날짜 형식을 확인해주세요.";
+                break;
+            case "ERROR-200":
+                userMessage = "파일 타입 값이 유효하지 않습니다.";
+                break;
+            case "ERROR-300":
+                userMessage = "조회 건수 값이 누락되었습니다.";
+                break;
+            case "ERROR-301":
+                userMessage = "조회 건수 값의 타입이 유효하지 않습니다.";
+                break;
+            case "ERROR-400":
+                userMessage = "검색 범위가 너무 큽니다. 기간을 줄여서 다시 시도해주세요.";
+                break;
+            case "ERROR-500":
+                userMessage = "한국은행 서버 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+                break;
+            case "ERROR-600":
+                userMessage = "한국은행 데이터베이스 연결 오류가 발생했습니다.";
+                break;
+            case "ERROR-601":
+                userMessage = "한국은행 데이터베이스 SQL 오류가 발생했습니다.";
+                break;
+            case "ERROR-602":
+                userMessage = "과도한 API 호출로 이용이 제한되었습니다. 잠시 후 다시 시도해주세요.";
+                break;
+            default:
+                userMessage = originalMessage != null && !originalMessage.isEmpty() ? originalMessage : "알 수 없는 오류가 발생했습니다.";
+                break;
+        }
+        
+        // 에러 코드와 메시지를 함께 반환
+        return String.format("[%s] %s", code, userMessage);
     }
 
     /**

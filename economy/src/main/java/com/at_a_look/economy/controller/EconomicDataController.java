@@ -157,6 +157,22 @@ public class EconomicDataController {
         }
     }
 
+    // 어드민용: 커스텀 연도 금리 데이터 수동 호출
+    @PostMapping("/admin/interest-rate/fetch/custom")
+    @Operation(summary = "[어드민] 커스텀 연도 금리 데이터 수동 호출", description = "한국은행 API에서 지정된 연도만큼의 금리 데이터를 수동으로 가져옵니다.")
+    public ResponseEntity<ApiResponse<String>> fetchCustomYearsInterestRateData(@RequestParam int years) {
+        try {
+            if (years < 1 || years > 10) {
+                return ResponseEntity.ok(ApiResponse.error("연도는 1년에서 10년 사이로 입력해주세요."));
+            }
+            
+            interestRateService.fetchAndSaveCustomYearsRates(years);
+            return ResponseEntity.ok(ApiResponse.success("최근 " + years + "년간의 금리 데이터가 성공적으로 업데이트되었습니다."));
+        } catch (Exception e) {
+            return ResponseEntity.ok(ApiResponse.error(years + "년 금리 데이터 가져오기 실패: " + e.getMessage()));
+        }
+    }
+
     // 어드민용: 1년 환율 데이터 수동 호출
     @PostMapping("/admin/exchange-rate/fetch/yearly")
     @Operation(summary = "[어드민] 1년 환율 데이터 수동 호출", description = "외부 API에서 최근 1년간의 환율 데이터를 수동으로 가져옵니다.")

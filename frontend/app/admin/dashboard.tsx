@@ -26,6 +26,7 @@ export default function AdminDashboardScreen() {
   const [isExchangeRateLoading, setIsExchangeRateLoading] = useState(false);
   const [isCPILoading, setIsCPILoading] = useState(false);
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
+  const [customYears, setCustomYears] = useState('3');
 
   useEffect(() => {
     // 인증 확인
@@ -339,6 +340,59 @@ export default function AdminDashboardScreen() {
           const status = error.response.status;
           const data = error.response.data;
           userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
+        } else {
+          userMessage = '서버에 연결할 수 없습니다.';
+          setErrorMessage('네트워크 오류: 서버에 연결할 수 없습니다.');
+        }
+      }
+      
+      Alert.alert('오류', userMessage);
+      
+    } finally {
+      setIsInterestRateLoading(false);
+    }
+  };
+
+  // 커스텀 연도 금리 데이터 수동 호출
+  const fetchCustomYearsInterestRates = async () => {
+    const years = parseInt(customYears);
+    
+    if (!years || years < 1 || years > 10) {
+      Alert.alert('오류', '1년에서 10년 사이의 유효한 연도를 입력해주세요.');
+      return;
+    }
+    
+    setIsInterestRateLoading(true);
+    setErrorMessage(null);
+    setApiResult(null);
+    
+    try {
+      console.log(`📅 관리자 대시보드: ${years}년 금리 데이터 가져오기 시작`);
+      const response = await axios.post(`${Config.apiUrl}/api/economic/admin/interest-rate/fetch/custom?years=${years}`);
+      setApiResult(response.data);
+      
+      if (response.data?.success) {
+        console.log(`✅ ${years}년 금리 데이터 가져오기 성공:`, response.data.message);
+        Alert.alert('성공', response.data.message || `최근 ${years}년간의 금리 데이터를 성공적으로 가져왔습니다.`);
+      } else {
+        console.warn(`⚠️ ${years}년 금리 데이터 가져오기 실패:`, response.data.message);
+        Alert.alert('오류', response.data.message || `${years}년 금리 데이터를 가져오는데 실패했습니다.`);
+      }
+      
+    } catch (error) {
+      console.error(`💥 ${years}년 금리 데이터 가져오기 에러:`, error);
+      let userMessage = `${years}년 금리 데이터를 가져오는 중 오류가 발생했습니다.`;
+      
+      if (axios.isAxiosError(error)) {
+        if (error.response) {
+          const status = error.response.status;
+          const data = error.response.data;
+          if (status === 404) {
+            userMessage = '커스텀 연도 API가 아직 구현되지 않았습니다.\n백엔드 개발자에게 API 추가를 요청해주세요.';
+          } else {
+            userMessage = data?.message || `서버 오류가 발생했습니다. (오류 코드: ${status})`;
+          }
           setErrorMessage(`HTTP ${status}: ${data?.message || error.response.statusText}`);
         } else {
           userMessage = '서버에 연결할 수 없습니다.';
@@ -884,6 +938,38 @@ export default function AdminDashboardScreen() {
                   {isInterestRateLoading ? '📊 가져오는 중...' : '📅 1년 금리 데이터 가져오기'}
                 </ThemedText>
               </TouchableOpacity>
+
+              {/* 커스텀 연도 입력 */}
+              <View style={styles.customYearsContainer}>
+                <ThemedText style={styles.customYearsLabel}>📅 커스텀 연도 설정</ThemedText>
+                <View style={styles.customYearsInputContainer}>
+                  <TextInput
+                    style={styles.yearsInput}
+                    placeholder="3"
+                    value={customYears}
+                    onChangeText={setCustomYears}
+                    editable={!isInterestRateLoading && !isLoading}
+                    keyboardType="numeric"
+                    maxLength={2}
+                  />
+                  <ThemedText style={styles.yearsInputLabel}>년치</ThemedText>
+                  <TouchableOpacity 
+                    style={[
+                      styles.customYearsButton,
+                      (isInterestRateLoading || isLoading) && styles.disabledButton
+                    ]}
+                    onPress={fetchCustomYearsInterestRates}
+                    disabled={isInterestRateLoading || isLoading}
+                  >
+                    <ThemedText style={styles.buttonText}>
+                      {isInterestRateLoading ? '📊 가져오는 중...' : '🔄 가져오기'}
+                    </ThemedText>
+                  </TouchableOpacity>
+                </View>
+                <ThemedText style={styles.customYearsDescription}>
+                  💡 1~10년 사이의 연도를 입력하여 한국은행 기준금리 데이터를 가져올 수 있습니다.
+                </ThemedText>
+              </View>
               
               {isInterestRateLoading && (
                 <View style={styles.loadingNotice}>
@@ -1342,5 +1428,56 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#155A5E',
     lineHeight: 20,
+  },
+  // 커스텀 연도 입력 관련 스타일
+  customYearsContainer: {
+    backgroundColor: '#F5F5F5',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 15,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+  },
+  customYearsLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+  },
+  customYearsInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  yearsInput: {
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: 'white',
+    fontSize: 16,
+    width: 60,
+    textAlign: 'center',
+    marginRight: 8,
+  },
+  yearsInputLabel: {
+    fontSize: 16,
+    color: '#666',
+    marginRight: 12,
+  },
+  customYearsButton: {
+    backgroundColor: '#FF6B35',
+    borderRadius: 8,
+    padding: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minWidth: 100,
+  },
+  customYearsDescription: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+    lineHeight: 16,
   },
 }); 
