@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, StyleSheet, Dimensions } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, Dimensions, Text, ScrollView } from 'react-native';
 import { ThemedText } from '../ThemedText';
 import { LineChart } from 'react-native-gifted-charts';
 
@@ -25,6 +25,19 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
   showOnlyDay
 }) => {
   const screenWidth = Dimensions.get('window').width - 32;
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [timeoutId, setTimeoutId] = useState<number | null>(null);
+
+  const handleFocus = useCallback((item: any, index: number) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    setFocusedIndex(index);
+    const newTimeoutId = setTimeout(() => {
+      setFocusedIndex(null);
+    }, 3000);
+    setTimeoutId(newTimeoutId);
+  }, [timeoutId]);
 
   // 국가별 데이터 선택
   const getDataByCountry = () => {
@@ -86,52 +99,34 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
 
   const chartData = validData.map((item, index) => {
     const date = new Date(item.date);
-    const year = date.getFullYear();
     const month = date.getMonth() + 1;
     const day = date.getDate();
     
     let label = '';
-    
-    // 데이터 개수에 따라 라벨 표시 간격 조정
-    const dataLength = validData.length;
-    let showLabel = false;
-    
-    if (dataLength <= 7) {
-      // 7일 이하: 모든 날짜 표시
-      showLabel = true;
-    } else if (dataLength <= 15) {
-      // 15일 이하: 2일마다 표시
-      showLabel = index % 2 === 0 || index === dataLength - 1;
-    } else if (dataLength <= 21) {
-      // 21일 이하: 3일마다 표시
-      showLabel = index % 3 === 0 || index === dataLength - 1;
-    } else if (dataLength <= 30) {
-      // 30일 이하: 6일마다 표시 + 처음과 마지막
-      showLabel = index % 6 === 0 || index === dataLength - 1;
-    } else {
-      // 30일 초과: 7일마다 표시 + 처음과 마지막
-      showLabel = index % 7 === 0 || index === dataLength - 1;
-    }
-    
-    if (showLabel) {
-      if (showOnlyDay) {
-        if (index === 0) {
-          label = `${month}.${day}`;
-        } else {
-          const prevDate = new Date(validData[index - 1].date);
-          const prevMonth = prevDate.getMonth() + 1;
-          
-          if (month !== prevMonth) {
-            label = `${month}.${day}`;
-          } else {
-            label = `${day}`;
-          }
-        }
+
+    if (showOnlyDay) {
+      // 30일 차트: 첫째 날과 월이 바뀔 때 '월.일', 나머지는 '일'
+      if (index === 0) {
+        label = `${month}.${day}`;
       } else {
-        if (index === 0) {
+        const prevDate = new Date(validData[index - 1].date);
+        if (date.getMonth() !== prevDate.getMonth()) {
           label = `${month}.${day}`;
         } else {
+          label = `${day}`;
+        }
+      }
+    } else {
+      // 7일 차트: 첫째 날은 '연.월.일', 월 바뀌면 '월.일', 나머지는 '일'
+      const year = date.getFullYear().toString().slice(-2);
+      if (index === 0) {
+        label = `${year}.${month}.${day}`;
+      } else {
+        const prevDate = new Date(validData[index - 1].date);
+        if (date.getMonth() !== prevDate.getMonth()) {
           label = `${month}.${day}`;
+        } else {
+          label = `${day}`;
         }
       }
     }
@@ -141,7 +136,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
     return {
       value: value,
       label: label,
-      dataPointText: value.toFixed(0),
+      dataPointText: value.toLocaleString('ko-KR'),
     };
   });
 
@@ -175,66 +170,84 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
         fontSize: 8
       };
     } else {
-      // 30일 데이터도 화면에 맞춤
-      const availableWidth = screenWidth - 80; // Y축 공간 제외
-      const spacingPerItem = availableWidth / validData.length;
+      // 30일 데이터: 스크롤이 가능하도록 고정된 간격 설정
       return {
-        spacing: Math.max(spacingPerItem, 8), // 최소 8px 간격 보장
+        spacing: 40,
         initialSpacing: 5,
-        endSpacing: 5,
-        fontSize: 7
+        endSpacing: 40,
+        fontSize: 9
       };
     }
   };
 
   const chartConfig = getChartConfig();
 
+  const lineChartComponent = (
+    <LineChart
+      data={chartData}
+      width={showOnlyDay ? (validData.length * (chartConfig.spacing || 0)) : screenWidth}
+      height={height}
+      color={currencyData.color}
+      thickness={3}
+      dataPointsColor={currencyData.color}
+      dataPointsRadius={validData.length > 15 ? 3 : 4}
+      focusEnabled
+      onFocus={handleFocus}
+      dataPointLabelComponent={(item: any, index: number) => {
+        if (focusedIndex === index) {
+          return (
+            <View style={styles.tooltipContainer}>
+              <Text style={styles.tooltipText}>{item.dataPointText}</Text>
+            </View>
+          );
+        }
+        return null;
+      }}
+      dataPointLabelShiftY={-20}
+      showVerticalLines
+      verticalLinesColor="#e2e8f0"
+      rulesColor="#e2e8f0"
+      rulesType="solid"
+      spacing={chartConfig.spacing}
+      initialSpacing={chartConfig.initialSpacing}
+      endSpacing={chartConfig.endSpacing}
+      disableScroll={!showOnlyDay}
+      animateOnDataChange={validData.length <= 15}
+      animationDuration={1000}
+      yAxisColor="#64748b"
+      xAxisColor="#64748b"
+      yAxisThickness={1}
+      xAxisThickness={1}
+      yAxisOffset={yAxisMin}
+      stepValue={yAxisStep}
+      noOfSections={6}
+      formatYLabel={(value: string) => parseFloat(value).toLocaleString('ko-KR')}
+      yAxisTextStyle={{
+        color: '#1f2937',
+        fontSize: 12,
+        fontWeight: '600',
+      }}
+      xAxisLabelTextStyle={{
+        color: '#1f2937',
+        fontSize: 14,
+        fontWeight: '600',
+        textAlign: 'center',
+      }}
+    />
+  );
+
   return (
     <View style={styles.container}>
       <ThemedText style={styles.chartTitle}>{currencyData.label}</ThemedText>
       
       <View style={styles.chartContainer}>
-        <LineChart
-          data={chartData}
-          width={screenWidth}
-          height={height}
-          color={currencyData.color}
-          thickness={3}
-          dataPointsColor={currencyData.color}
-          dataPointsRadius={validData.length > 15 ? 3 : 4}
-          showDataPointOnFocus
-          showStripOnFocus
-          showTextOnFocus
-          textShiftY={-10}
-          textShiftX={-5}
-          textColor="#333"
-          textFontSize={12}
-          showVerticalLines
-          verticalLinesColor="#e2e8f0"
-          rulesColor="#e2e8f0"
-          rulesType="solid"
-          spacing={chartConfig.spacing}
-          initialSpacing={chartConfig.initialSpacing}
-          endSpacing={chartConfig.endSpacing}
-          animateOnDataChange={validData.length <= 15}
-          animationDuration={1000}
-          yAxisColor="#64748b"
-          xAxisColor="#64748b"
-          yAxisThickness={1}
-          xAxisThickness={1}
-          yAxisOffset={yAxisMin}
-          stepValue={yAxisStep}
-          noOfSections={6}
-          yAxisTextStyle={{
-            color: '#64748b',
-            fontSize: 10,
-          }}
-          xAxisLabelTextStyle={{
-            color: '#64748b',
-            fontSize: chartConfig.fontSize,
-            textAlign: 'center',
-          }}
-        />
+        {showOnlyDay ? (
+          <ScrollView horizontal showsHorizontalScrollIndicator>
+            {lineChartComponent}
+          </ScrollView>
+        ) : (
+          lineChartComponent
+        )}
       </View>
     </View>
   );
@@ -252,7 +265,6 @@ const styles = StyleSheet.create({
      chartContainer: {
      width: '100%',
      borderRadius: 16,
-     overflow: 'hidden',
    },
   noDataContainer: {
     flex: 1,
@@ -262,6 +274,21 @@ const styles = StyleSheet.create({
   noDataText: {
     fontSize: 16,
     color: '#666',
+    fontWeight: 'bold',
+  },
+  tooltipContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    position: 'absolute',
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  tooltipText: {
+    color: 'black',
+    fontSize: 12,
     fontWeight: 'bold',
   },
 }); 

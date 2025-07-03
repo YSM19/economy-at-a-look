@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, Dimensions, Text } from 'react-native';
 import { ThemedText } from '../ThemedText';
 import { LineChart } from 'react-native-gifted-charts';
 
@@ -13,149 +13,100 @@ interface InterestRateChartProps {
   data: InterestRateDataPoint[];
 }
 
-export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) => {
-  const [chartMode, setChartMode] = useState<'rate' | 'change'>('rate');
-  const screenWidth = Dimensions.get('window').width - 32;
+interface ChartDataType {
+  data: {
+    value: number;
+    label: string;
+    dataPointText: string;
+  }[];
+  title: string;
+}
 
-  // 선택된 차트 모드에 따라 데이터 생성
-  const getChartData = () => {
+export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) => {
+  const screenWidth = Dimensions.get('window').width - 64; // 양쪽 패딩(16*2) + 컨테이너 패딩(16*2)
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [timeoutId, setTimeoutId] = useState<number | null>(null);
+
+  const handleFocus = useCallback((item: ChartDataType['data'][0], index: number) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    setFocusedIndex(index);
+    const newTimeoutId = setTimeout(() => {
+      setFocusedIndex(null);
+    }, 3000);
+    setTimeoutId(newTimeoutId);
+  }, [timeoutId]);
+
+  // 금리 차트 데이터 생성
+  const getChartData = (): ChartDataType => {
     // 데이터를 발표일 순으로 정렬 (오래된 것부터)하여 최신이 오른쪽에 오도록
     const sortedData = [...data].sort((a, b) => a.date.localeCompare(b.date));
     
-    switch (chartMode) {
-      case 'rate':
-        return {
-          data: sortedData.map((item, index) => ({
-            value: item.rate,
-            label: (() => {
-              const dateStr = item.date;
-              let year, month, day;
-              
-              if (dateStr.includes('-')) {
-                const [fullYear, monthStr, dayStr] = dateStr.split('-');
-                year = fullYear;
-                month = monthStr;
-                day = dayStr;
-              } else if (dateStr.length === 8) {
-                year = dateStr.slice(0, 4);
-                month = dateStr.slice(4, 6);
-                day = dateStr.slice(6, 8);
-              } else {
-                year = dateStr.slice(0, 4);
-                month = dateStr.slice(4, 6);
-                day = null;
-              }
-              
-              if (index === 0) {
-                return day ? `${year}.${month}.${day}` : `${year}.${month}`;
-              }
-              
-              const prevDateStr = sortedData[index - 1].date;
-              let prevYear;
-              
-              if (prevDateStr.includes('-')) {
-                prevYear = prevDateStr.split('-')[0];
-              } else if (prevDateStr.length === 8) {
-                prevYear = prevDateStr.slice(0, 4);
-              } else {
-                prevYear = prevDateStr.slice(0, 4);
-              }
-              
-              if (year !== prevYear) {
-                return day ? `${year}.${month}.${day}` : `${year}.${month}`;
-              }
-              
-              return day ? `${month}.${day}` : month;
-            })(),
-            dataPointText: item.rate.toFixed(2) + '%',
-          })),
-          title: '정책금리(%)',
-        };
-      case 'change':
-        const changes = sortedData.map((item, index) => {
-          if (index === 0) return 0;
-          return item.rate - sortedData[index - 1].rate;
-        });
-        
-        return {
-          data: sortedData.map((item, index) => ({
-            value: changes[index],
-            label: (() => {
-              const dateStr = item.date;
-              let year, month, day;
-              
-              if (dateStr.includes('-')) {
-                const [fullYear, monthStr, dayStr] = dateStr.split('-');
-                year = fullYear;
-                month = monthStr;
-                day = dayStr;
-              } else if (dateStr.length === 8) {
-                year = dateStr.slice(0, 4);
-                month = dateStr.slice(4, 6);
-                day = dateStr.slice(6, 8);
-              } else {
-                year = dateStr.slice(0, 4);
-                month = dateStr.slice(4, 6);
-                day = null;
-              }
-              
-              if (index === 0) {
-                return day ? `${year}.${month}.${day}` : `${year}.${month}`;
-              }
-              
-              const prevDateStr = sortedData[index - 1].date;
-              let prevYear;
-              
-              if (prevDateStr.includes('-')) {
-                prevYear = prevDateStr.split('-')[0];
-              } else if (prevDateStr.length === 8) {
-                prevYear = prevDateStr.slice(0, 4);
-              } else {
-                prevYear = prevDateStr.slice(0, 4);
-              }
-              
-              if (year !== prevYear) {
-                return day ? `${year}.${month}.${day}` : `${year}.${month}`;
-              }
-              
-              return day ? `${month}.${day}` : month;
-            })(),
-            dataPointText: (changes[index] >= 0 ? '+' : '') + changes[index].toFixed(2) + '%p',
-          })),
-          title: '금리 변화(%p)',
-        };
-    }
+    return {
+      data: sortedData.map((item, index) => ({
+        value: item.rate,
+        label: (() => {
+          const dateStr = item.date;
+          let year, month, day;
+          
+          if (dateStr.includes('-')) {
+            const [fullYear, monthStr, dayStr] = dateStr.split('-');
+            year = fullYear.slice(-2);
+            month = monthStr;
+            day = dayStr;
+          } else if (dateStr.length === 8) {
+            year = dateStr.slice(2, 4);
+            month = dateStr.slice(4, 6);
+            day = dateStr.slice(6, 8);
+          } else {
+            year = dateStr.slice(2, 4);
+            month = dateStr.slice(4, 6);
+            day = null;
+          }
+          
+          if (index === 0) {
+            return day ? `${year}.${month}.${day}` : `${year}.${month}`;
+          }
+          
+          const prevDateStr = sortedData[index - 1].date;
+          let prevYear;
+          
+          if (prevDateStr.includes('-')) {
+            prevYear = prevDateStr.split('-')[0].slice(-2);
+          } else if (prevDateStr.length === 8) {
+            prevYear = prevDateStr.slice(2, 4);
+          } else {
+            prevYear = prevDateStr.slice(2, 4);
+          }
+          
+          if (year !== prevYear) {
+            return day ? `${year}.${month}.${day}` : `${year}.${month}`;
+          }
+          
+          return day ? `${month}.${day}` : month;
+        })(),
+        dataPointText: item.rate.toFixed(2) + '%',
+      })),
+      title: '정책금리(%)',
+    };
   };
 
   const chartData = getChartData();
 
   return (
     <View style={styles.container}>
-      {/* 차트 모드 선택 버튼 */}
-      <View style={styles.modeSelector}>
-        <TouchableOpacity
-          style={[styles.modeButton, chartMode === 'rate' && styles.activeModeButton]}
-          onPress={() => setChartMode('rate')}
-        >
-          <ThemedText style={[styles.modeButtonText, chartMode === 'rate' && styles.activeModeButtonText]}>
-            금리
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.modeButton, chartMode === 'change' && styles.activeModeButton]}
-          onPress={() => setChartMode('change')}
-        >
-          <ThemedText style={[styles.modeButtonText, chartMode === 'change' && styles.activeModeButtonText]}>
-            변화율
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-
       {/* 차트 제목 */}
       <ThemedText style={styles.chartTitle}>{chartData.title}</ThemedText>
 
-      {/* 차트 */}
-      <View style={styles.chartContainer}>
+            {/* 차트 */}
+      {chartData.data.length === 0 ? (
+        <View style={styles.noDataContainer}>
+          <ThemedText style={styles.noDataText}>
+            표시할 데이터가 없습니다.
+          </ThemedText>
+        </View>
+      ) : (
         <LineChart
           data={chartData.data}
           width={screenWidth}
@@ -163,37 +114,48 @@ export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) =>
           color="#3b82f6"
           thickness={3}
           dataPointsColor="#3b82f6"
-          dataPointsRadius={5}
-          showDataPointOnFocus
-          showStripOnFocus
-          showTextOnFocus
-          textShiftY={-10}
-          textShiftX={-5}
-          textColor="#333"
-          textFontSize={12}
+          dataPointsRadius={4}
+          focusEnabled
+          onFocus={handleFocus}
+          dataPointLabelComponent={(item: any, index: number) => {
+            if (focusedIndex === index) {
+              return (
+                <View style={styles.tooltipContainer}>
+                  <Text style={styles.tooltipText}>{item.dataPointText}</Text>
+                </View>
+              );
+            }
+            return null;
+          }}
+          dataPointLabelShiftY={-20}
           showVerticalLines
-          verticalLinesColor="#e2e8f0"
-          rulesColor="#e2e8f0"
+          verticalLinesColor="#d1d5db"
+          rulesColor="#d1d5db"
           rulesType="solid"
-          initialSpacing={10}
-          endSpacing={10}
+          initialSpacing={20}
+          endSpacing={0}
+          spacing={(screenWidth - 20 - 25) / (chartData.data.length > 1 ? chartData.data.length - 1 : 1)}
+          disableScroll
+          yAxisLabelWidth={25}
           animateOnDataChange
           animationDuration={1000}
-          yAxisColor="#64748b"
-          xAxisColor="#64748b"
-          yAxisThickness={1}
-          xAxisThickness={1}
+          yAxisColor="#374151"
+          xAxisColor="#374151"
+          yAxisThickness={1.5}
+          xAxisThickness={1.5}
           yAxisTextStyle={{
-            color: '#64748b',
-            fontSize: 11,
+            color: '#1f2937',
+            fontSize: 14,
+            fontWeight: '600',
           }}
           xAxisLabelTextStyle={{
-            color: '#64748b',
-            fontSize: 9,
+            color: '#1f2937',
+            fontSize: 14,
+            fontWeight: '600',
             textAlign: 'center',
           }}
         />
-      </View>
+      )}
     </View>
   );
 };
@@ -201,42 +163,41 @@ export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) =>
 const styles = StyleSheet.create({
   container: {
     alignItems: 'center',
-  },
-  modeSelector: {
-    flexDirection: 'row',
-    marginTop: 8,
-    backgroundColor: '#f0f0f0',
-    borderRadius: 8,
-    padding: 4,
-  },
-  modeButton: {
-    paddingVertical: 6,
-    paddingHorizontal: 16,
-    borderRadius: 6,
-  },
-  activeModeButton: {
-    backgroundColor: '#3b82f6',
-  },
-  modeButtonText: {
-    fontSize: 12,
-    color: '#666',
-    lineHeight: 16,
-    paddingVertical: 2,
-  },
-  activeModeButtonText: {
-    fontSize: 12,
-    color: '#fff',
-    fontWeight: 'bold',
-    lineHeight: 16,
-    paddingVertical: 2,
+    width: '100%',
   },
   chartTitle: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 12,
+    marginTop: 8,
+    color: '#1f2937',
+    textAlign: 'center',
   },
-  chartContainer: {
-    marginVertical: 8,
-    borderRadius: 16,
+  noDataContainer: {
+    height: 220,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  noDataText: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  tooltipContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    position: 'absolute',
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  tooltipText: {
+    color: 'black',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
 }); 

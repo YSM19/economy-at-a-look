@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, TouchableWithoutFeedback } from 'react-native';
+import { View, StyleSheet, Dimensions, TouchableOpacity, TouchableWithoutFeedback, Text } from 'react-native';
 import { ThemedText } from '../ThemedText';
 import { LineChart } from 'react-native-gifted-charts';
 
@@ -17,22 +17,19 @@ interface CPIChartProps {
 export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
   const [chartMode, setChartMode] = useState<'cpi' | 'monthly' | 'annual'>('cpi');
   const screenWidth = Dimensions.get('window').width - 32;
-  const [tooltipPos, setTooltipPos] = useState<{
-    x: number;
-    y: number;
-    value: number;
-    visible: boolean;
-    index: number;
-  }>({
-    x: 0,
-    y: 0,
-    value: 0,
-    visible: false,
-    index: -1,
-  });
-  
-  const autoHideTimeout = useRef<NodeJS.Timeout | null>(null);
-  const isUserInteracting = useRef(false);
+  const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
+  const [timeoutId, setTimeoutId] = useState<number | null>(null);
+
+  const handleFocus = useCallback((item: any, index: number) => {
+    if (timeoutId) {
+      clearTimeout(timeoutId);
+    }
+    setFocusedIndex(index);
+    const newTimeoutId = setTimeout(() => {
+      setFocusedIndex(null);
+    }, 3000);
+    setTimeoutId(newTimeoutId);
+  }, [timeoutId]);
 
   // 선택된 차트 모드에 따라 데이터 생성
   const getChartData = () => {
@@ -49,12 +46,12 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
               const month = item.date.slice(4, 6);
               
               if (index === 0) {
-                return `${fullYear}.${month}`;
+                return `${fullYear.slice(-2)}.${month}`;
               }
               
               const prevFullYear = sortedData[index - 1].date.slice(0, 4);
               if (fullYear !== prevFullYear) {
-                return `${fullYear}.${month}`;
+                return `${fullYear.slice(-2)}.${month}`;
               }
               
               return month;
@@ -74,12 +71,12 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
               const month = item.date.slice(4, 6);
               
               if (index === 0) {
-                return `${fullYear}.${month}`;
+                return `${fullYear.slice(-2)}.${month}`;
               }
               
               const prevFullYear = sortedData[index - 1].date.slice(0, 4);
               if (fullYear !== prevFullYear) {
-                return `${fullYear}.${month}`;
+                return `${fullYear.slice(-2)}.${month}`;
               }
               
               return month;
@@ -99,12 +96,12 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
               const month = item.date.slice(4, 6);
               
               if (index === 0) {
-                return `${fullYear}.${month}`;
+                return `${fullYear.slice(-2)}.${month}`;
               }
               
               const prevFullYear = sortedData[index - 1].date.slice(0, 4);
               if (fullYear !== prevFullYear) {
-                return `${fullYear}.${month}`;
+                return `${fullYear.slice(-2)}.${month}`;
               }
               
               return month;
@@ -120,114 +117,25 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
 
   const chartData = getChartData();
   
-  // 모든 차트 모드에서 데이터 범위에 맞게 Y축 동적 조정
-  // fromZero=false로 설정하여 항상 데이터 범위에 최적화
-
-  const chartConfig = {
-    backgroundGradientFrom: '#ffffff',
-    backgroundGradientFromOpacity: 0,
-    backgroundGradientTo: '#f0f9ff',
-    backgroundGradientToOpacity: 0.6,
-    decimalPlaces: chartMode === 'cpi' ? 1 : 2,
-    color: (opacity = 1) => `rgba(100, 116, 139, ${opacity})`,
-    labelColor: (opacity = 1) => `rgba(51, 65, 85, ${opacity})`,
-    style: {
-      borderRadius: 16,
-    },
-    propsForDots: {
-      r: '4',
-      strokeWidth: '2',
-      shadowColor: '#3b82f6',
-      shadowOffset: { width: 0, height: 2 },
-      shadowOpacity: 0.3,
-      shadowRadius: 4,
-    },
-    propsForLabels: {
-      fontSize: 10,
-      fontWeight: 'bold',
-    },
-    propsForBackgroundLines: {
-      strokeDasharray: "3,3",
-      stroke: "#e2e8f0",
-      strokeWidth: 1,
-    },
-    fillShadowGradientOpacity: 0.1,
-    formatYLabel: (yValue: string) => {
-      const value = parseFloat(yValue);
-      if (chartMode === 'cpi') {
-        return value.toFixed(1);
-      } else {
-        return value.toFixed(1) + '%';
-      }
-    },
-  };
-
-  // 점 클릭 이벤트 핸들러
-  const handleDataPointClick = useCallback((data: any) => {
-    const { x, y, value, index } = data;
-    
-    // 기존 타이머 클리어
-    if (autoHideTimeout.current) {
-      clearTimeout(autoHideTimeout.current);
-      autoHideTimeout.current = null;
-    }
-    
-    // 같은 점을 다시 클릭한 경우 툴팁 숨김
-    if (tooltipPos.visible && tooltipPos.index === index) {
-      setTooltipPos(prev => ({ ...prev, visible: false, index: -1 }));
-      return;
-    }
-    
-    // 새로운 툴팁 표시
-    setTooltipPos({
-      x: x,
-      y: y,
-      value: value,
-      visible: true,
-      index: index,
-    });
-    
-    // 3초 후 자동 숨김 (사용자가 상호작용 중이 아닐 때만)
-    autoHideTimeout.current = setTimeout(() => {
-      if (!isUserInteracting.current) {
-        setTooltipPos(prev => ({ ...prev, visible: false, index: -1 }));
-      }
-    }, 3000);
-  }, [tooltipPos.visible, tooltipPos.index]);
+  // Y축을 동적으로 조정하기 위한 계산
+  const values = chartData.data.map(item => item.value);
+  const minValue = Math.min(...values);
+  const maxValue = Math.max(...values);
   
-  // 차트 외부 터치 시 툴팁 숨김
-  const handleChartAreaTouch = useCallback(() => {
-    if (tooltipPos.visible) {
-      if (autoHideTimeout.current) {
-        clearTimeout(autoHideTimeout.current);
-        autoHideTimeout.current = null;
-      }
-      setTooltipPos(prev => ({ ...prev, visible: false, index: -1 }));
-    }
-  }, [tooltipPos.visible]);
+  // 변동을 더 잘 보이게 하기 위해 범위 조정
+  const range = maxValue - minValue;
+  // 차트 모드에 따라 패딩을 다르게 설정
+  let padding;
+  if (chartMode === 'cpi') {
+    padding = range > 0 ? range * 0.1 : 1; // CPI 지수는 값의 범위가 크므로 10% 패딩
+  } else {
+    padding = range > 0 ? range * 0.2 : 0.5; // 변화율은 작은 값이므로 20% 패딩, 최소 0.5
+  }
   
-  // 터치 시작 시 사용자 상호작용 상태 설정
-  const handleTouchStart = useCallback(() => {
-    // react-native-gifted-charts에서는 내장 터치 핸들링 사용
-  }, []);
-  
-  // 터치 종료 시 사용자 상호작용 상태 해제
-  const handleTouchEnd = useCallback(() => {
-    // react-native-gifted-charts에서는 내장 터치 핸들링 사용
-  }, []);
-
-  // 차트 모드에 따른 툴팁 텍스트 생성
-  const getTooltipText = (value: number) => {
-    switch (chartMode) {
-      case 'cpi':
-        return value.toFixed(1);
-      case 'monthly':
-      case 'annual':
-        return `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
-      default:
-        return value.toString();
-    }
-  };
+  const yAxisMin = minValue - padding;
+  const yAxisMax = maxValue + padding;
+  // y축을 5개의 섹션으로 나눔
+  const yAxisStep = (yAxisMax - yAxisMin) / 5;
 
   return (
     <View style={styles.container}>
@@ -265,43 +173,55 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
       {/* 차트 */}
       <View style={styles.chartContainer}>
         <LineChart
-          data={chartData.data}
-          width={screenWidth}
-          height={220}
-          color="#3b82f6"
-          thickness={3}
-          dataPointsColor="#3b82f6"
-          dataPointsRadius={4}
-          showDataPointOnPress
-          showStripOnPress
-          showTextOnPress
-          textShiftY={-10}
-          textShiftX={-5}
-          textColor="#333"
-          textFontSize={12}
-          showVerticalLines
-          verticalLinesColor="#e2e8f0"
-          rulesColor="#e2e8f0"
-          rulesType="solid"
-          initialSpacing={10}
-          endSpacing={10}
-          animateOnDataChange
-          animationDuration={1000}
-          onFocus={(item: any, index: number) => {
-            // 포커스 시 처리 (선택사항)
-          }}
-          yAxisColor="#64748b"
-          xAxisColor="#64748b"
-          yAxisThickness={1}
-          xAxisThickness={1}
-          yAxisTextStyle={{
-            color: '#64748b',
-            fontSize: 10,
-          }}
-          xAxisLabelTextStyle={{
-            color: '#64748b',
-            fontSize: 9,
+          {...{
+          data: chartData.data,
+          width: screenWidth,
+          height: 220,
+          color: "#3b82f6",
+          thickness: 3,
+          dataPointsColor: "#3b82f6",
+          dataPointsRadius: 4,
+          focusEnabled: true,
+          onFocus: handleFocus,
+          dataPointLabelComponent: (item: any, index: number) => {
+            if (focusedIndex === index) {
+              return (
+                <View style={styles.tooltipContainer}>
+                  <Text style={styles.tooltipText}>{item.dataPointText}</Text>
+                </View>
+              );
+            }
+            return null;
+          },
+          dataPointLabelShiftY: -20,
+          showVerticalLines: true,
+          verticalLinesColor: "#e2e8f0",
+          rulesColor: "#e2e8f0",
+          rulesType: "solid",
+          spacing: (screenWidth - 70) / (chartData.data.length > 1 ? chartData.data.length -1 : 1),
+          disableScroll: true,
+          initialSpacing: 20,
+          endSpacing: 0,
+          animateOnDataChange: true,
+          animationDuration: 1000,
+          yAxisColor: "#64748b",
+          xAxisColor: "#64748b",
+          yAxisThickness: 1,
+          xAxisThickness: 1,
+          yAxisTextStyle: {
+            color: '#1f2937',
+            fontSize: 14,
+            fontWeight: '600',
+          },
+          xAxisLabelTextStyle: {
+            color: '#1f2937',
+            fontSize: 14,
+            fontWeight: '600',
             textAlign: 'center',
+          },
+          yAxisOffset: yAxisMin,
+          stepValue: yAxisStep,
+          noOfSections: 5,
           }}
         />
       </View>
@@ -345,15 +265,20 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     paddingVertical: 2,
   },
-  tooltip: {
+  tooltipContainer: {
+    backgroundColor: 'white',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
     position: 'absolute',
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-    padding: 8,
-    borderRadius: 8,
+    alignSelf: 'center',
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
   },
   tooltipText: {
     fontSize: 12,
-    color: '#fff',
+    color: 'black',
+    fontWeight: 'bold'
   },
   modeSelector: {
     flexDirection: 'row',

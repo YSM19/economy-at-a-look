@@ -41,7 +41,7 @@ export default function ExchangeRateScreen() {
         return {
           title: '미국 달러 환율 정보',
           subtitle: '달러 환율 동향',
-          rateLabel: '1달러',
+          rateLabel: '달러',
           rateProp: 'usdRate',
           description: '원/달러 환율이 상승하면 수입품 가격이 오르고 수출 경쟁력이 강화됩니다. 콜금리 인상은 원/달러 환율 상승, 연방자금금리 인상은 원/달러 환율 하락 경향을 보입니다.'
         };
@@ -49,7 +49,7 @@ export default function ExchangeRateScreen() {
         return {
           title: '일본 엔화 환율 정보',
           subtitle: '엔화 환율 동향',
-          rateLabel: '1엔',
+          rateLabel: '엔',
           rateProp: 'jpyRate',
           description: '원/엔 환율은 일본과의 무역 및 투자에 직접적인 영향을 미칩니다. 일본 중앙은행의 통화정책과 한국의 금리 정책에 따라 변동됩니다.'
         };
@@ -57,7 +57,7 @@ export default function ExchangeRateScreen() {
         return {
           title: '중국 위안화 환율 정보',
           subtitle: '위안화 환율 동향',
-          rateLabel: '1위안',
+          rateLabel: '위안',
           rateProp: 'cnyRate',
           description: '원/위안 환율은 중국과의 무역 관계에 중요한 영향을 미칩니다. 중국의 경제성장률과 통화정책에 따라 변동됩니다.'
         };
@@ -65,7 +65,7 @@ export default function ExchangeRateScreen() {
         return {
           title: '유럽 유로 환율 정보',
           subtitle: '유로 환율 동향',
-          rateLabel: '1유로',
+          rateLabel: '유로',
           rateProp: 'eurRate',
           description: '원/유로 환율은 유럽연합과의 무역 및 투자에 영향을 미칩니다. 유럽중앙은행의 통화정책과 유럽 경제 상황에 따라 변동됩니다.'
         };
@@ -212,8 +212,7 @@ export default function ExchangeRateScreen() {
                     {(() => {
                       const value = ((exchangeRateData as any)[countryInfo.rateProp] as number);
                       if (!value) return 'N/A';
-                      const fixed = value.toFixed(1);
-                      return fixed.endsWith('.0') ? value.toFixed(0) : fixed;
+                      return value.toLocaleString('ko-KR');
                     })()}
                   </ThemedText>
                   <ThemedText style={styles.rateCurrency}>원</ThemedText>

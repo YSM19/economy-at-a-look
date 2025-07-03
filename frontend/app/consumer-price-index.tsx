@@ -53,7 +53,14 @@ export default function ConsumerPriceIndexScreen() {
                monthlyChange: item.monthlyChange || 0,
                annualChange: item.annualChange || 0
              }));
-             setHistoricalData(formattedHistory);
+             // 데이터를 날짜 내림차순으로 정렬하여 최신 데이터가 앞에 오도록 함
+             const sortedHistory = formattedHistory.sort((a: CPIPeriodData, b: CPIPeriodData) => new Date(b.date).getTime() - new Date(a.date).getTime());
+             // 최근 6개월 데이터만 선택
+             const recentHistory = sortedHistory.slice(0, 6);
+             // 차트에서는 시간 순서대로 보여줘야 하므로 다시 오름차순으로 정렬
+             const finalHistory = recentHistory.sort((a: CPIPeriodData, b: CPIPeriodData) => new Date(a.date).getTime() - new Date(b.date).getTime());
+             
+             setHistoricalData(finalHistory);
           }
         }
       } catch (err) {

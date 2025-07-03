@@ -244,7 +244,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
               backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.03)' : 'rgba(0, 0, 0, 0.01)',
               opacity: 0.7
             }]}
-            onPress={() => handleComingSoonAlert('주가')}
+            onPress={() => handleComingSoonAlert('주가지수')}
             activeOpacity={0.7}
           >
             <View style={[styles.iconContainer, { 
@@ -258,7 +258,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
             </View>
             <ThemedText style={[styles.menuItemText, { 
               color: colorScheme === 'dark' ? '#8e8e93' : '#6d6d70' 
-            }]}>주가</ThemedText>
+            }]}>주가지수</ThemedText>
             <View style={styles.comingSoonBadge}>
               <ThemedText style={styles.comingSoonText}>출시 예정</ThemedText>
             </View>
