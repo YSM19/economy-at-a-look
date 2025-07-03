@@ -6,6 +6,7 @@ import { useColorScheme } from '../hooks/useColorScheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ComingSoonModal } from './ComingSoonModal';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface SidebarProps {
   isVisible: boolean;
@@ -22,6 +23,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
   const backdropOpacity = React.useRef(new Animated.Value(0)).current;
   const [isLoggedIn, setIsLoggedIn] = React.useState(false);
   const [userInfo, setUserInfo] = React.useState<any>(null);
+  const [isLoginModalVisible, setIsLoginModalVisible] = React.useState(false);
   const [comingSoonModal, setComingSoonModal] = React.useState({
     visible: false,
     featureName: ''
@@ -108,6 +110,15 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
       params: { tab }
     } as any);
     onClose();
+  };
+
+  const handleHistoryPress = () => {
+    if (isLoggedIn) {
+      router.push('/exchange-rate-history');
+      onClose();
+    } else {
+      setIsLoginModalVisible(true);
+    }
   };
 
   // 출시 예정 기능 알림 핸들러 함수 추가
@@ -289,33 +300,24 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
             </View>
           </TouchableOpacity>
 
-          {/* 환율 저장 기록 메뉴 (로그인 시에만 표시) */}
-          {isLoggedIn && (
-            <>
-              <View style={styles.sectionSpacer} />
-              <TouchableOpacity
-                style={[styles.menuItem, { 
-                  backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
-                }]}
-                onPress={() => {
-                  router.push('/exchange-rate-history');
-                  onClose();
-                }}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconContainer, { 
-                  backgroundColor: colorScheme === 'dark' ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.1)' 
-                }]}>
-                  <MaterialCommunityIcons 
-                    name="history" 
-                    size={20} 
-                    color="#007AFF" 
-                  />
-                </View>
-                <ThemedText style={styles.menuItemText}>환율 저장 기록</ThemedText>
-              </TouchableOpacity>
-            </>
-          )}
+          <TouchableOpacity
+            style={[styles.menuItem, { 
+              backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
+            }]}
+            onPress={handleHistoryPress}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconContainer, { 
+              backgroundColor: colorScheme === 'dark' ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.1)' 
+            }]}>
+              <MaterialCommunityIcons 
+                name="history" 
+                size={20} 
+                color="#007AFF" 
+              />
+            </View>
+            <ThemedText style={styles.menuItemText}>환율 저장 기록</ThemedText>
+          </TouchableOpacity>
           
           <View style={styles.divider} />
           
@@ -465,6 +467,25 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
         visible={comingSoonModal.visible}
         featureName={comingSoonModal.featureName}
         onClose={closeComingSoonModal}
+      />
+
+      <ConfirmationModal
+        visible={isLoginModalVisible}
+        title="로그인 필요"
+        message="로그인이 필요한 서비스입니다. 지금 로그인하시겠습니까?"
+        confirmText="로그인"
+        cancelText="나중에"
+        onConfirm={() => {
+          setIsLoginModalVisible(false);
+          onClose();
+          router.push('/login');
+        }}
+        onCancel={() => {
+          setIsLoginModalVisible(false);
+          onClose();
+        }}
+        iconName="login"
+        iconColor="#34C759"
       />
     </View>
   );

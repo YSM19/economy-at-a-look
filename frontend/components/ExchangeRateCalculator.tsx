@@ -5,6 +5,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { economicIndexApi, exchangeRateHistoryApi } from '../services/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useToast } from './ToastProvider';
+import { ConfirmationModal } from './ConfirmationModal';
+import { useRouter } from 'expo-router';
 
 type ExchangeRateCalculatorProps = {
   country: string;
@@ -21,8 +23,10 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
   const [isKRWFirst, setIsKRWFirst] = useState(true);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
   
   const { showToast } = useToast();
+  const router = useRouter();
 
   useEffect(() => {
     fetchExchangeRate();
@@ -316,23 +320,20 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
 
   const saveExchangeRateHistory = async () => {
     if (!isLoggedIn) {
-      showToast('로그인 후 저장할 수 있습니다.', 'error');
-      return;
-    }
-
-    if (!krwAmount && !foreignAmount) {
-      showToast('저장할 금액을 입력해주세요.', 'error');
+      setIsLoginModalVisible(true);
       return;
     }
 
     const rate = getEffectiveRate();
-    if (!rate) {
-      showToast('환율 정보를 확인할 수 없습니다.', 'error');
+    const krw = parseFloat(krwAmount.replace(/,/g, ''));
+    const foreign = parseFloat(foreignAmount.replace(/,/g, ''));
+
+    if (!rate || isNaN(krw) || isNaN(foreign) || krw === 0 || foreign === 0) {
+      showToast('저장할 금액을 입력해주세요.', 'info');
       return;
     }
 
     setIsSaving(true);
-
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
@@ -342,15 +343,12 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
 
       const currencyInfo = getCurrencyInfo();
       
-      const krwValue = parseFloat((krwAmount || '0').replace(/,/g, ''));
-      const foreignValue = parseFloat((foreignAmount || '0').replace(/,/g, ''));
-
       const requestData = {
         currencyCode: currencyInfo.symbol,
         currencyName: currencyInfo.name,
         exchangeRate: rate,
-        krwAmount: krwValue > 0 ? krwValue : Math.round(foreignValue * rate),
-        foreignAmount: foreignValue > 0 ? foreignValue : Math.round(krwValue / rate * 100) / 100,
+        krwAmount: krw,
+        foreignAmount: foreign,
         memo: '',
         isKrwFirst: isKRWFirst
       };
@@ -497,22 +495,12 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
 
         {/* 액션 버튼들 */}
         <View style={styles.actionContainer}>
-          {isLoggedIn && (krwAmount || foreignAmount) && (
-            <TouchableOpacity 
-              style={[styles.saveButton, isSaving && styles.disabledButton]} 
-              onPress={saveExchangeRateHistory}
-              disabled={isSaving}
-            >
-              <MaterialCommunityIcons 
-                name={isSaving ? "loading" : "content-save"} 
-                size={16} 
-                color="#fff" 
-              />
-              <ThemedText style={styles.saveButtonText}>
-                {isSaving ? '저장 중...' : '저장'}
-              </ThemedText>
-            </TouchableOpacity>
-          )}
+          <TouchableOpacity style={styles.saveButton} onPress={saveExchangeRateHistory} disabled={isSaving}>
+            <MaterialCommunityIcons name="content-save-edit-outline" size={22} color="#fff" />
+            <ThemedText style={styles.saveButtonText}>
+              {isSaving ? '저장 중...' : '현재 환율 저장'}
+            </ThemedText>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.clearButton} onPress={clearAll}>
             <MaterialCommunityIcons name="refresh" size={16} color="#666" />
             <ThemedText style={styles.clearButtonText}>초기화</ThemedText>
@@ -527,6 +515,21 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
           </ThemedText>
         </View>
       </View>
+
+      <ConfirmationModal
+        visible={isLoginModalVisible}
+        title="로그인 필요"
+        message="환율 기록을 저장하려면 로그인이 필요합니다. 지금 로그인하시겠습니까?"
+        confirmText="로그인"
+        cancelText="나중에"
+        onConfirm={() => {
+          setIsLoginModalVisible(false);
+          router.push('/login');
+        }}
+        onCancel={() => setIsLoginModalVisible(false)}
+        iconName="login"
+        iconColor="#34C759"
+      />
     </View>
   );
 };
