@@ -139,34 +139,6 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
 
   return (
     <View style={styles.container}>
-      {/* 차트 모드 선택 버튼 */}
-      <View style={styles.modeSelector}>
-        <TouchableOpacity
-          style={[styles.modeButton, chartMode === 'cpi' && styles.activeModeButton]}
-          onPress={() => setChartMode('cpi')}
-        >
-          <ThemedText style={[styles.modeButtonText, chartMode === 'cpi' && styles.activeModeButtonText]}>
-            지수
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.modeButton, chartMode === 'monthly' && styles.activeModeButton]}
-          onPress={() => setChartMode('monthly')}
-        >
-          <ThemedText style={[styles.modeButtonText, chartMode === 'monthly' && styles.activeModeButtonText]}>
-            월별변화
-          </ThemedText>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.modeButton, chartMode === 'annual' && styles.activeModeButton]}
-          onPress={() => setChartMode('annual')}
-        >
-          <ThemedText style={[styles.modeButtonText, chartMode === 'annual' && styles.activeModeButtonText]}>
-            연간변화
-          </ThemedText>
-        </TouchableOpacity>
-      </View>
-
       {/* 차트 제목 */}
       <ThemedText style={styles.chartTitle}>{chartData.title}</ThemedText>
 
@@ -210,7 +182,7 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
           xAxisThickness: 1,
           yAxisTextStyle: {
             color: '#1f2937',
-            fontSize: 14,
+            fontSize: 11,
             fontWeight: '600',
           },
           xAxisLabelTextStyle: {
@@ -224,6 +196,34 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
           noOfSections: 5,
           }}
         />
+      </View>
+      
+      {/* 차트 모드 선택 버튼 */}
+      <View style={styles.modeSelector}>
+        <TouchableOpacity
+          style={[styles.modeButton, chartMode === 'cpi' && styles.activeModeButton]}
+          onPress={() => setChartMode('cpi')}
+        >
+          <ThemedText style={[styles.modeButtonText, chartMode === 'cpi' && styles.activeModeButtonText]}>
+            지수
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.modeButton, chartMode === 'monthly' && styles.activeModeButton]}
+          onPress={() => setChartMode('monthly')}
+        >
+          <ThemedText style={[styles.modeButtonText, chartMode === 'monthly' && styles.activeModeButtonText]}>
+            월별변화
+          </ThemedText>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={[styles.modeButton, chartMode === 'annual' && styles.activeModeButton]}
+          onPress={() => setChartMode('annual')}
+        >
+          <ThemedText style={[styles.modeButtonText, chartMode === 'annual' && styles.activeModeButtonText]}>
+            연간변화
+          </ThemedText>
+        </TouchableOpacity>
       </View>
     </View>
   );

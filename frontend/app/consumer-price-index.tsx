@@ -103,7 +103,7 @@ export default function ConsumerPriceIndexScreen() {
                 <ThemedText style={styles.rateLabel}>소비자물가지수</ThemedText>
                 <ThemedText style={styles.rateValue}>{cpiData.cpi.toFixed(1)}</ThemedText>
                 <ThemedText style={styles.rateDate}>
-                  업데이트: {new Date(cpiData.lastUpdated).toLocaleDateString()}
+                  업데이트: {new Date(cpiData.lastUpdated).getFullYear()}. {new Date(cpiData.lastUpdated).getMonth() + 1}. {new Date(cpiData.lastUpdated).getDate()}.
                 </ThemedText>
               </View>
             </View>
@@ -130,7 +130,7 @@ export default function ConsumerPriceIndexScreen() {
                       styles.analysisValue,
                       cpiData.monthlyChange > 0 ? styles.positiveValue : styles.negativeValue
                     ]}>
-                      {cpiData.monthlyChange > 0 ? '+' : ''}{cpiData.monthlyChange.toFixed(1)}%
+                      {cpiData.monthlyChange > 0 ? '+' : ''}{cpiData.monthlyChange.toFixed(2)}%
                     </ThemedText>
                   </View>
                   <View style={styles.analysisItem}>
@@ -139,7 +139,7 @@ export default function ConsumerPriceIndexScreen() {
                       styles.analysisValue,
                       cpiData.annualChange > 0 ? styles.positiveValue : styles.negativeValue
                     ]}>
-                      {cpiData.annualChange > 0 ? '+' : ''}{cpiData.annualChange.toFixed(1)}%
+                      {cpiData.annualChange > 0 ? '+' : ''}{cpiData.annualChange.toFixed(2)}%
                     </ThemedText>
                   </View>
                 </View>
