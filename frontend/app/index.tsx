@@ -204,7 +204,7 @@ export default function HomeScreen() {
           headerRight: () => (
             Platform.OS === 'web' ? (
               <TouchableOpacity 
-                onPress={() => router.push('/admin/login')}
+                onPress={() => router.push('/admin/login' as any)}
                 style={styles.adminButton}
               >
                 <MaterialCommunityIcons name="shield-account" size={22} color="#0066CC" />

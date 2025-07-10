@@ -242,7 +242,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
       
       <View style={styles.chartContainer}>
         {showOnlyDay ? (
-          <ScrollView horizontal showsHorizontalScrollIndicator>
+          <ScrollView horizontal showsHorizontalScrollIndicator persistentScrollbar={true}>
             {lineChartComponent}
           </ScrollView>
         ) : (

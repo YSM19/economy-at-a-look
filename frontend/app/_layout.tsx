@@ -7,7 +7,6 @@ import { useEffect, useState } from 'react';
 import 'react-native-reanimated';
 import { View, StyleSheet } from 'react-native';
 
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { HamburgerButton, BackButton } from '../components/HamburgerButton';
 import { Sidebar } from '../components/Sidebar';
 import { ToastProvider } from '../components/ToastProvider';
@@ -16,7 +15,6 @@ import { ToastProvider } from '../components/ToastProvider';
 SplashScreen.preventAutoHideAsync();
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
   const [sidebarVisible, setSidebarVisible] = useState(false);
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
@@ -46,7 +44,7 @@ export default function RootLayout() {
 
   return (
     <ToastProvider>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <ThemeProvider value={DefaultTheme}>
         <View style={styles.container}>
           {!isAdminPage && (
             <View style={styles.hamburgerContainer}>

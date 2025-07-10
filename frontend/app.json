@@ -36,6 +36,7 @@
         "backgroundColor": "#ffffff"
       },
       "package": "com.ysm19.atalook",
+      "versionCode": 1,
       "permissions": [
         "android.permission.INTERNET",
         "android.permission.ACCESS_NETWORK_STATE"
