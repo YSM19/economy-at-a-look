@@ -169,12 +169,12 @@ const styles = StyleSheet.create({
   toast: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
     borderRadius: 12,
     borderWidth: 1,
-    maxWidth: width - 40,
-    minWidth: 200,
+    maxWidth: width - 20,
+    minWidth: 280,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -194,6 +194,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
-    lineHeight: 18,
+    lineHeight: 20,
+    flexWrap: 'nowrap',
   },
 }); 
