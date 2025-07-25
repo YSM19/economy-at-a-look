@@ -50,8 +50,8 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
   const needleAngle = startAngle + (rate / maxRate) * totalAngle;
   const needleRad = needleAngle * Math.PI / 180;
   
-  // 바늘 끝점 계산
-  const needleLength = radius * 0.85;
+  // 바늘 끝점 계산 - 적절한 길이로 조정
+  const needleLength = radius * 0.6;
   const needleX = center + needleLength * Math.cos(needleRad);
   const needleY = center + needleLength * Math.sin(needleRad);
   
@@ -172,10 +172,10 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
             );
           })}
           
-          {/* 섹션 이름 표시 - 각 칸 안쪽에 배치 */}
+          {/* 섹션 이름 표시 - 적절한 위치로 조정 */}
           {sections.map((section, idx) => {
             const midPoint = (section.start + section.end) / 2;
-            const label = createLabel(midPoint, radius * 0.5, 0);
+            const label = createLabel(midPoint, radius * 0.7, 0);
             
             return (
               <SvgText
@@ -216,7 +216,7 @@ const PriceIndexGauge: React.FC<PriceIndexGaugeProps> = ({ value = 3.2 }) => {
             x2={needleX}
             y2={needleY}
             stroke={sections[activeSection]?.textColor || "#333"}
-            strokeWidth={3}
+            strokeWidth={6}
             strokeLinecap="round"
           />
           
