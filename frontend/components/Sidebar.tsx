@@ -1,8 +1,7 @@
 import React from 'react';
-import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Linking, Alert } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Linking, Alert, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { ThemedText } from './ThemedText';
-import { useColorScheme } from '../hooks/useColorScheme';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ComingSoonModal } from './ComingSoonModal';

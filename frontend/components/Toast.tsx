@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { View, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
+import { View, StyleSheet, Animated, Dimensions, Platform, useColorScheme } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useColorScheme } from '../hooks/useColorScheme';
 
 interface ToastProps {
   visible: boolean;

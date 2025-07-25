@@ -5,11 +5,11 @@ import {
   Animated, 
   Dimensions, 
   TouchableOpacity,
-  Modal 
+  Modal,
+  useColorScheme
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useColorScheme } from '../hooks/useColorScheme';
 
 interface ConfirmationModalProps {
   visible: boolean;

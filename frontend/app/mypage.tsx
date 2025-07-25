@@ -1,11 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, TouchableOpacity, ScrollView, Alert, Platform, TextInput, Modal } from 'react-native';
+import { StyleSheet, View, TouchableOpacity, ScrollView, Alert, Platform, TextInput, Modal, useColorScheme } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ThemedText } from '../components/ThemedText';
 import { ThemedView } from '../components/ThemedView';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useColorScheme } from '../hooks/useColorScheme';
 import axios from 'axios';
 import Config from '../constants/Config';
 import { useToast } from '../components/ToastProvider';

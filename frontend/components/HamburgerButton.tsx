@@ -1,6 +1,5 @@
 import React from 'react';
-import { TouchableOpacity, StyleSheet, View } from 'react-native';
-import { useColorScheme } from '../hooks/useColorScheme';
+import { TouchableOpacity, StyleSheet, View, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 

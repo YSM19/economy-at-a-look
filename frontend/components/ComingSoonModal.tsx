@@ -6,11 +6,11 @@ import {
   Dimensions, 
   Platform,
   TouchableOpacity,
-  Modal 
+  Modal,
+  useColorScheme
 } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useColorScheme } from '../hooks/useColorScheme';
 
 interface ComingSoonModalProps {
   visible: boolean;
