@@ -287,21 +287,6 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
             );
           })}
           
-          {/* 현재 금리 값을 하단 여유 공간에 크게 표시 */}
-          <SvgText 
-            x={center} 
-            y={center + radius * 0.35}
-            fontSize="32" 
-            fontWeight="bold" 
-            fill={rateColor} 
-            textAnchor="middle"
-            alignmentBaseline="middle"
-          >
-            {formatNumberWithUnit(rate, '%')}
-          </SvgText>
-          
-
-          
           {/* 바늘 */}
           <Line
             x1={center}
@@ -316,9 +301,17 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
           {/* 바늘 중심점 */}
           <Circle cx={center} cy={center} r={6} fill={sections[activeSection]?.textColor || "#666"} />
         </Svg>
+        {/* 현재 값 표시 */}
+        <View style={styles.valueContainer}>
+          <ThemedText style={[styles.valueText, { color: rateColor }]}>
+            {formatNumberWithUnit(rate, '%')}
+          </ThemedText>
+          <ThemedText style={[styles.labelText, { color: rateColor }]}>
+            {rateText}
+          </ThemedText>
+        </View>
       </View>
       <View style={styles.infoContainer}>
-        <ThemedText style={[styles.infoText, { color: rateColor }]}>{rateText}</ThemedText>
         <ThemedText style={styles.description}>
           현재 정책금리는 {formatNumberWithUnit(rate, '%')}입니다.
           금리가 낮을수록 대출 비용이 낮아지고, 높을수록 물가 상승을 억제합니다.
@@ -349,26 +342,21 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     marginBottom: 8,
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   gaugeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 30,
-    marginBottom: 16,
-    height: 320,
-    width: '100%',
-    paddingHorizontal: 10,
+    position: 'relative',
   },
   infoContainer: {
     alignItems: 'center',
-    marginTop: -70,
   },
   infoText: {
     fontSize: 20,
@@ -411,7 +399,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#999',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 8,
   },
   rateValue: {
     fontSize: 22,
@@ -433,13 +421,10 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   labelText: {
-    fontSize: 14,
-    color: '#333',
+    fontSize: 20,
+    fontWeight: 'bold',
     textAlign: 'center',
-    fontWeight: '600',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 20,
+    marginTop: 12,
   },
   updateText: {
     fontSize: 10,
@@ -450,6 +435,33 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 14,
+  },
+  valueContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    top: '60%',
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  valueText: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 32,
+  },
+  descriptionText: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: -38,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 15,
   },
 });
 

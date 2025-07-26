@@ -191,20 +191,6 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
             );
           })}
           
-          {/* 중앙 수치 표시 */}
-          <Circle cx={center} cy={center} r={30} fill="#FFF" stroke="#DDD" strokeWidth={1} />
-          <SvgText 
-            x={center} 
-            y={center}
-            fontSize="24" 
-            fontWeight="bold" 
-            fill="#333" 
-            textAnchor="middle"
-            alignmentBaseline="middle"
-          >
-            {index}
-          </SvgText>
-          
           {/* 바늘 */}
           <Line
             x1={center}
@@ -219,13 +205,19 @@ const EconomicGaugeIndex: React.FC<EconomicGaugeIndexProps> = ({ value = 65 }) =
           {/* 바늘 중심점 */}
           <Circle cx={center} cy={center} r={6} fill={sections[activeSection]?.textColor || "#666"} />
         </Svg>
+        {/* 현재 값 표시 */}
+        <View style={styles.valueContainer}>
+          <ThemedText style={[styles.valueText, { color: indexColor }]}>
+            {index}
+          </ThemedText>
+          <ThemedText style={[styles.labelText, { color: indexColor }]}>
+            {indexText}
+          </ThemedText>
+        </View>
       </View>
-      <View style={styles.indexTextContainer}>
-        <ThemedText style={[styles.indexText, { color: indexColor }]}>{indexText}</ThemedText>
-      </View>
-      <ThemedText style={styles.description}>
-        금리, 환율, 물가지수를 종합적으로 고려한 경제 심리 지수입니다.
-        25 이하(극심한 경기침체), 25-45(경기침체), 45-55(중립), 55-75(경기확장), 75 이상(경기과열)
+      {/* 설명 텍스트 */}
+      <ThemedText style={styles.descriptionText}>
+        경제심리지수는 금리, 환율, 물가지수를 종합적으로 고려한 지수입니다.
       </ThemedText>
     </View>
   );
@@ -235,7 +227,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 16,
+    padding: 20,
     marginVertical: 8,
     shadowColor: "#000",
     shadowOffset: {
@@ -247,15 +239,42 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 16,
+    fontSize: 16,
+    fontWeight: '700',
+    marginBottom: 8,
     textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 22,
   },
   gaugeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginVertical: 8,
+    position: 'relative',
+  },
+  valueContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    top: '60%',
+    width: '100%',
+    paddingHorizontal: 20,
+  },
+  labelText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  descriptionText: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: -38,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 15,
   },
   indexTextContainer: {
     alignItems: 'center',
@@ -271,6 +290,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginTop: 16,
     lineHeight: 18,
+  },
+  valueText: {
+    fontSize: 26,
+    fontWeight: '700',
+    color: '#333',
+    textAlign: 'center',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 32,
   },
 });
 

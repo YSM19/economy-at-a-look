@@ -303,6 +303,28 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
             style={[styles.menuItem, { 
               backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
             }]}
+            onPress={() => {
+              router.push('/community');
+              onClose();
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconContainer, { 
+              backgroundColor: colorScheme === 'dark' ? 'rgba(255, 204, 0, 0.15)' : 'rgba(255, 204, 0, 0.1)' 
+            }]}>
+              <MaterialCommunityIcons 
+                name="forum" 
+                size={20} 
+                color="#FFCC00" 
+              />
+            </View>
+            <ThemedText style={styles.menuItemText}>커뮤니티</ThemedText>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuItem, { 
+              backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
+            }]}
             onPress={handleHistoryPress}
             activeOpacity={0.7}
           >
@@ -364,48 +386,9 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                 />
               </TouchableOpacity>
               
-              {userInfo?.role === 'ADMIN' && (
-                <TouchableOpacity
-                  style={[styles.menuItem, { 
-                    backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
-                  }]}
-                  onPress={() => {
-                    router.push('/admin/dashboard');
-                    onClose();
-                  }}
-                  activeOpacity={0.7}
-                >
-                  <View style={[styles.iconContainer, { 
-                    backgroundColor: colorScheme === 'dark' ? 'rgba(142, 142, 147, 0.15)' : 'rgba(142, 142, 147, 0.1)' 
-                  }]}>
-                    <MaterialCommunityIcons 
-                      name="cog" 
-                      size={20} 
-                      color="#8E8E93" 
-                    />
-                  </View>
-                  <ThemedText style={styles.menuItemText}>관리자 페이지</ThemedText>
-                </TouchableOpacity>
-              )}
+
               
-              <TouchableOpacity
-                style={[styles.menuItem, { 
-                  backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
-                }]}
-                onPress={handleLogout}
-                activeOpacity={0.7}
-              >
-                <View style={[styles.iconContainer, { 
-                  backgroundColor: colorScheme === 'dark' ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255, 59, 48, 0.1)' 
-                }]}>
-                  <MaterialCommunityIcons 
-                    name="logout" 
-                    size={20} 
-                    color="#FF3B30" 
-                  />
-                </View>
-                <ThemedText style={styles.menuItemText}>로그아웃</ThemedText>
-              </TouchableOpacity>
+
             </>
                      ) : (
              <TouchableOpacity

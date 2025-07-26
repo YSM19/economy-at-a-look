@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="create-comments-table" author="developer">
+        <createTable tableName="comments">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="post_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="parent_id" type="BIGINT"/>
+            <column name="like_count" type="INTEGER" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_deleted" type="BOOLEAN" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint 
+            baseTableName="comments" 
+            baseColumnNames="post_id"
+            constraintName="fk_comments_post_id"
+            referencedTableName="posts"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint 
+            baseTableName="comments" 
+            baseColumnNames="user_id"
+            constraintName="fk_comments_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <addForeignKeyConstraint 
+            baseTableName="comments" 
+            baseColumnNames="parent_id"
+            constraintName="fk_comments_parent_id"
+            referencedTableName="comments"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <createIndex indexName="idx_comments_post_id" tableName="comments">
+            <column name="post_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_comments_user_id" tableName="comments">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_comments_parent_id" tableName="comments">
+            <column name="parent_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_comments_created_at" tableName="comments">
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex indexName="idx_comments_deleted" tableName="comments">
+            <column name="is_deleted"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog> 

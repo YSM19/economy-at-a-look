@@ -505,10 +505,10 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
                 
                 return (
                   <SvgText
-                    key={`label-${idx}`}
+                    key={`section-label-${idx}`}
                     x={label.x}
                     y={label.y}
-                    fontSize="16"
+                    fontSize="15"
                     fontWeight="bold"
                     fill={section.textColor}
                     textAnchor="middle"
@@ -518,21 +518,6 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
                   </SvgText>
                 );
               })}
-              
-              {/* 현재 환율 값을 하단 여유 공간에 크게 표시 */}
-              <SvgText 
-                x={center} 
-                y={center + radius * 0.35}
-                fontSize="26" 
-                fontWeight="bold" 
-                fill={rateColor} 
-                textAnchor="middle"
-                alignmentBaseline="middle"
-              >
-                {formatNumberWithUnit(rate, '원')}
-              </SvgText>
-              
-
               
               {/* 바늘 */}
               <Line
@@ -548,25 +533,29 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
               {/* 바늘 중심점 */}
               <Circle cx={center} cy={center} r={6} fill={sections[activeSection]?.textColor || "#666"} />
             </Svg>
-          </View>
-          <View style={styles.infoContainer}>
-            <ThemedText style={[styles.infoText, { color: rateColor }]}>{rateText}</ThemedText>
-            <ThemedText style={styles.description}>
-              현재 {getCountryCurrencyName(country)}/원 환율은 {formatNumberWithUnit(rate, '원')}입니다.
-              환율이 낮을수록 원화가 강세이고, 높을수록 원화가 약세입니다.
-            </ThemedText>
-            
-            {/* 마지막 업데이트 */}
-            {lastUpdated && (
-              <ThemedText style={styles.lastUpdated}>
-                마지막 업데이트: {new Date(lastUpdated).toLocaleDateString('ko-KR', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
+            {/* 현재 값 표시 */}
+            <View style={styles.valueContainer}>
+              <ThemedText style={[styles.valueText, { color: rateColor }]}>
+                {formatNumberWithUnit(rate, '원')}
               </ThemedText>
-            )}
+              <ThemedText style={[styles.labelText, { color: rateColor }]}>
+                {rateText}
+              </ThemedText>
+            </View>
           </View>
+          {/* 설명 텍스트 */}
+          <ThemedText style={styles.descriptionText}>
+            {currencyTitle}
+          </ThemedText>
+          {lastUpdated && (
+            <ThemedText style={styles.lastUpdated}>
+              마지막 업데이트: {new Date(lastUpdated).toLocaleDateString('ko-KR', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </ThemedText>
+          )}
         </>
       ) : (
         <View style={styles.errorContainer}>
@@ -627,22 +616,42 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
   title: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '700',
     marginBottom: 8,
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
-    lineHeight: 24,
+    lineHeight: 22,
   },
   gaugeContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: 60,
-    marginBottom: 16,
-    height: 280,
+    position: 'relative',
+  },
+  valueContainer: {
+    position: 'absolute',
+    alignItems: 'center',
+    justifyContent: 'center',
+    top: '60%',
     width: '100%',
-    paddingHorizontal: 10,
+    paddingHorizontal: 20,
+  },
+  labelText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginTop: 12,
+  },
+  descriptionText: {
+    fontSize: 11,
+    color: '#999',
+    textAlign: 'center',
+    marginTop: -38,
+    fontWeight: '500',
+    includeFontPadding: false,
+    textAlignVertical: 'center',
+    lineHeight: 15,
   },
   infoContainer: {
     alignItems: 'center',
@@ -705,20 +714,20 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#999',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: 8,
     fontWeight: '500',
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 14,
   },
   valueText: {
-    fontSize: 22,
+    fontSize: 26,
     fontWeight: '700',
     color: '#333',
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
-    lineHeight: 28,
+    lineHeight: 32,
   },
   unitText: {
     fontSize: 12,
@@ -729,16 +738,6 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 16,
-  },
-  labelText: {
-    fontSize: 14,
-    color: '#333',
-    marginTop: 8,
-    textAlign: 'center',
-    fontWeight: '600',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 20,
   },
   smallText: {
     fontSize: 14,

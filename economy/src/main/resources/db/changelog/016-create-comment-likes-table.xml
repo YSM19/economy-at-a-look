@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+    <changeSet id="016" author="system">
+        <createTable tableName="comment_likes">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_comment_likes_user" references="users(id)"/>
+            </column>
+            <column name="comment_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_comment_likes_comment" references="comments(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addUniqueConstraint tableName="comment_likes" columnNames="user_id, comment_id" constraintName="uk_comment_likes_user_comment"/>
+        
+        <createIndex tableName="comment_likes" indexName="idx_comment_likes_user">
+            <column name="user_id"/>
+        </createIndex>
+        
+        <createIndex tableName="comment_likes" indexName="idx_comment_likes_comment">
+            <column name="comment_id"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog> 

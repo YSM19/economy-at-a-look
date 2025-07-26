@@ -2,6 +2,8 @@ package com.at_a_look.economy.service;
 
 import com.at_a_look.economy.dto.ExchangeRateHistoryRequest;
 import com.at_a_look.economy.dto.ExchangeRateHistoryResponse;
+import com.at_a_look.economy.dto.UpdateMemoRequest;
+import com.at_a_look.economy.dto.UpdateExchangeRateRequest;
 import com.at_a_look.economy.entity.ExchangeRateHistory;
 import com.at_a_look.economy.entity.User;
 import com.at_a_look.economy.repository.ExchangeRateHistoryRepository;
@@ -62,6 +64,71 @@ public class ExchangeRateHistoryService {
         return histories.stream()
                 .map(this::convertToResponse)
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 환율 저장 기록의 메모 업데이트
+     */
+    @Transactional
+    public ExchangeRateHistoryResponse updateMemo(String userEmail, Long historyId, UpdateMemoRequest request) {
+        log.info("메모 업데이트 요청 - 사용자: {}, 기록 ID: {}", userEmail, historyId);
+        
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        ExchangeRateHistory history = exchangeRateHistoryRepository.findById(historyId)
+                .orElseThrow(() -> new RuntimeException("저장 기록을 찾을 수 없습니다."));
+
+        // 본인의 기록만 수정 가능
+        if (!history.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("본인의 기록만 수정할 수 있습니다.");
+        }
+
+        history.setMemo(request.getMemo());
+        ExchangeRateHistory updatedHistory = exchangeRateHistoryRepository.save(history);
+        
+        log.info("메모 업데이트 완료 - 기록 ID: {}", historyId);
+        
+        return convertToResponse(updatedHistory);
+    }
+
+    /**
+     * 환율 저장 기록의 환율 및 금액 업데이트
+     */
+    @Transactional
+    public ExchangeRateHistoryResponse updateExchangeRateHistory(String userEmail, Long historyId, UpdateExchangeRateRequest request) {
+        log.info("환율 정보 업데이트 요청 - 사용자: {}, 기록 ID: {}", userEmail, historyId);
+        
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        ExchangeRateHistory history = exchangeRateHistoryRepository.findById(historyId)
+                .orElseThrow(() -> new RuntimeException("저장 기록을 찾을 수 없습니다."));
+
+        // 본인의 기록만 수정 가능
+        if (!history.getUser().getId().equals(user.getId())) {
+            throw new RuntimeException("본인의 기록만 수정할 수 있습니다.");
+        }
+
+        // 필드별로 null이 아닌 경우에만 업데이트
+        if (request.getExchangeRate() != null) {
+            history.setExchangeRate(request.getExchangeRate());
+        }
+        if (request.getKrwAmount() != null) {
+            history.setKrwAmount(request.getKrwAmount());
+        }
+        if (request.getForeignAmount() != null) {
+            history.setForeignAmount(request.getForeignAmount());
+        }
+        if (request.getMemo() != null) {
+            history.setMemo(request.getMemo());
+        }
+
+        ExchangeRateHistory updatedHistory = exchangeRateHistoryRepository.save(history);
+        
+        log.info("환율 정보 업데이트 완료 - 기록 ID: {}", historyId);
+        
+        return convertToResponse(updatedHistory);
     }
 
     /**

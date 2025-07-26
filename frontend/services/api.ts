@@ -32,7 +32,17 @@ api.interceptors.request.use(
   },
   error => {
     if (Config.debug) {
-      console.error('❌ 요청 오류:', error);
+      console.error('❌ 응답 오류:', error);
+      console.error('🔍 오류 상세:', {
+        message: error.message,
+        code: error.code,
+        status: error.response?.status,
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        url: error.config?.url,
+        method: error.config?.method,
+        baseURL: error.config?.baseURL
+      });
     }
     return Promise.reject(error);
   }
@@ -185,6 +195,22 @@ export const exchangeRateHistoryApi = {
       }
     })
   ),
+  updateMemo: (historyId: number, memo: string, token: string) => withRetry(() => 
+    api.put(`/api/exchange-rate-history/${historyId}/memo`, { memo }, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    })
+  ),
+  updateExchangeRate: (historyId: number, data: any, token: string) => withRetry(() => 
+    api.put(`/api/exchange-rate-history/${historyId}`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      }
+    })
+  ),
   deleteHistory: (historyId: number, token: string) => withRetry(() => 
     api.delete(`/api/exchange-rate-history/${historyId}`, {
       headers: {
@@ -201,6 +227,408 @@ export const exchangeRateHistoryApi = {
   ),
   getHistoryCount: (token: string) => withRetry(() => 
     api.get('/api/exchange-rate-history/count', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+};
+
+// 알림 관련 API 호출
+export const notificationApi = {
+  getNotifications: (token: string, page = 0, size = 20) => withRetry(() =>
+    api.get('/api/notifications', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { page, size }
+    })
+  ),
+  getUnreadCount: (token: string) => withRetry(() =>
+    api.get('/api/notifications/unread-count', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  markAsRead: (notificationId: string, token: string) => withRetry(() =>
+    api.put(`/api/notifications/${notificationId}/read`, {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  markAllAsRead: (token: string) => withRetry(() =>
+    api.put('/api/notifications/read-all', {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  deleteNotification: (notificationId: string, token: string) => withRetry(() =>
+    api.delete(`/api/notifications/${notificationId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  createLikeNotification: (data: any, token: string) => withRetry(() =>
+    api.post('/api/notifications/create-like', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  createCommentNotification: (data: any, token: string) => withRetry(() =>
+    api.post('/api/notifications/create-comment', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+};
+
+// 게시글 관련 API 호출
+export const postApi = {
+  getPosts: (boardType?: string, sort = 'latest', page = 0, size = 20, search?: string) => withRetry(() =>
+    api.get('/api/posts', {
+      params: { boardType, sort, page, size, search }
+    })
+  ),
+  getPost: (postId: number, token?: string) => withRetry(() =>
+    api.get(`/api/posts/${postId}`, {
+      headers: token ? {
+        'Authorization': `Bearer ${token}`,
+      } : {}
+    })
+  ),
+  createPost: (data: any, token: string) => withRetry(() =>
+    api.post('/api/posts', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  updatePost: (postId: number, data: any, token: string) => withRetry(() =>
+    api.put(`/api/posts/${postId}`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  deletePost: (postId: number, token: string) => withRetry(() =>
+    api.delete(`/api/posts/${postId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  likePost: (postId: number, token: string) => withRetry(() =>
+    api.post(`/api/posts/${postId}/like`, {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  bookmarkPost: (postId: number, token: string) => withRetry(() =>
+    api.post(`/api/posts/${postId}/bookmark`, {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  getMyPosts: (page = 0, size = 20, token?: string) => withRetry(() =>
+    api.get('/api/posts/my', {
+      headers: token ? {
+        'Authorization': `Bearer ${token}`,
+      } : {},
+      params: { page, size }
+    })
+  ),
+  getBookmarks: (page = 0, size = 20, token?: string) => withRetry(() =>
+    api.get('/api/posts/bookmarks', {
+      headers: token ? {
+        'Authorization': `Bearer ${token}`,
+      } : {},
+      params: { page, size }
+    })
+  ),
+  getTrendingPosts: (days = 7, limit = 10) => withRetry(() =>
+    api.get('/api/posts/trending', {
+      params: { days, limit }
+    })
+  ),
+  searchPosts: (query: string, boardType?: string, page = 0, size = 20) => withRetry(() =>
+    api.get('/api/posts/search', {
+      params: { query, boardType, page, size }
+    })
+  ),
+  getBoardStats: () => withRetry(() =>
+    api.get('/api/posts/board-stats')
+  ),
+};
+
+// 백엔드 연결 상태 체크 API
+export const healthApi = {
+  checkConnection: () => withRetry(() =>
+    api.get('/api/health', { timeout: 5000 })
+  ),
+  testEndpoint: () => withRetry(() =>
+    api.get('/api/posts?boardType=FREE&page=0&size=1', { timeout: 5000 })
+  ),
+};
+
+// 댓글 관련 API 호출
+export const commentApi = {
+  getComments: (postId: number, page = 0, size = 20) => withRetry(() =>
+    api.get(`/api/comments/post/${postId}`, {
+      params: { page, size }
+    })
+  ),
+  createComment: (data: any, token: string) => withRetry(() =>
+    api.post('/api/comments', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  updateComment: (commentId: number, data: any, token: string) => withRetry(() =>
+    api.put(`/api/comments/${commentId}`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  deleteComment: (commentId: number, token: string) => withRetry(() =>
+    api.delete(`/api/comments/${commentId}`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  likeComment: (commentId: number, token: string) => withRetry(() =>
+    api.post(`/api/comments/${commentId}/like`, {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  getMyComments: (token: string, page = 0, size = 20) => withRetry(() =>
+    api.get('/api/comments/my', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { page, size }
+    })
+  ),
+  getReplies: (commentId: number, page = 0, size = 20) => withRetry(() =>
+    api.get(`/api/comments/${commentId}/replies`, {
+      params: { page, size }
+    })
+  ),
+};
+
+// 신고 관련 API 호출
+export const reportApi = {
+  createReport: (data: any, token: string) => withRetry(() =>
+    api.post('/api/reports', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  getReports: (token: string, status?: string, page = 0, size = 20) => withRetry(() =>
+    api.get('/api/reports', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { status, page, size }
+    })
+  ),
+  reviewReport: (reportId: number, data: any, token: string) => withRetry(() =>
+    api.put(`/api/reports/${reportId}/review`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  getMyReports: (token: string, page = 0, size = 20) => withRetry(() =>
+    api.get('/api/reports/my', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { page, size }
+    })
+  ),
+  getReportStatistics: (token: string) => withRetry(() =>
+    api.get('/api/reports/statistics', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+};
+
+// 파일 업로드 관련 API 호출
+export const fileUploadApi = {
+  uploadImage: (file: FormData, token: string) => withRetry(() =>
+    api.post('/api/files/upload', file, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      }
+    })
+  ),
+  uploadImages: (files: FormData, token: string) => withRetry(() =>
+    api.post('/api/files/upload-multiple', files, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data',
+      }
+    })
+  ),
+
+  deleteFile: (fileUrl: string, token: string) => withRetry(() =>
+    api.delete('/api/files/delete', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { fileUrl }
+    })
+  ),
+};
+
+// 관리자 관련 API 호출
+export const adminApi = {
+  // 게시글 관리
+  getPostManagementList: (params: any, token: string) => withRetry(() =>
+    api.get('/api/admin/posts', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params
+    })
+  ),
+  
+  bulkDeletePosts: (data: any, token: string) => withRetry(() =>
+    api.post('/api/admin/posts/bulk-delete', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  
+  bulkRestorePosts: (data: any, token: string) => withRetry(() =>
+    api.post('/api/admin/posts/bulk-restore', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  
+  // 댓글 관리
+  getCommentManagementList: (params: any, token: string) => withRetry(() =>
+    api.get('/api/admin/comments', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params
+    })
+  ),
+  
+  bulkDeleteComments: (data: any, token: string) => withRetry(() =>
+    api.post('/api/admin/comments/bulk-delete', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  
+  bulkRestoreComments: (data: any, token: string) => withRetry(() =>
+    api.post('/api/admin/comments/bulk-restore', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  
+  // 통계
+  getCommunityStats: (token: string) => withRetry(() =>
+    api.get('/api/admin/stats', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  // 신고 관리
+  getReportManagementList: (params: any, token: string) => withRetry(() =>
+    api.get('/api/reports/admin', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params
+    })
+  ),
+  approveReport: (reportId: number, data: any, token: string) => withRetry(() =>
+    api.post(`/api/admin/reports/${reportId}/approve`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  rejectReport: (reportId: number, data: any, token: string) => withRetry(() =>
+    api.post(`/api/admin/reports/${reportId}/reject`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+
+  // 사용자 정지 관리
+  getUserList: (params: any, token: string) => withRetry(() =>
+    api.get('/api/admin/users', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params
+    })
+  ),
+
+  getSuspendedUserList: (params: any, token: string) => withRetry(() =>
+    api.get('/api/admin/users/suspended', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params
+    })
+  ),
+
+  suspendUser: (data: any, token: string) => withRetry(() =>
+    api.post('/api/admin/users/suspend', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+
+  unsuspendUser: (data: any, token: string) => withRetry(() =>
+    api.post('/api/admin/users/unsuspend', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+
+  getUserSuspensionStatus: (userId: number, token: string) => withRetry(() =>
+    api.get(`/api/admin/users/${userId}/suspension`, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+
+  releaseExpiredSuspensions: (token: string) => withRetry(() =>
+    api.post('/api/admin/users/release-expired-suspensions', {}, {
       headers: {
         'Authorization': `Bearer ${token}`,
       }

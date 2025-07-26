@@ -1,0 +1,74 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-3.8.xsd">
+
+    <changeSet id="create-posts-table" author="developer">
+        <createTable tableName="posts">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="user_id" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="board_type" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="tags" type="TEXT"/>
+            <column name="view_count" type="INTEGER" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="like_count" type="INTEGER" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="comment_count" type="INTEGER" defaultValue="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_deleted" type="BOOLEAN" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <addForeignKeyConstraint 
+            baseTableName="posts" 
+            baseColumnNames="user_id"
+            constraintName="fk_posts_user_id"
+            referencedTableName="users"
+            referencedColumnNames="id"
+            onDelete="CASCADE"/>
+
+        <createIndex indexName="idx_posts_board_type" tableName="posts">
+            <column name="board_type"/>
+        </createIndex>
+
+        <createIndex indexName="idx_posts_created_at" tableName="posts">
+            <column name="created_at"/>
+        </createIndex>
+
+        <createIndex indexName="idx_posts_like_count" tableName="posts">
+            <column name="like_count"/>
+        </createIndex>
+
+        <createIndex indexName="idx_posts_user_id" tableName="posts">
+            <column name="user_id"/>
+        </createIndex>
+
+        <createIndex indexName="idx_posts_deleted" tableName="posts">
+            <column name="is_deleted"/>
+        </createIndex>
+    </changeSet>
+
+</databaseChangeLog> 

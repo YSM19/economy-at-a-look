@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, TextInput, TouchableOpacity, Alert } from 'react-native';
+import { View, StyleSheet, TextInput, TouchableOpacity, Alert, Platform, Modal, useColorScheme } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { economicIndexApi, exchangeRateHistoryApi } from '../services/api';
@@ -24,9 +24,12 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isLoginModalVisible, setIsLoginModalVisible] = useState(false);
+  const [isMemoModalVisible, setIsMemoModalVisible] = useState(false);
+  const [memo, setMemo] = useState('');
   
   const { showToast } = useToast();
   const router = useRouter();
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
     fetchExchangeRate();
@@ -333,7 +336,15 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
       return;
     }
 
+    // 메모 입력 모달 열기
+    setMemo('');
+    setIsMemoModalVisible(true);
+  };
+
+  const confirmSaveWithMemo = async () => {
     setIsSaving(true);
+    setIsMemoModalVisible(false);
+    
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
@@ -341,6 +352,9 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
         return;
       }
 
+      const rate = getEffectiveRate();
+      const krw = parseFloat(krwAmount.replace(/,/g, ''));
+      const foreign = parseFloat(foreignAmount.replace(/,/g, ''));
       const currencyInfo = getCurrencyInfo();
       
       const requestData = {
@@ -349,7 +363,7 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
         exchangeRate: rate,
         krwAmount: krw,
         foreignAmount: foreign,
-        memo: '',
+        memo: memo || '',
         isKrwFirst: isKRWFirst
       };
 
@@ -360,6 +374,7 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
 
       if (response.data.success) {
         showToast('환율이 저장되었습니다!', 'success');
+        setMemo('');
       } else {
         showToast(response.data.message || '저장에 실패했습니다.', 'error');
       }
@@ -516,6 +531,63 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
         </View>
       </View>
 
+      {/* 메모 입력 모달 */}
+      <Modal
+        visible={isMemoModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => setIsMemoModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#ffffff' }]}>
+            <ThemedText style={styles.modalTitle}>메모 추가</ThemedText>
+            <ThemedText style={styles.modalSubtitle}>환율 저장과 함께 메모를 남겨보세요 (선택사항)</ThemedText>
+            
+            <TextInput
+              style={[
+                styles.memoInput,
+                { 
+                  borderColor: colorScheme === 'dark' ? '#333' : '#ddd',
+                  backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                  color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                }
+              ]}
+              placeholder="메모를 입력하세요 (최대 200자)"
+              placeholderTextColor={colorScheme === 'dark' ? '#666' : '#999'}
+              value={memo}
+              onChangeText={setMemo}
+              autoFocus={true}
+              maxLength={200}
+              multiline={true}
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setIsMemoModalVisible(false);
+                  setMemo('');
+                }}
+              >
+                <ThemedText style={styles.cancelButtonText}>취소</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmButton, isSaving && styles.disabledModalButton]}
+                onPress={confirmSaveWithMemo}
+                disabled={isSaving}
+              >
+                <ThemedText style={styles.confirmButtonText}>
+                  {isSaving ? '저장 중...' : '저장'}
+                </ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
       <ConfirmationModal
         visible={isLoginModalVisible}
         title="로그인 필요"
@@ -536,13 +608,13 @@ const ExchangeRateCalculator: React.FC<ExchangeRateCalculatorProps> = ({ country
 
 const styles = StyleSheet.create({
   outerContainer: {
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: 16,
+    marginBottom: 12,
   },
   title: {
     fontSize: 18,
     fontWeight: '700',
-    marginBottom: 12,
+    marginBottom: 10,
     marginLeft: 5,
     textAlign: 'left',
     includeFontPadding: false,
@@ -552,7 +624,7 @@ const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     shadowColor: "#000",
     shadowOffset: {
       width: 0,
@@ -573,9 +645,9 @@ const styles = StyleSheet.create({
   },
   rateDisplay: {
     backgroundColor: '#f0f8ff',
-    padding: 12,
+    padding: 10,
     borderRadius: 8,
-    marginBottom: 20,
+    marginBottom: 16,
     alignItems: 'center',
   },
   rateTextContainer: {
@@ -661,8 +733,8 @@ const styles = StyleSheet.create({
   infoContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: 12,
-    padding: 8,
+    marginTop: 8,
+    padding: 6,
     backgroundColor: '#f9f9f9',
     borderRadius: 6,
   },
@@ -725,6 +797,80 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#ccc',
     opacity: 0.7,
+  },
+  // 메모 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: Platform.OS === 'web' ? 400 : '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.7,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  memoInput: {
+    height: 100,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(150, 150, 150, 0.2)',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#999',
+  },
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  confirmButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  disabledModalButton: {
+    opacity: 0.6,
   },
 });
 

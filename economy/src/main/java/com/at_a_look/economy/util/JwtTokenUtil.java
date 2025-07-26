@@ -206,4 +206,22 @@ public class JwtTokenUtil {
             return true;
         }
     }
+
+    /**
+     * HTTP 요청에서 JWT 토큰 추출
+     */
+    public String extractTokenFromRequest(jakarta.servlet.http.HttpServletRequest request) {
+        String bearerToken = request.getHeader("Authorization");
+        if (bearerToken != null && bearerToken.startsWith("Bearer ")) {
+            return bearerToken.substring(7);
+        }
+        return null;
+    }
+
+    /**
+     * HTTP 요청에서 JWT 토큰 추출 (별칭 메서드)
+     */
+    public String getTokenFromRequest(jakarta.servlet.http.HttpServletRequest request) {
+        return extractTokenFromRequest(request);
+    }
 } 

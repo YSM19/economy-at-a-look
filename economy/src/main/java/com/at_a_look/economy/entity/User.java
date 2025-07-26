@@ -52,6 +52,24 @@ public class User {
     @Builder.Default
     private Boolean isActive = true;
 
+    @Column(name = "is_suspended", nullable = false)
+    @Builder.Default
+    private Boolean isSuspended = false;
+
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
+    @Column(name = "suspension_reason")
+    private String suspensionReason;
+
+    @Column(name = "suspended_by")
+    private String suspendedBy;
+
+    @Column(name = "suspended_at")
+    private LocalDateTime suspendedAt;
+
+
+
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();

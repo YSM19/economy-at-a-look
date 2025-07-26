@@ -6,6 +6,7 @@ import com.at_a_look.economy.dto.LoginRequest;
 import com.at_a_look.economy.dto.LoginResponse;
 import com.at_a_look.economy.dto.SignupRequest;
 import com.at_a_look.economy.dto.UserResponse;
+import com.at_a_look.economy.dto.UserSuspensionDto;
 import com.at_a_look.economy.entity.User;
 import com.at_a_look.economy.repository.UserRepository;
 import com.at_a_look.economy.util.JwtTokenUtil;
@@ -16,7 +17,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -297,5 +302,172 @@ public class UserService {
         
         userRepository.save(user);
         log.info("✅ [UserService] 비밀번호 변경 성공: email={}", email);
+    }
+
+    /**
+     * 사용자 정지
+     */
+    @Transactional
+    public UserSuspensionDto.UserSuspensionResponse suspendUser(UserSuspensionDto.SuspendUserRequest request, String adminUsername) {
+        log.info("🚫 [UserService] 사용자 정지 시도: userId={}, days={}, reason={}", 
+                request.getUserId(), request.getSuspensionDays(), request.getReason());
+        
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
+        // 관리자는 정지할 수 없음
+        if (user.getRole() == User.Role.ADMIN) {
+            log.warn("❌ [UserService] 사용자 정지 실패: 관리자는 정지할 수 없음 - userId={}", request.getUserId());
+            throw new IllegalArgumentException("관리자는 정지할 수 없습니다.");
+        }
+        
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime suspendedUntil = now.plusDays(request.getSuspensionDays());
+        
+        user.setIsSuspended(true);
+        user.setSuspendedUntil(suspendedUntil);
+        user.setSuspensionReason(request.getReason());
+        user.setSuspendedBy(adminUsername);
+        user.setSuspendedAt(now);
+        
+        User savedUser = userRepository.save(user);
+        log.info("✅ [UserService] 사용자 정지 성공: userId={}, suspendedUntil={}", 
+                savedUser.getId(), savedUser.getSuspendedUntil());
+        
+        return convertToSuspensionResponse(savedUser);
+    }
+
+    /**
+     * 사용자 정지 해제
+     */
+    @Transactional
+    public UserSuspensionDto.UserSuspensionResponse unsuspendUser(Long userId) {
+        log.info("✅ [UserService] 사용자 정지 해제 시도: userId={}", userId);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
+        user.setIsSuspended(false);
+        user.setSuspendedUntil(null);
+        user.setSuspensionReason(null);
+        user.setSuspendedBy(null);
+        user.setSuspendedAt(null);
+        
+        User savedUser = userRepository.save(user);
+        log.info("✅ [UserService] 사용자 정지 해제 성공: userId={}", savedUser.getId());
+        
+        return convertToSuspensionResponse(savedUser);
+    }
+
+    /**
+     * 만료된 정지 자동 해제
+     */
+    @Transactional
+    public void releaseExpiredSuspensions() {
+        log.info("🔄 [UserService] 만료된 정지 자동 해제 시작");
+        
+        LocalDateTime now = LocalDateTime.now();
+        List<User> expiredUsers = userRepository.findExpiredSuspensions(now);
+        
+        for (User user : expiredUsers) {
+            user.setIsSuspended(false);
+            user.setSuspendedUntil(null);
+            user.setSuspensionReason(null);
+            user.setSuspendedBy(null);
+            user.setSuspendedAt(null);
+            userRepository.save(user);
+            log.info("✅ [UserService] 만료된 정지 자동 해제: userId={}", user.getId());
+        }
+        
+        log.info("✅ [UserService] 만료된 정지 자동 해제 완료: {}명", expiredUsers.size());
+    }
+
+    /**
+     * 사용자 목록 조회 (관리자용)
+     */
+    public Page<UserSuspensionDto.SuspensionHistoryResponse> getUserList(Pageable pageable, String keyword) {
+        log.info("📋 [UserService] 사용자 목록 조회: page={}, size={}, keyword={}", 
+                pageable.getPageNumber(), pageable.getPageSize(), keyword);
+        
+        Page<User> users;
+        if (keyword != null && !keyword.trim().isEmpty()) {
+            users = userRepository.findByUsernameOrEmailContaining(keyword.trim(), pageable);
+        } else {
+            users = userRepository.findAll(pageable);
+        }
+        
+        Page<UserSuspensionDto.SuspensionHistoryResponse> response = users.map(this::convertToSuspensionHistoryResponse);
+        log.info("✅ [UserService] 사용자 목록 조회 완료: 총 {}명", response.getTotalElements());
+        
+        return response;
+    }
+
+    /**
+     * 정지된 사용자 목록 조회
+     */
+    public Page<UserSuspensionDto.SuspensionHistoryResponse> getSuspendedUserList(Pageable pageable) {
+        log.info("🚫 [UserService] 정지된 사용자 목록 조회");
+        
+        Page<User> suspendedUsers = userRepository.findByIsSuspendedTrue(pageable);
+        Page<UserSuspensionDto.SuspensionHistoryResponse> response = suspendedUsers.map(this::convertToSuspensionHistoryResponse);
+        
+        log.info("✅ [UserService] 정지된 사용자 목록 조회 완료: 총 {}명", response.getTotalElements());
+        return response;
+    }
+
+    /**
+     * 사용자 정지 상태 조회
+     */
+    public UserSuspensionDto.UserSuspensionResponse getUserSuspensionStatus(Long userId) {
+        log.info("🔍 [UserService] 사용자 정지 상태 조회: userId={}", userId);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
+        return convertToSuspensionResponse(user);
+    }
+
+    /**
+     * DTO 변환 메서드들
+     */
+    private UserSuspensionDto.UserSuspensionResponse convertToSuspensionResponse(User user) {
+        LocalDateTime now = LocalDateTime.now();
+        boolean isExpired = user.getIsSuspended() && 
+                           user.getSuspendedUntil() != null && 
+                           user.getSuspendedUntil().isBefore(now);
+        
+        return UserSuspensionDto.UserSuspensionResponse.builder()
+                .userId(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole().toString())
+                .isSuspended(user.getIsSuspended())
+                .suspendedUntil(user.getSuspendedUntil())
+                .suspensionReason(user.getSuspensionReason())
+                .suspendedBy(user.getSuspendedBy())
+                .suspendedAt(user.getSuspendedAt())
+                .isSuspensionExpired(isExpired)
+                .build();
+    }
+
+    private UserSuspensionDto.SuspensionHistoryResponse convertToSuspensionHistoryResponse(User user) {
+        LocalDateTime now = LocalDateTime.now();
+        boolean isExpired = user.getIsSuspended() && 
+                           user.getSuspendedUntil() != null && 
+                           user.getSuspendedUntil().isBefore(now);
+        
+        return UserSuspensionDto.SuspensionHistoryResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .role(user.getRole().toString())
+                .isSuspended(user.getIsSuspended())
+                .suspendedUntil(user.getSuspendedUntil())
+                .suspensionReason(user.getSuspensionReason())
+                .suspendedBy(user.getSuspendedBy())
+                .suspendedAt(user.getSuspendedAt())
+                .isSuspensionExpired(isExpired)
+                .createdAt(user.getCreatedAt())
+                .build();
     }
 } 

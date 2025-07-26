@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Alert, Modal, TextInput, useColorScheme, Platform } from 'react-native';
 import { ThemedText } from '../components/ThemedText';
 import { ThemedView } from '../components/ThemedView';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
@@ -25,8 +25,21 @@ export default function ExchangeRateHistoryScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [editingMemo, setEditingMemo] = useState<{ id: number, memo: string } | null>(null);
+  const [isMemoModalVisible, setIsMemoModalVisible] = useState(false);
+  const [editingExchangeRate, setEditingExchangeRate] = useState<{
+    id: number;
+    exchangeRate: string;
+    krwAmount: string;
+    foreignAmount: string;
+    memo: string;
+    currencyCode: string;
+    currencyName: string;
+  } | null>(null);
+  const [isExchangeRateModalVisible, setIsExchangeRateModalVisible] = useState(false);
   
   const { showToast } = useToast();
+  const colorScheme = useColorScheme();
 
   useEffect(() => {
     checkLoginAndLoadData();
@@ -168,15 +181,122 @@ export default function ExchangeRateHistoryScreen() {
     );
   };
 
+  const openMemoEditModal = (historyId: number, currentMemo: string) => {
+    setEditingMemo({ id: historyId, memo: currentMemo || '' });
+    setIsMemoModalVisible(true);
+  };
+
+  const updateMemo = async () => {
+    if (!editingMemo) return;
+
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        showToast('로그인 토큰이 없습니다.', 'error');
+        return;
+      }
+
+      const response = await exchangeRateHistoryApi.updateMemo(
+        editingMemo.id, 
+        editingMemo.memo, 
+        token
+      );
+
+      if (response.data.success) {
+        showToast('메모가 업데이트되었습니다.', 'success');
+        setIsMemoModalVisible(false);
+        setEditingMemo(null);
+        loadExchangeRateHistory(); // 목록 새로고침
+      } else {
+        showToast(response.data.message || '메모 업데이트에 실패했습니다.', 'error');
+      }
+    } catch (error: any) {
+      console.error('메모 업데이트 실패:', error);
+      if (error?.request) {
+        showToast('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.', 'error');
+      } else {
+        showToast('메모 업데이트 중 오류가 발생했습니다.', 'error');
+      }
+    }
+  };
+
+  const openExchangeRateEditModal = (history: ExchangeRateHistory) => {
+    setEditingExchangeRate({
+      id: history.id,
+      exchangeRate: history.exchangeRate.toString(),
+      krwAmount: history.krwAmount.toString(),
+      foreignAmount: history.foreignAmount.toString(),
+      memo: history.memo || '',
+      currencyCode: history.currencyCode,
+      currencyName: history.currencyName,
+    });
+    setIsExchangeRateModalVisible(true);
+  };
+
+  const updateExchangeRate = async () => {
+    if (!editingExchangeRate) return;
+
+    try {
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        showToast('로그인 토큰이 없습니다.', 'error');
+        return;
+      }
+
+      const updateData = {
+        exchangeRate: parseFloat(editingExchangeRate.exchangeRate),
+        krwAmount: parseFloat(editingExchangeRate.krwAmount.replace(/,/g, '')),
+        foreignAmount: parseFloat(editingExchangeRate.foreignAmount.replace(/,/g, '')),
+        memo: editingExchangeRate.memo,
+      };
+
+      // 유효성 검사
+      if (isNaN(updateData.exchangeRate) || updateData.exchangeRate <= 0) {
+        showToast('유효한 환율을 입력해주세요.', 'error');
+        return;
+      }
+      if (isNaN(updateData.krwAmount) || updateData.krwAmount <= 0) {
+        showToast('유효한 원화 금액을 입력해주세요.', 'error');
+        return;
+      }
+      if (isNaN(updateData.foreignAmount) || updateData.foreignAmount <= 0) {
+        showToast('유효한 외화 금액을 입력해주세요.', 'error');
+        return;
+      }
+
+      const response = await exchangeRateHistoryApi.updateExchangeRate(
+        editingExchangeRate.id, 
+        updateData, 
+        token
+      );
+
+      if (response.data.success) {
+        showToast('환율 정보가 업데이트되었습니다.', 'success');
+        setIsExchangeRateModalVisible(false);
+        setEditingExchangeRate(null);
+        loadExchangeRateHistory(); // 목록 새로고침
+      } else {
+        showToast(response.data.message || '환율 정보 업데이트에 실패했습니다.', 'error');
+      }
+    } catch (error: any) {
+      console.error('환율 정보 업데이트 실패:', error);
+      if (error?.request) {
+        showToast('서버에 연결할 수 없습니다. 백엔드 서버가 실행 중인지 확인해주세요.', 'error');
+      } else {
+        showToast('환율 정보 업데이트 중 오류가 발생했습니다.', 'error');
+      }
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    
+    return `${year}.${month}.${day} ${hours}:${minutes}`;
   };
 
   const formatNumber = (value: number) => {
@@ -206,7 +326,7 @@ export default function ExchangeRateHistoryScreen() {
   if (!isLoggedIn) {
     return (
       <ThemedView style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: 80 }]}>
           <MaterialCommunityIcons name="history" size={24} color="#4CAF50" />
           <ThemedText style={styles.title}>환율 저장 기록</ThemedText>
         </View>
@@ -227,7 +347,7 @@ export default function ExchangeRateHistoryScreen() {
   if (loading) {
     return (
       <ThemedView style={styles.container}>
-        <View style={styles.header}>
+        <View style={[styles.header, { paddingTop: 80 }]}>
           <MaterialCommunityIcons name="history" size={24} color="#4CAF50" />
           <ThemedText style={styles.title}>환율 저장 기록</ThemedText>
         </View>
@@ -241,12 +361,12 @@ export default function ExchangeRateHistoryScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: 80 }]}>
         <View style={styles.headerLeft}>
           <MaterialCommunityIcons name="history" size={24} color="#4CAF50" />
           <ThemedText style={styles.title}>환율 저장 기록</ThemedText>
         </View>
-        <View style={styles.headerRight}>
+        <View style={styles.headerRightButtons}>
           {histories.length > 0 && (
             <TouchableOpacity 
               style={styles.deleteAllButton}
@@ -287,34 +407,45 @@ export default function ExchangeRateHistoryScreen() {
         >
           {histories.map((history) => (
             <View key={history.id} style={styles.historyCard}>
-              {/* 카드 헤더 - 통화 정보와 날짜 */}
-              <View style={styles.cardHeader}>
-                <View style={styles.currencyHeader}>
-                  <MaterialCommunityIcons 
-                    name={getCurrencyIcon(history.currencyCode)} 
-                    size={24} 
-                    color="#4CAF50" 
-                  />
-                  <View style={styles.currencyTextContainer}>
-                    <ThemedText style={styles.currencyName}>
-                      {history.currencyName}
-                    </ThemedText>
-                    <ThemedText style={styles.currencyCode}>
-                      {history.currencyCode}
+                            {/* 상단 헤더 - 통화, 환율, 날짜, 버튼 */}
+              <View style={styles.compactHeader}>
+                {/* 왼쪽: 통화 정보 + 환율 */}
+                <View style={styles.leftSection}>
+                  <View style={styles.currencyRow}>
+                    <MaterialCommunityIcons 
+                      name={getCurrencyIcon(history.currencyCode)} 
+                      size={18} 
+                      color="#4CAF50" 
+                    />
+                    <ThemedText style={styles.currencyText}>
+                      {history.currencyName} ({history.currencyCode})
                     </ThemedText>
                   </View>
+                  <ThemedText style={styles.rateText}>
+                    1 {history.currencyCode} = {formatNumber(history.exchangeRate)}원
+                  </ThemedText>
                 </View>
-                <ThemedText style={styles.dateText}>
-                  {formatDate(history.createdAt)}
-                </ThemedText>
-              </View>
 
-              {/* 환율 정보 */}
-              <View style={styles.rateSection}>
-                <ThemedText style={styles.rateLabel}>환율</ThemedText>
-                <ThemedText style={styles.rateValue}>
-                  1 {history.currencyCode} = {formatNumber(history.exchangeRate)}원
-                </ThemedText>
+                {/* 오른쪽: 날짜 + 버튼 */}
+                <View style={styles.rightSection}>
+                  <ThemedText style={styles.dateText} numberOfLines={1} ellipsizeMode="tail">
+                    {formatDate(history.createdAt)}
+                  </ThemedText>
+                  <View style={styles.topRightButtons}>
+                    <TouchableOpacity 
+                      style={styles.editButtonTop}
+                      onPress={() => openExchangeRateEditModal(history)}
+                    >
+                      <MaterialCommunityIcons name="pencil" size={14} color="#FF9800" />
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={styles.deleteButtonTop}
+                      onPress={() => deleteHistory(history.id)}
+                    >
+                      <MaterialCommunityIcons name="delete-outline" size={14} color="#ff5252" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </View>
 
               {/* 금액 정보 */}
@@ -348,18 +479,208 @@ export default function ExchangeRateHistoryScreen() {
                 </View>
               </View>
 
-              {/* 삭제 버튼 */}
-              <TouchableOpacity 
-                style={styles.deleteButton}
-                onPress={() => deleteHistory(history.id)}
-              >
-                <MaterialCommunityIcons name="delete-outline" size={18} color="#ff5252" />
-                <ThemedText style={styles.deleteButtonText}>삭제</ThemedText>
-              </TouchableOpacity>
+                            {/* 메모 섹션 (인라인) */}
+              {history.memo && (
+                <View style={styles.memoRow}>
+                  <MaterialCommunityIcons name="note-text-outline" size={14} color="#999" />
+                  <ThemedText style={styles.memoText} numberOfLines={2} ellipsizeMode="tail">
+                    {history.memo}
+                  </ThemedText>
+                </View>
+              )}
+
+
             </View>
           ))}
         </ScrollView>
       )}
+
+      {/* 메모 편집 모달 */}
+      <Modal
+        visible={isMemoModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setIsMemoModalVisible(false);
+          setEditingMemo(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#ffffff' }]}>
+            <ThemedText style={styles.modalTitle}>메모 편집</ThemedText>
+            <ThemedText style={styles.modalSubtitle}>환율 저장 기록에 대한 메모를 편집하세요</ThemedText>
+            
+            <TextInput
+              style={[
+                styles.memoInput,
+                { 
+                  borderColor: colorScheme === 'dark' ? '#333' : '#ddd',
+                  backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                  color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                }
+              ]}
+              placeholder="메모를 입력하세요 (최대 200자)"
+              placeholderTextColor={colorScheme === 'dark' ? '#666' : '#999'}
+              value={editingMemo?.memo || ''}
+              onChangeText={(text) => setEditingMemo(prev => prev ? { ...prev, memo: text } : null)}
+              autoFocus={true}
+              maxLength={200}
+              multiline={true}
+              numberOfLines={4}
+              textAlignVertical="top"
+            />
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setIsMemoModalVisible(false);
+                  setEditingMemo(null);
+                }}
+              >
+                <ThemedText style={styles.cancelButtonText}>취소</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={updateMemo}
+              >
+                <ThemedText style={styles.confirmButtonText}>저장</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* 환율 편집 모달 */}
+      <Modal
+        visible={isExchangeRateModalVisible}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={() => {
+          setIsExchangeRateModalVisible(false);
+          setEditingExchangeRate(null);
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#ffffff' }]}>
+            <ThemedText style={styles.modalTitle}>환율 정보 편집</ThemedText>
+            <ThemedText style={styles.modalSubtitle}>
+              {editingExchangeRate?.currencyName} ({editingExchangeRate?.currencyCode}) 정보를 수정하세요
+            </ThemedText>
+            
+            {/* 환율 입력 */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>환율</ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    borderColor: colorScheme === 'dark' ? '#333' : '#ddd',
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                    color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                  }
+                ]}
+                placeholder="환율을 입력하세요"
+                placeholderTextColor={colorScheme === 'dark' ? '#666' : '#999'}
+                value={editingExchangeRate?.exchangeRate || ''}
+                onChangeText={(text) => setEditingExchangeRate(prev => prev ? { ...prev, exchangeRate: text } : null)}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* 원화 금액 입력 */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>원화 금액 (₩)</ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    borderColor: colorScheme === 'dark' ? '#333' : '#ddd',
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                    color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                  }
+                ]}
+                placeholder="원화 금액을 입력하세요"
+                placeholderTextColor={colorScheme === 'dark' ? '#666' : '#999'}
+                value={editingExchangeRate?.krwAmount || ''}
+                onChangeText={(text) => {
+                  const numericText = text.replace(/[^0-9.]/g, '');
+                  setEditingExchangeRate(prev => prev ? { ...prev, krwAmount: numericText } : null);
+                }}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* 외화 금액 입력 */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>
+                외화 금액 ({getCurrencySymbol(editingExchangeRate?.currencyCode || '')})
+              </ThemedText>
+              <TextInput
+                style={[
+                  styles.input,
+                  { 
+                    borderColor: colorScheme === 'dark' ? '#333' : '#ddd',
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                    color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                  }
+                ]}
+                placeholder="외화 금액을 입력하세요"
+                placeholderTextColor={colorScheme === 'dark' ? '#666' : '#999'}
+                value={editingExchangeRate?.foreignAmount || ''}
+                onChangeText={(text) => {
+                  const numericText = text.replace(/[^0-9.]/g, '');
+                  setEditingExchangeRate(prev => prev ? { ...prev, foreignAmount: numericText } : null);
+                }}
+                keyboardType="numeric"
+              />
+            </View>
+
+            {/* 메모 입력 */}
+            <View style={styles.inputGroup}>
+              <ThemedText style={styles.inputLabel}>메모 (선택사항)</ThemedText>
+              <TextInput
+                style={[
+                  styles.memoInput,
+                  { 
+                    borderColor: colorScheme === 'dark' ? '#333' : '#ddd',
+                    backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                    color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                  }
+                ]}
+                placeholder="메모를 입력하세요"
+                placeholderTextColor={colorScheme === 'dark' ? '#666' : '#999'}
+                value={editingExchangeRate?.memo || ''}
+                onChangeText={(text) => setEditingExchangeRate(prev => prev ? { ...prev, memo: text } : null)}
+                multiline={true}
+                numberOfLines={3}
+                textAlignVertical="top"
+                maxLength={200}
+              />
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.cancelButton]}
+                onPress={() => {
+                  setIsExchangeRateModalVisible(false);
+                  setEditingExchangeRate(null);
+                }}
+              >
+                <ThemedText style={styles.cancelButtonText}>취소</ThemedText>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[styles.modalButton, styles.confirmButton]}
+                onPress={updateExchangeRate}
+              >
+                <ThemedText style={styles.confirmButtonText}>저장</ThemedText>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </ThemedView>
   );
 }
@@ -373,8 +694,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 20,
-    paddingTop: 60,
+    padding: 16,
+    paddingTop: 50,
     backgroundColor: '#fff',
     borderBottomWidth: 1,
     borderBottomColor: '#e0e0e0',
@@ -384,7 +705,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     flex: 1,
   },
-  headerRight: {
+  headerRightButtons: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -393,7 +714,8 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: '700',
     marginBottom: 20,
-    textAlign: 'center',
+    marginLeft: 12,
+    textAlign: 'left',
     color: '#333',
     includeFontPadding: false,
     textAlignVertical: 'center',
@@ -462,34 +784,64 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   scrollView: {
-    padding: 16,
+    padding: 6,
   },
   historyCard: {
     backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
+    borderRadius: 10,
+    padding: 12,
+    marginBottom: 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 1,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
+    elevation: 2,
     borderWidth: 1,
     borderColor: '#f5f5f5',
   },
-  cardHeader: {
+  compactHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 20,
+    marginBottom: 8,
   },
-  currencyHeader: {
+  leftSection: {
+    flex: 1,
+    marginRight: 12,
+  },
+  currencyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
+    marginBottom: 4,
+  },
+  currencyText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 6,
+  },
+  rateText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2196F3',
+  },
+  rightSection: {
+    alignItems: 'flex-end',
+  },
+  topRightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+  },
+  editButtonTop: {
+    padding: 3,
+    borderRadius: 10,
+    backgroundColor: '#fff3e0',
+    borderWidth: 1,
+    borderColor: '#ffcc02',
   },
   currencyTextContainer: {
     marginLeft: 12,
@@ -509,46 +861,37 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     fontWeight: '500',
+    textAlign: 'right',
+    marginBottom: 4,
   },
-  rateSection: {
-    backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 20,
+  deleteButtonTop: {
+    padding: 3,
+    borderRadius: 10,
+    backgroundColor: '#fff5f5',
+    borderWidth: 1,
+    borderColor: '#ffebee',
   },
-  rateLabel: {
-    fontSize: 12,
-    color: '#666',
-    fontWeight: '600',
-    marginBottom: 6,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  rateValue: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#2196F3',
-  },
+
   amountSection: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 10,
   },
   amountItem: {
     flex: 1,
     alignItems: 'center',
   },
   amountLabel: {
-    fontSize: 11,
+    fontSize: 13,
     color: '#999',
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 3,
     textTransform: 'uppercase',
     letterSpacing: 0.5,
   },
   amountValue: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '700',
     color: '#1a1a1a',
     textAlign: 'center',
@@ -556,22 +899,108 @@ const styles = StyleSheet.create({
   exchangeIcon: {
     marginHorizontal: 16,
   },
-  deleteButton: {
+  memoRow: {
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#fff5f5',
-    borderRadius: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderWidth: 1,
-    borderColor: '#ffebee',
+    alignItems: 'flex-start',
+    marginTop: 6,
+    paddingTop: 6,
+    borderTopWidth: 1,
+    borderTopColor: '#f0f0f0',
   },
-  deleteButtonText: {
-    fontSize: 12,
-    color: '#ff5252',
+  memoText: {
+    fontSize: 16,
+    color: '#666',
+    fontStyle: 'italic',
+    lineHeight: 22,
+    marginLeft: 6,
+    flex: 1,
+  },
+  // 메모 모달 스타일
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalContainer: {
+    width: Platform.OS === 'web' ? 400 : '100%',
+    maxWidth: 400,
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 8,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    textAlign: 'center',
+    opacity: 0.7,
+    marginBottom: 24,
+    lineHeight: 20,
+  },
+  memoInput: {
+    height: 100,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 16,
+    marginBottom: 24,
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    height: 48,
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: 'rgba(150, 150, 150, 0.2)',
+  },
+  cancelButtonText: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#999',
+  },
+  confirmButton: {
+    backgroundColor: '#4CAF50',
+  },
+  confirmButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  inputGroup: {
+    marginBottom: 16,
+  },
+  inputLabel: {
+    fontSize: 14,
     fontWeight: '600',
-    marginLeft: 4,
+    marginBottom: 8,
+    color: '#333',
+  },
+  input: {
+    height: 48,
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    fontSize: 16,
   },
   headerText: {
     fontSize: 16,

@@ -272,22 +272,22 @@ export default function ExchangeRateScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    paddingTop: 60,
+    paddingTop: 50,
   },
   scrollView: {
     flex: 1,
-    padding: 16,
-    paddingTop: 30,
+    padding: 12,
+    paddingTop: 20,
   },
   header: {
-    marginBottom: 16,
-    marginTop: 10,
+    marginBottom: 12,
+    marginTop: 6,
   },
   title: {
     fontSize: 28,
     fontWeight: '800',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: 16,
     color: '#333',
     includeFontPadding: false,
     textAlignVertical: 'center',
@@ -296,7 +296,7 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
-    marginBottom: 30,
+    marginBottom: 20,
     color: '#666',
     fontWeight: '500',
     includeFontPadding: false,
@@ -309,7 +309,7 @@ const styles = StyleSheet.create({
   rateItem: {
     backgroundColor: '#FBFCFF',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -341,8 +341,8 @@ const styles = StyleSheet.create({
   chartContainer: {
     backgroundColor: '#FBFCFF',
     borderRadius: 16,
-    padding: 16,
-    marginVertical: 16,
+    padding: 14,
+    marginVertical: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -441,8 +441,8 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: '700',
-    marginTop: 24,
-    marginBottom: 16,
+    marginTop: 16,
+    marginBottom: 12,
     marginLeft: 5,
     color: '#333',
     includeFontPadding: false,

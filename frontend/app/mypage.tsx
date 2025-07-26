@@ -9,6 +9,7 @@ import axios from 'axios';
 import Config from '../constants/Config';
 import { useToast } from '../components/ToastProvider';
 
+
 interface UserInfo {
   id: number;
   username: string;
@@ -33,6 +34,8 @@ export default function MyPageScreen() {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [passwordLoading, setPasswordLoading] = useState(false);
+  
+
 
   useEffect(() => {
     loadUserInfo();
@@ -50,7 +53,8 @@ export default function MyPageScreen() {
         return;
       }
       
-      setUserInfo(JSON.parse(userInfoStr));
+      const parsedUserInfo = JSON.parse(userInfoStr);
+      setUserInfo(parsedUserInfo);
     } catch (error) {
       console.error('사용자 정보 로딩 실패:', error);
       showToast('사용자 정보를 불러오는데 실패했습니다.', 'error');
@@ -95,6 +99,8 @@ export default function MyPageScreen() {
     setNewUsername(userInfo?.username || '');
     setUsernameModalVisible(true);
   };
+
+
 
   const submitUsernameChange = async () => {
     if (!newUsername || newUsername.trim().length < 2) {
@@ -295,6 +301,8 @@ export default function MyPageScreen() {
             </View>
           )}
         </View>
+
+
 
         {/* 계정 정보 */}
         <View style={styles.section}>
@@ -844,5 +852,37 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
     textAlignVertical: 'center',
     lineHeight: 20,
+  },
+  // 프로필 이미지 관련 스타일
+  profileImageSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    position: 'relative',
+  },
+  profileImageInfo: {
+    marginTop: 16,
+    alignItems: 'center',
+  },
+  profileImageTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  profileImageDescription: {
+    fontSize: 14,
+    opacity: 0.7,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 12,
   },
 }); 

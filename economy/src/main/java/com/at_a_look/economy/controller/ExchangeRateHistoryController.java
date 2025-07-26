@@ -2,6 +2,8 @@ package com.at_a_look.economy.controller;
 
 import com.at_a_look.economy.dto.ExchangeRateHistoryRequest;
 import com.at_a_look.economy.dto.ExchangeRateHistoryResponse;
+import com.at_a_look.economy.dto.UpdateMemoRequest;
+import com.at_a_look.economy.dto.UpdateExchangeRateRequest;
 import com.at_a_look.economy.dto.response.ApiResponse;
 import com.at_a_look.economy.service.ExchangeRateHistoryService;
 import com.at_a_look.economy.service.UserService;
@@ -59,7 +61,47 @@ public class ExchangeRateHistoryController {
     }
 
     /**
-     * 환율 저장 기록 삭제
+     * 환율 저장 기록의 메모 업데이트
+     */
+    @PutMapping("/{historyId}/memo")
+    public ResponseEntity<ApiResponse<ExchangeRateHistoryResponse>> updateMemo(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long historyId,
+            @RequestBody UpdateMemoRequest request) {
+        try {
+            String userEmail = userService.getUserEmailFromToken(token);
+            ExchangeRateHistoryResponse response = exchangeRateHistoryService.updateMemo(userEmail, historyId, request);
+            
+            return ResponseEntity.ok(ApiResponse.success("메모가 업데이트되었습니다.", response));
+        } catch (Exception e) {
+            log.error("메모 업데이트 실패", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("메모 업데이트에 실패했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 환율 저장 기록의 환율 및 금액 업데이트
+     */
+    @PutMapping("/{historyId}")
+    public ResponseEntity<ApiResponse<ExchangeRateHistoryResponse>> updateExchangeRateHistory(
+            @RequestHeader("Authorization") String token,
+            @PathVariable Long historyId,
+            @RequestBody UpdateExchangeRateRequest request) {
+        try {
+            String userEmail = userService.getUserEmailFromToken(token);
+            ExchangeRateHistoryResponse response = exchangeRateHistoryService.updateExchangeRateHistory(userEmail, historyId, request);
+            
+            return ResponseEntity.ok(ApiResponse.success("환율 정보가 업데이트되었습니다.", response));
+        } catch (Exception e) {
+            log.error("환율 정보 업데이트 실패", e);
+            return ResponseEntity.badRequest()
+                    .body(ApiResponse.error("환율 정보 업데이트에 실패했습니다: " + e.getMessage()));
+        }
+    }
+
+    /**
+     * 특정 환율 저장 기록 삭제
      */
     @DeleteMapping("/{historyId}")
     public ResponseEntity<ApiResponse<String>> deleteExchangeRateHistory(

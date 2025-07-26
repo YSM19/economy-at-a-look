@@ -444,13 +444,13 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   valueText: {
-    fontSize: 32,
+    fontSize: 26,
     fontWeight: '700',
     color: '#333',
     textAlign: 'center',
     includeFontPadding: false,
     textAlignVertical: 'center',
-    lineHeight: 38,
+    lineHeight: 32,
   },
   labelText: {
     fontSize: 20,

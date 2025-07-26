@@ -10,6 +10,8 @@ import { View, StyleSheet } from 'react-native';
 import { HamburgerButton, BackButton } from '../components/HamburgerButton';
 import { Sidebar } from '../components/Sidebar';
 import { ToastProvider } from '../components/ToastProvider';
+import { NotificationProvider } from '../components/NotificationProvider';
+import { NotificationBell } from '../components/NotificationBell';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -22,8 +24,8 @@ export default function RootLayout() {
   const pathname = usePathname();
 
   // 뒤로가기 버튼을 표시할 경로들 (상세 화면들)
-  const showBackButtonPaths = ['/exchange-rate', '/interest-rate', '/consumer-price-index', '/mypage', '/exchange-rate-history'];
-  const shouldShowBackButton = showBackButtonPaths.includes(pathname);
+  const showBackButtonPaths = ['/exchange-rate', '/interest-rate', '/consumer-price-index', '/mypage', '/community/board', '/community/post'];
+  const shouldShowBackButton = showBackButtonPaths.includes(pathname) || pathname.startsWith('/community/board') || pathname.startsWith('/community/post');
   
   // admin 페이지에서는 네비게이션 버튼을 숨김
   const isAdminPage = pathname.startsWith('/admin');
@@ -44,17 +46,23 @@ export default function RootLayout() {
 
   return (
     <ToastProvider>
-      <ThemeProvider value={DefaultTheme}>
-        <View style={styles.container}>
-          {!isAdminPage && (
-            <View style={styles.hamburgerContainer}>
-              {shouldShowBackButton ? (
-                <BackButton />
-              ) : (
-                <HamburgerButton onPress={toggleSidebar} />
-              )}
-            </View>
-          )}
+      <NotificationProvider>
+        <ThemeProvider value={DefaultTheme}>
+          <View style={styles.container}>
+            {!isAdminPage && (
+              <>
+                <View style={styles.hamburgerContainer}>
+                  {shouldShowBackButton ? (
+                    <BackButton />
+                  ) : (
+                    <HamburgerButton onPress={toggleSidebar} />
+                  )}
+                </View>
+                <View style={styles.notificationContainer}>
+                  <NotificationBell />
+                </View>
+              </>
+            )}
 
           <Sidebar 
             isVisible={sidebarVisible} 
@@ -71,13 +79,18 @@ export default function RootLayout() {
             <Stack.Screen name="signup" options={{ headerShown: false }} />
             <Stack.Screen name="mypage" options={{ headerShown: false }} />
             <Stack.Screen name="exchange-rate-history" options={{ headerShown: false }} />
+            <Stack.Screen name="community" options={{ headerShown: false }} />
+            <Stack.Screen name="community/board/[boardType]" options={{ headerShown: false }} />
+            <Stack.Screen name="community/post/[postId]" options={{ headerShown: false }} />
+            <Stack.Screen name="community/write" options={{ headerShown: false }} />
             <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
             <Stack.Screen name="+not-found" />
           </Stack>
           <StatusBar style="auto" />
         </View>
       </ThemeProvider>
-    </ToastProvider>
+    </NotificationProvider>
+  </ToastProvider>
   );
 }
 
@@ -89,6 +102,12 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 50,
     left: 10,
+    zIndex: 100,
+  },
+  notificationContainer: {
+    position: 'absolute',
+    top: 50,
+    right: 10,
     zIndex: 100,
   },
 });
