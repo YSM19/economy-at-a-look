@@ -19,6 +19,10 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import com.at_a_look.economy.entity.User;
+import com.at_a_look.economy.repository.UserRepository;
+import io.jsonwebtoken.ExpiredJwtException;
+import java.util.Optional;
 
 @Slf4j
 @RestController
@@ -31,6 +35,7 @@ public class AuthController {
 
     private final UserService userService;
     private final JwtTokenUtil jwtTokenUtil;
+    private final UserRepository userRepository;
 
     @Operation(summary = "회원가입", description = "새로운 사용자 계정을 생성합니다.")
     @PostMapping("/signup")
@@ -106,6 +111,63 @@ public class AuthController {
             log.error("💥 [AuthController] 토큰 검증 중 예상치 못한 오류: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("토큰 검증 처리 중 오류가 발생했습니다."));
+        }
+    }
+
+    @Operation(summary = "토큰 갱신", description = "만료된 토큰을 새로운 토큰으로 갱신합니다.")
+    @PostMapping("/refresh")
+    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(@RequestHeader("Authorization") String token) {
+        log.info("🔄 [AuthController] 토큰 갱신 요청");
+        
+        try {
+            // "Bearer " 접두사 제거
+            if (token.startsWith("Bearer ")) {
+                token = token.substring(7);
+            }
+            
+            // 토큰에서 사용자 정보 추출
+            String email = jwtTokenUtil.getEmailFromToken(token);
+            Long userId = jwtTokenUtil.getUserIdFromToken(token);
+            String username = jwtTokenUtil.getUsernameFromToken(token);
+            String role = jwtTokenUtil.getRoleFromToken(token);
+            
+            if (email == null || userId == null) {
+                log.warn("❌ [AuthController] 토큰 갱신 실패: 토큰에서 사용자 정보를 추출할 수 없음");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("유효하지 않은 토큰입니다."));
+            }
+            
+            // 사용자 존재 여부 확인
+            Optional<User> userOpt = userRepository.findByEmailAndIsActiveTrue(email);
+            if (userOpt.isEmpty()) {
+                log.warn("❌ [AuthController] 토큰 갱신 실패: 사용자를 찾을 수 없음 - {}", email);
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(ApiResponse.error("사용자를 찾을 수 없습니다."));
+            }
+            
+            User user = userOpt.get();
+            
+            // 새로운 토큰 생성
+            String newToken = jwtTokenUtil.generateToken(
+                user.getId(),
+                user.getEmail(),
+                user.getUsername(),
+                user.getRole().toString()
+            );
+            
+            log.info("✅ [AuthController] 토큰 갱신 성공: email={}", email);
+            
+            return ResponseEntity.ok(ApiResponse.success("토큰이 성공적으로 갱신되었습니다.", 
+                LoginResponse.success(newToken, user)));
+                    
+        } catch (ExpiredJwtException e) {
+            log.warn("❌ [AuthController] 토큰 갱신 실패: 토큰이 만료됨");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ApiResponse.error("토큰이 만료되었습니다. 다시 로그인해주세요."));
+        } catch (Exception e) {
+            log.error("💥 [AuthController] 토큰 갱신 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("토큰 갱신 처리 중 오류가 발생했습니다."));
         }
     }
 

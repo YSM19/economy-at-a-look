@@ -1,5 +1,14 @@
 import axios, { AxiosResponse } from 'axios';
 import Config, { isDevelopment, useMockData } from '../constants/Config';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
+
+// 토스트 메시지를 표시하는 함수 (전역에서 사용 가능하도록)
+let showToastFunction: ((message: string, type?: 'success' | 'error' | 'info', duration?: number) => void) | null = null;
+
+export const setToastFunction = (toastFn: (message: string, type?: 'success' | 'error' | 'info', duration?: number) => void) => {
+  showToastFunction = toastFn;
+};
 
 /**
  * 환경 설정에 따라 구성된 axios 인스턴스
@@ -59,7 +68,7 @@ api.interceptors.response.use(
     }
     return response;
   },
-  error => {
+  async error => {
     // 디버그 모드일 때 오류 로깅
     if (Config.debug) {
       console.error('❌ 응답 오류:', error);
@@ -76,6 +85,75 @@ api.interceptors.response.use(
         console.error('타임아웃:', error.config?.timeout);
       } else {
         console.error('⚠️ 요청 설정 오류:', error.message);
+      }
+    }
+
+    // JWT 토큰 만료 처리 (401 Unauthorized)
+    if (error.response?.status === 401) {
+      console.log('🔐 JWT 토큰이 만료되었습니다. 토큰 갱신을 시도합니다.');
+      
+      try {
+        // 현재 토큰 가져오기
+        const currentToken = await AsyncStorage.getItem('userToken');
+        
+        if (currentToken && !error.config.url?.includes('/api/auth/refresh')) {
+          // 토큰 갱신 시도
+          const refreshResponse = await api.post('/api/auth/refresh', {}, {
+            headers: {
+              'Authorization': `Bearer ${currentToken}`,
+            }
+          });
+          
+          if (refreshResponse.data.success && refreshResponse.data.data.token) {
+            // 새로운 토큰 저장
+            await AsyncStorage.setItem('userToken', refreshResponse.data.data.token);
+            console.log('✅ 토큰 갱신 성공');
+            
+            // 원래 요청 재시도
+            const originalRequest = error.config;
+            originalRequest.headers['Authorization'] = `Bearer ${refreshResponse.data.data.token}`;
+            return api(originalRequest);
+          }
+        }
+        
+        // 토큰 갱신 실패 시 자동 로그아웃
+        console.log('❌ 토큰 갱신 실패. 자동 로그아웃을 진행합니다.');
+        await AsyncStorage.removeItem('userToken');
+        await AsyncStorage.removeItem('userInfo');
+        await AsyncStorage.removeItem('adminToken');
+        
+        // 토스트 메시지 표시
+        if (showToastFunction) {
+          showToastFunction('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error');
+        }
+        
+        // 로그인 페이지로 리다이렉트 (현재 페이지가 로그인 페이지가 아닌 경우에만)
+        const currentRoute = router.canGoBack() ? 'current' : '/login';
+        if (currentRoute !== '/login') {
+          router.replace('/login');
+        }
+        
+      } catch (refreshError) {
+        console.error('토큰 갱신 중 오류:', refreshError);
+        
+        // 갱신 실패 시에도 자동 로그아웃
+        try {
+          await AsyncStorage.removeItem('userToken');
+          await AsyncStorage.removeItem('userInfo');
+          await AsyncStorage.removeItem('adminToken');
+          
+          // 토스트 메시지 표시
+          if (showToastFunction) {
+            showToastFunction('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error');
+          }
+          
+          const currentRoute = router.canGoBack() ? 'current' : '/login';
+          if (currentRoute !== '/login') {
+            router.replace('/login');
+          }
+        } catch (storageError) {
+          console.error('토큰 삭제 중 오류:', storageError);
+        }
       }
     }
     
@@ -629,6 +707,44 @@ export const adminApi = {
 
   releaseExpiredSuspensions: (token: string) => withRetry(() =>
     api.post('/api/admin/users/release-expired-suspensions', {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+}; 
+
+// 인증 관련 API 호출
+export const authApi = {
+  login: (data: any) => withRetry(() => 
+    api.post('/api/auth/login', data)
+  ),
+  signup: (data: any) => withRetry(() => 
+    api.post('/api/auth/signup', data)
+  ),
+  validateToken: (token: string) => withRetry(() => 
+    api.get('/api/auth/validate', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  refreshToken: (token: string) => withRetry(() => 
+    api.post('/api/auth/refresh', {}, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  changeUsername: (data: any, token: string) => withRetry(() => 
+    api.put('/api/auth/change-username', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  changePassword: (data: any, token: string) => withRetry(() => 
+    api.put('/api/auth/change-password', data, {
       headers: {
         'Authorization': `Bearer ${token}`,
       }

@@ -14,6 +14,8 @@ import CPIRecommendations from '../components/CPIRecommendations';
 import ExchangeRateCalculator from '../components/ExchangeRateCalculator';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { economicIndexApi } from '../services/api';
+import { checkLoginStatusWithValidation } from '../utils/authUtils';
+import { useToast } from '../components/ToastProvider';
 
 interface CPIData {
   currentCPI: number;
@@ -32,6 +34,8 @@ interface CPIData {
 export default function HomeScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
+  const { showToast } = useToast();
+  
   // URL 파라미터로 전달된 탭 정보를 받아오거나, 기본값으로 'exchange' 사용
   const [activeTab, setActiveTab] = useState(
     typeof params.tab === 'string' ? params.tab : 'exchange'
@@ -43,6 +47,24 @@ export default function HomeScreen() {
   // CPI 데이터 상태 추가
   const [cpiData, setCpiData] = useState<CPIData | null>(null);
   const [cpiLoading, setCpiLoading] = useState(false);
+
+  // 앱 시작 시 토큰 유효성 확인
+  useEffect(() => {
+    const validateTokenOnStart = async () => {
+      try {
+        const { isLoggedIn, userInfo } = await checkLoginStatusWithValidation();
+        
+        if (!isLoggedIn && userInfo) {
+          // 토큰이 만료되어 자동으로 삭제된 경우
+          showToast('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error');
+        }
+      } catch (error) {
+        console.error('토큰 유효성 확인 중 오류:', error);
+      }
+    };
+
+    validateTokenOnStart();
+  }, [showToast]);
   
   // params.tab이 변경되면 activeTab도 업데이트
   useEffect(() => {
