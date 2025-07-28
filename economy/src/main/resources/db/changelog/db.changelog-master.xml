@@ -29,7 +29,7 @@
     <include file="db/changelog/014-create-post-likes-table.xml"/>
     <include file="db/changelog/015-create-post-bookmarks-table.xml"/>
     <include file="db/changelog/016-create-comment-likes-table.xml"/>
-    <include file="db/changelog/017-remove-profile-image-from-users.xml"/>
+<!--    <include file="db/changelog/017-remove-profile-image-from-users.xml"/>-->
     <include file="db/changelog/018-add-original-data-to-reports.xml"/>
     <include file="db/changelog/019-add-user-suspension-fields.xml"/>
 
