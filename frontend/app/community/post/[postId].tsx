@@ -708,6 +708,17 @@ export default function PostDetailScreen() {
             backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f8f9fa',
             borderBottomColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
           }]}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => router.back()}
+            >
+              <MaterialCommunityIcons 
+                name="arrow-left" 
+                size={24} 
+                color={colorScheme === 'dark' ? '#ffffff' : '#000000'} 
+              />
+            </TouchableOpacity>
+            
             <View style={styles.boardBadge}>
               <View style={[styles.boardIconSmall, { backgroundColor: `${currentBoard.color}15` }]}>
                 <MaterialCommunityIcons 
@@ -1107,14 +1118,18 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
   boardBadge: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
   },
   boardIconSmall: {
     width: 24,

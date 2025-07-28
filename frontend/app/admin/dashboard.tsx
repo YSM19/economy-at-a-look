@@ -2,13 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, TouchableOpacity, ScrollView, Alert, Platform, useColorScheme } from 'react-native';
 import { Stack, router } from 'expo-router';
 import { ThemedText } from '../../components/ThemedText';
-import { Sidebar } from '../../components/Sidebar';
+// 사이드바 기능 비활성화
+// import { Sidebar } from '../../components/Sidebar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export default function AdminDashboardScreen() {
   const colorScheme = useColorScheme();
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  // 사이드바 기능 비활성화
+  // const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
@@ -56,16 +58,18 @@ export default function AdminDashboardScreen() {
         headerShown: false
       }} />
       
-      {/* 사이드바 */}
+      {/* 사이드바 기능 비활성화
       <Sidebar 
         isVisible={isSidebarVisible} 
         onClose={() => setIsSidebarVisible(false)} 
       />
+      */}
       
       <ScrollView style={styles.scrollView} contentContainerStyle={styles.contentContainer}>
         {/* 헤더 */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
+            {/* 사이드바 기능 비활성화
             <TouchableOpacity onPress={() => setIsSidebarVisible(true)} style={styles.hamburgerButton}>
               <MaterialCommunityIcons 
                 name="menu" 
@@ -73,6 +77,7 @@ export default function AdminDashboardScreen() {
                 color={colorScheme === 'dark' ? '#ffffff' : '#000000'} 
               />
             </TouchableOpacity>
+            */}
             <TouchableOpacity 
               style={styles.logoutButtonMain}
               onPress={handleLogout}
@@ -82,7 +87,7 @@ export default function AdminDashboardScreen() {
           </View>
           
           <View style={styles.headerInfo}>
-            <ThemedText style={styles.headerTitle}>경제 한눈에 보기 - 관리자 페이지</ThemedText>
+            <ThemedText style={styles.headerTitle}>이코노뷰 - 관리자 페이지</ThemedText>
             <ThemedText style={styles.headerSubtitle}>데이터 관리 및 API 요청</ThemedText>
           </View>
         </View>

@@ -4,7 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
-import { Sidebar } from '../../components/Sidebar';
+// 사이드바 기능 비활성화
+// import { Sidebar } from '../../components/Sidebar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { adminApi } from '../../services/api';
@@ -30,7 +31,8 @@ interface Report {
 export default function AdminReportsScreen() {
   const router = useRouter();
   const colorScheme = useColorScheme();
-  const [isSidebarVisible, setIsSidebarVisible] = useState(false);
+  // 사이드바 기능 비활성화
+  // const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [reports, setReports] = useState<Report[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -286,6 +288,7 @@ export default function AdminReportsScreen() {
           backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f8f9fa',
           borderBottomColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
         }]}>
+          {/* 사이드바 기능 비활성화
           <TouchableOpacity onPress={() => setIsSidebarVisible(true)} style={styles.hamburgerButton}>
             <MaterialCommunityIcons 
               name="menu" 
@@ -293,6 +296,7 @@ export default function AdminReportsScreen() {
               color={colorScheme === 'dark' ? '#ffffff' : '#000000'} 
             />
           </TouchableOpacity>
+          */}
           <View style={styles.headerContent}>
             <MaterialCommunityIcons name="flag" size={24} color="#FF3B30" />
             <View style={styles.headerText}>
@@ -304,11 +308,12 @@ export default function AdminReportsScreen() {
           </View>
         </View>
         
-        {/* 사이드바 */}
+        {/* 사이드바 기능 비활성화
         <Sidebar 
           isVisible={isSidebarVisible} 
           onClose={() => setIsSidebarVisible(false)} 
         />
+        */}
 
         {/* 필터 탭 */}
         <View style={[styles.filterContainer, {

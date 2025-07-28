@@ -1,3 +1,5 @@
+// 사이드바 기능 비활성화 - 전체 파일이 주석처리됨
+/*
 import React from 'react';
 import { View, StyleSheet, TouchableOpacity, Animated, Dimensions, Linking, Alert, useColorScheme } from 'react-native';
 import { useRouter } from 'expo-router';
@@ -66,7 +68,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
       setIsLoggedIn(false);
       setUserInfo(null);
       onClose();
-      router.replace('/');
+      router.replace('/' as any);
     } catch (error) {
       console.error('로그아웃 오류:', error);
     }
@@ -103,11 +105,20 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
   }, [isVisible, slideAnim, backdropOpacity]);
 
   const navigateWithTab = (tab: string) => {
-    // index 페이지로 이동한 후 해당 탭을 설정하도록 파라미터 전달
-    router.push({
-      pathname: '/',
-      params: { tab }
-    } as any);
+    // 기존 페이지로 이동
+    switch (tab) {
+      case 'exchange':
+        router.push('/exchange-rate' as any);
+        break;
+      case 'interest':
+        router.push('/interest-rate' as any);
+        break;
+      case 'price':
+        router.push('/consumer-price-index' as any);
+        break;
+      default:
+        router.push('/' as any);
+    }
     onClose();
   };
 
@@ -188,10 +199,32 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
           backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f8f9fa',
           borderBottomColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
         }]}>
-          <ThemedText style={styles.title}>경제 한눈에</ThemedText>
+          <ThemedText style={styles.title}>이코노뷰</ThemedText>
         </View>
         
         <View style={styles.menuItems}>
+          <TouchableOpacity
+            style={[styles.menuItem, { 
+              backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
+            }]}
+            onPress={() => {
+              router.push('/(tabs)' as any);
+              onClose();
+            }}
+            activeOpacity={0.7}
+          >
+            <View style={[styles.iconContainer, { 
+              backgroundColor: colorScheme === 'dark' ? 'rgba(0, 122, 255, 0.15)' : 'rgba(0, 122, 255, 0.1)' 
+            }]}>
+              <MaterialCommunityIcons 
+                name="home" 
+                size={20} 
+                color="#007AFF" 
+              />
+            </View>
+            <ThemedText style={styles.menuItemText}>홈</ThemedText>
+          </TouchableOpacity>
+          
           <TouchableOpacity
             style={[styles.menuItem, { 
               backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
@@ -304,7 +337,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
               backgroundColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.05)' : 'rgba(0, 0, 0, 0.02)' 
             }]}
             onPress={() => {
-              router.push('/community');
+              router.push('/(tabs)/community' as any);
               onClose();
             }}
             activeOpacity={0.7}
@@ -350,7 +383,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
                   borderColor: colorScheme === 'dark' ? 'rgba(0, 122, 255, 0.2)' : 'rgba(0, 122, 255, 0.15)',
                 }]}
                 onPress={() => {
-                  router.push('/mypage');
+                  router.push('/mypage' as any);
                   onClose();
                 }}
                 activeOpacity={0.7}
@@ -460,7 +493,7 @@ export const Sidebar = ({ isVisible, onClose }: SidebarProps) => {
         onConfirm={() => {
           setIsLoginModalVisible(false);
           onClose();
-          router.push('/login');
+          router.push('/login' as any);
         }}
         onCancel={() => {
           setIsLoginModalVisible(false);
@@ -653,3 +686,4 @@ const styles = StyleSheet.create({
     letterSpacing: -0.1,
   },
 }); 
+*/

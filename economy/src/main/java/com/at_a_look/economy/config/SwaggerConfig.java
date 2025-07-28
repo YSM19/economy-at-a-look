@@ -17,7 +17,7 @@ public class SwaggerConfig {
         return new OpenAPI()
                 .components(new Components())
                 .info(new Info()
-                        .title("경제 한눈에 보기 API")
+                        .title("이코노뷰 API")
                         .description("환율, 금리, 물가지수 등의 경제 지표를 제공하는 API입니다.")
                         .version("v1.0.0")
                         .contact(new Contact()

@@ -46,10 +46,17 @@ public class UserService {
     public UserResponse signup(SignupRequest request) {
         log.info("🔐 [UserService] 회원가입 시도: email={}, username={}", request.getEmail(), request.getUsername());
         
-        // 이메일 중복 체크
-        if (userRepository.existsByEmail(request.getEmail())) {
+        // 이메일 중복 체크 (활성 계정만)
+        Optional<User> existingUser = userRepository.findByEmail(request.getEmail());
+        if (existingUser.isPresent() && existingUser.get().getIsActive()) {
             log.warn("❌ [UserService] 회원가입 실패: 이미 존재하는 이메일 - {}", request.getEmail());
             throw new IllegalArgumentException("이미 존재하는 이메일입니다.");
+        }
+        
+        // 삭제된 계정이 있다면 완전히 삭제하고 새로 생성
+        if (existingUser.isPresent() && !existingUser.get().getIsActive()) {
+            log.info("🔄 [UserService] 삭제된 계정 발견, 완전 삭제 후 재생성: email={}", request.getEmail());
+            userRepository.delete(existingUser.get());
         }
         
         // 닉네임 중복 체크
@@ -81,19 +88,44 @@ public class UserService {
     public LoginResponse login(LoginRequest request) {
         log.info("🔐 [UserService] 로그인 시도: email={}", request.getEmail());
         
-        Optional<User> userOpt = userRepository.findByEmailAndIsActiveTrue(request.getEmail());
+        // 입력값 검증
+        if (request.getEmail() == null || request.getEmail().trim().isEmpty()) {
+            log.warn("❌ [UserService] 로그인 실패: 이메일이 비어있음");
+            return LoginResponse.failure("이메일을 입력해주세요.");
+        }
+        
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            log.warn("❌ [UserService] 로그인 실패: 비밀번호가 비어있음 - {}", request.getEmail());
+            return LoginResponse.failure("비밀번호를 입력해주세요.");
+        }
+        
+        // 이메일 형식 검증
+        String emailRegex = "^[A-Za-z0-9+_.-]+@(.+)$";
+        if (!request.getEmail().trim().matches(emailRegex)) {
+            log.warn("❌ [UserService] 로그인 실패: 잘못된 이메일 형식 - {}", request.getEmail());
+            return LoginResponse.failure("올바른 이메일 형식을 입력해주세요.");
+        }
+        
+        // 먼저 이메일로 사용자 찾기 (활성 상태와 관계없이)
+        Optional<User> userOpt = userRepository.findByEmail(request.getEmail().trim());
         
         if (userOpt.isEmpty()) {
-            log.warn("❌ [UserService] 로그인 실패: 사용자를 찾을 수 없음 - {}", request.getEmail());
-            return LoginResponse.failure("이메일 또는 비밀번호가 올바르지 않습니다.");
+            log.warn("❌ [UserService] 로그인 실패: 존재하지 않는 이메일 - {}", request.getEmail());
+            return LoginResponse.failure("등록되지 않은 이메일입니다.");
         }
         
         User user = userOpt.get();
         
+        // 계정 상태 확인 (삭제된 계정인지 확인)
+        if (!user.getIsActive()) {
+            log.warn("❌ [UserService] 로그인 실패: 삭제된 계정 - {}", request.getEmail());
+            return LoginResponse.failure("삭제된 계정입니다. 다시 가입해주세요.");
+        }
+        
         // 비밀번호 확인 (BCrypt로 암호화된 비밀번호와 비교)
         if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             log.warn("❌ [UserService] 로그인 실패: 비밀번호 불일치 - {}", request.getEmail());
-            return LoginResponse.failure("이메일 또는 비밀번호가 올바르지 않습니다.");
+            return LoginResponse.failure("비밀번호가 올바르지 않습니다.");
         }
         
         // JWT 토큰 생성
@@ -425,6 +457,29 @@ public class UserService {
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         
         return convertToSuspensionResponse(user);
+    }
+
+    /**
+     * 계정 삭제
+     */
+    @Transactional
+    public void deleteAccount(String email) {
+        log.info("🗑️ [UserService] 계정 삭제 시도: email={}", email);
+        
+        User user = userRepository.findByEmailAndIsActiveTrue(email)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        
+        // 관리자 계정은 삭제 불가
+        if (user.getRole() == User.Role.ADMIN) {
+            log.warn("❌ [UserService] 관리자 계정 삭제 시도 차단: email={}", email);
+            throw new IllegalArgumentException("관리자 계정은 삭제할 수 없습니다.");
+        }
+        
+        // 계정 비활성화 (실제 삭제 대신)
+        user.setIsActive(false);
+        userRepository.save(user);
+        
+        log.info("✅ [UserService] 계정 삭제 완료: email={}, userId={}", email, user.getId());
     }
 
     /**

@@ -317,6 +317,17 @@ export default function BoardScreen() {
           backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f8f9fa',
           borderBottomColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
         }]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <MaterialCommunityIcons 
+              name="arrow-left" 
+              size={24} 
+              color={colorScheme === 'dark' ? '#ffffff' : '#000000'} 
+            />
+          </TouchableOpacity>
+          
           <View style={styles.boardInfo}>
             <View style={[styles.boardIcon, { backgroundColor: `${currentBoard.color}15` }]}>
               <MaterialCommunityIcons 
@@ -547,16 +558,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingVertical: 16,
     paddingTop: 40, // 상단 여백 추가
     borderBottomWidth: 1,
   },
+  backButton: {
+    padding: 8,
+    marginRight: 8,
+  },
   boardInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
+    marginLeft: 8,
   },
   boardIcon: {
     width: 48,

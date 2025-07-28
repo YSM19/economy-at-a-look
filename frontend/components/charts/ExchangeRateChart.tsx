@@ -262,10 +262,10 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 8,
   },
-     chartContainer: {
-     width: '100%',
-     borderRadius: 16,
-   },
+  chartContainer: {
+    width: '100%',
+    borderRadius: 16,
+  },
   noDataContainer: {
     flex: 1,
     justifyContent: 'center',

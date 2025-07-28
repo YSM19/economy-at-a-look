@@ -89,7 +89,13 @@ api.interceptors.response.use(
     }
 
     // JWT 토큰 만료 처리 (401 Unauthorized)
+    // 로그인 API 호출 시에는 토큰 만료 처리를 하지 않음
     if (error.response?.status === 401) {
+      if (error.config.url?.includes('/api/auth/login')) {
+        console.log('🔐 로그인 실패 - 토큰 만료 처리를 건너뜁니다.');
+        return Promise.reject(error);
+      }
+      
       console.log('🔐 JWT 토큰이 만료되었습니다. 토큰 갱신을 시도합니다.');
       
       try {
@@ -745,6 +751,13 @@ export const authApi = {
   ),
   changePassword: (data: any, token: string) => withRetry(() => 
     api.put('/api/auth/change-password', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+  deleteAccount: (token: string) => withRetry(() => 
+    api.delete('/api/auth/delete-account', {
       headers: {
         'Authorization': `Bearer ${token}`,
       }
