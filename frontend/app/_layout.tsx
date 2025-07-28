@@ -11,15 +11,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import { ToastProvider, useToast } from '../components/ToastProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
-import { NotificationBell } from '../components/NotificationBell';
 import { setToastFunction } from '../services/api';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
 
 function AppContent() {
-  // 사이드바 기능 비활성화
-  // const [sidebarVisible, setSidebarVisible] = useState(false);
   const [loaded] = useFonts({
     SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
   });
@@ -27,14 +24,6 @@ function AppContent() {
   const router = useRouter();
   const { showToast } = useToast();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
-  // 뒤로가기 버튼을 표시할 경로들 (상세 화면들)
-  const showBackButtonPaths = ['/exchange-rate', '/interest-rate', '/consumer-price-index', '/mypage', '/community/board', '/community/post', '/exchange-rate-history'];
-  const shouldShowBackButton = showBackButtonPaths.includes(pathname) || pathname.startsWith('/community/board') || pathname.startsWith('/community/post');
-  
-  // admin 페이지나 탭 페이지에서는 네비게이션 버튼을 숨김
-  const isAdminPage = pathname.startsWith('/admin');
-  const isTabPage = pathname.startsWith('/(tabs)');
 
   // 로그인 상태 확인 (앱 시작 시 한 번만)
   useEffect(() => {
@@ -82,36 +71,9 @@ function AppContent() {
     return null;
   }
 
-  // 사이드바 기능 비활성화
-  // const toggleSidebar = () => {
-  //   setSidebarVisible(!sidebarVisible);
-  // };
-
   return (
     <ThemeProvider value={DefaultTheme}>
       <View style={styles.container}>
-        {/* 사이드바 기능 비활성화
-        {!isAdminPage && !isTabPage && (
-          <>
-            <View style={styles.hamburgerContainer}>
-              {shouldShowBackButton ? (
-                <BackButton />
-              ) : (
-                <HamburgerButton onPress={toggleSidebar} />
-              )}
-            </View>
-            <View style={styles.notificationContainer}>
-              <NotificationBell />
-            </View>
-          </>
-        )}
-
-      <Sidebar 
-        isVisible={sidebarVisible} 
-        onClose={() => setSidebarVisible(false)} 
-      />
-        */}
-
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
@@ -141,17 +103,5 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  hamburgerContainer: {
-    position: 'absolute',
-    top: 50,
-    left: 10,
-    zIndex: 100,
-  },
-  notificationContainer: {
-    position: 'absolute',
-    top: 50,
-    right: 10,
-    zIndex: 100,
   },
 });
