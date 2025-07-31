@@ -26,6 +26,9 @@ public class CommentDto {
         // 작성자 정보
         private AuthorInfo author;
         
+        // 게시글 정보
+        private PostInfo post;
+        
         // 부모 댓글 정보 (대댓글인 경우)
         private ParentInfo parent;
         
@@ -41,6 +44,16 @@ public class CommentDto {
         @AllArgsConstructor
         public static class AuthorInfo {
             private String username;
+        }
+        
+        @Data
+        @Builder
+        @NoArgsConstructor
+        @AllArgsConstructor
+        public static class PostInfo {
+            private Long id;
+            private String title;
+            private String boardType;
         }
         
         @Data

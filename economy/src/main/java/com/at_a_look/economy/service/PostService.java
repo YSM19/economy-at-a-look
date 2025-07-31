@@ -352,6 +352,29 @@ public class PostService {
     }
 
     /**
+     * 내 좋아요 목록 조회
+     */
+    public PostDto.ListResponse getMyLikes(String userEmail, int page, int size) {
+        User user = findUserByEmail(userEmail);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        
+        Page<PostLike> likePage = postLikeRepository.findByUserOrderByCreatedAtDesc(user, pageable);
+        
+        List<PostDto.SummaryResponse> posts = likePage.getContent().stream()
+                .map(like -> convertToSummaryDto(like.getPost()))
+                .collect(Collectors.toList());
+
+        return PostDto.ListResponse.builder()
+                .posts(posts.stream().map(this::summaryToResponse).collect(Collectors.toList()))
+                .totalCount(likePage.getTotalElements())
+                .currentPage(page)
+                .totalPages(likePage.getTotalPages())
+                .hasNext(likePage.hasNext())
+                .sortBy("latest")
+                .build();
+    }
+
+    /**
      * 게시판 통계 조회
      */
     public PostDto.BoardStatsResponse getBoardStats() {

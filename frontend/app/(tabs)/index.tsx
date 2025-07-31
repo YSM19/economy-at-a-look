@@ -11,13 +11,7 @@ import { economicIndexApi } from '../../services/api';
 
 
 
-interface EconomicIndexData {
-  currentIndex: number;
-  prevIndex: number;
-  changeRate: number;
-  trend: string;
-  sentiment: string;
-}
+
 
 interface QuickAccessItem {
   id: string;
@@ -36,7 +30,6 @@ interface SummaryData {
 export default function HomeScreen() {
   const router = useRouter();
   
-  const [economicIndex, setEconomicIndex] = useState<EconomicIndexData | null>(null);
   const [summaryData, setSummaryData] = useState<SummaryData>({
     exchangeRate: 0,
     interestRate: 0,
@@ -93,27 +86,10 @@ export default function HomeScreen() {
           cpi: cpi
         });
         
-        // 경제 심리 지수는 임시 데이터로 설정 (API가 준비되지 않은 경우)
-        setEconomicIndex({
-          currentIndex: 75.2,
-          prevIndex: 72.8,
-          changeRate: 3.3,
-          trend: '상승',
-          sentiment: '긍정적'
-        });
-        
       } catch (error) {
         console.error('데이터 로딩 실패:', error);
         
         // 오류 시 기본 데이터 설정
-        setEconomicIndex({
-          currentIndex: 75.2,
-          prevIndex: 72.8,
-          changeRate: 3.3,
-          trend: '상승',
-          sentiment: '긍정적'
-        });
-        
         setSummaryData({
           exchangeRate: 1350,
           interestRate: 3.50,
@@ -143,23 +119,7 @@ export default function HomeScreen() {
     }
   };
 
-  const getSentimentColor = (sentiment: string) => {
-    switch (sentiment) {
-      case '긍정적': return '#4CAF50';
-      case '부정적': return '#F44336';
-      case '중립': return '#FF9800';
-      default: return '#2196F3';
-    }
-  };
 
-  const getTrendIcon = (trend: string) => {
-    switch (trend) {
-      case '상승': return 'trending-up';
-      case '하락': return 'trending-down';
-      case '보합': return 'trending-neutral';
-      default: return 'trending-neutral';
-    }
-  };
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
@@ -171,50 +131,7 @@ export default function HomeScreen() {
           <ThemedText style={styles.headerSubtitle}>오늘의 경제 현황을 한눈에</ThemedText>
         </View>
 
-        {/* 종합 경제 심리 지수 */}
-        <ThemedView style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <ThemedText style={styles.sectionTitle}>종합 경제 심리 지수</ThemedText>
-            <MaterialCommunityIcons 
-              name={getTrendIcon(economicIndex?.trend || '보합')} 
-              size={24} 
-              color={getSentimentColor(economicIndex?.sentiment || '중립')} 
-            />
-          </View>
-          
-          {loading ? (
-            <View style={styles.loadingContainer}>
-              <ThemedText>로딩 중...</ThemedText>
-            </View>
-          ) : economicIndex ? (
-            <View style={styles.indexContainer}>
-              <View style={styles.indexMain}>
-                <ThemedText style={styles.indexValue}>{economicIndex.currentIndex}</ThemedText>
-                <ThemedText style={styles.indexUnit}>점</ThemedText>
-              </View>
-              <View style={styles.indexDetails}>
-                <View style={styles.indexChange}>
-                  <MaterialCommunityIcons 
-                    name={economicIndex.changeRate >= 0 ? 'arrow-up' : 'arrow-down'} 
-                    size={16} 
-                    color={economicIndex.changeRate >= 0 ? '#4CAF50' : '#F44336'} 
-                  />
-                  <ThemedText style={[
-                    styles.changeRate, 
-                    { color: economicIndex.changeRate >= 0 ? '#4CAF50' : '#F44336' }
-                  ]}>
-                    {Math.abs(economicIndex.changeRate)}%
-                  </ThemedText>
-                </View>
-                <ThemedText style={styles.sentimentText}>
-                  {economicIndex.sentiment} 전망
-                </ThemedText>
-              </View>
-            </View>
-          ) : (
-            <ThemedText>데이터를 불러올 수 없습니다.</ThemedText>
-          )}
-        </ThemedView>
+
 
         {/* 주요 지표 요약 */}
         <ThemedView style={styles.section}>
@@ -320,16 +237,22 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 20 : 40,
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 8,
+    lineHeight: 36,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   headerSubtitle: {
     fontSize: 16,
     color: '#8E8E93',
+    lineHeight: 20,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   section: {
     margin: 16,
@@ -356,42 +279,6 @@ const styles = StyleSheet.create({
   loadingContainer: {
     alignItems: 'center',
     padding: 20,
-  },
-  indexContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  indexMain: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-  },
-  indexValue: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#007AFF',
-  },
-  indexUnit: {
-    fontSize: 18,
-    color: '#8E8E93',
-    marginLeft: 4,
-  },
-  indexDetails: {
-    alignItems: 'flex-end',
-  },
-  indexChange: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 4,
-  },
-  changeRate: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 4,
-  },
-  sentimentText: {
-    fontSize: 14,
-    color: '#8E8E93',
   },
   summaryGrid: {
     flexDirection: 'row',

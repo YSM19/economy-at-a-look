@@ -10,6 +10,28 @@ export const setToastFunction = (toastFn: (message: string, type?: 'success' | '
   showToastFunction = toastFn;
 };
 
+// 토큰 만료 처리 함수
+const handleTokenExpiration = async () => {
+  try {
+    await AsyncStorage.removeItem('userToken');
+    await AsyncStorage.removeItem('userInfo');
+    await AsyncStorage.removeItem('adminToken');
+    
+    // 토스트 메시지 표시
+    if (showToastFunction) {
+      showToastFunction('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error');
+    }
+    
+    // 로그인 페이지로 리다이렉트 (현재 페이지가 로그인 페이지가 아닌 경우에만)
+    const currentRoute = router.canGoBack() ? 'current' : '/login';
+    if (currentRoute !== '/login') {
+      router.replace('/login');
+    }
+  } catch (error) {
+    console.error('토큰 만료 처리 중 오류:', error);
+  }
+};
+
 /**
  * 환경 설정에 따라 구성된 axios 인스턴스
  */
@@ -124,42 +146,13 @@ api.interceptors.response.use(
         
         // 토큰 갱신 실패 시 자동 로그아웃
         console.log('❌ 토큰 갱신 실패. 자동 로그아웃을 진행합니다.');
-        await AsyncStorage.removeItem('userToken');
-        await AsyncStorage.removeItem('userInfo');
-        await AsyncStorage.removeItem('adminToken');
-        
-        // 토스트 메시지 표시
-        if (showToastFunction) {
-          showToastFunction('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error');
-        }
-        
-        // 로그인 페이지로 리다이렉트 (현재 페이지가 로그인 페이지가 아닌 경우에만)
-        const currentRoute = router.canGoBack() ? 'current' : '/login';
-        if (currentRoute !== '/login') {
-          router.replace('/login');
-        }
+        await handleTokenExpiration();
         
       } catch (refreshError) {
         console.error('토큰 갱신 중 오류:', refreshError);
         
         // 갱신 실패 시에도 자동 로그아웃
-        try {
-          await AsyncStorage.removeItem('userToken');
-          await AsyncStorage.removeItem('userInfo');
-          await AsyncStorage.removeItem('adminToken');
-          
-          // 토스트 메시지 표시
-          if (showToastFunction) {
-            showToastFunction('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error');
-          }
-          
-          const currentRoute = router.canGoBack() ? 'current' : '/login';
-          if (currentRoute !== '/login') {
-            router.replace('/login');
-          }
-        } catch (storageError) {
-          console.error('토큰 삭제 중 오류:', storageError);
-        }
+        await handleTokenExpiration();
       }
     }
     
@@ -505,6 +498,14 @@ export const commentApi = {
       params: { page, size }
     })
   ),
+  getMyLikes: (token: string, page = 0, size = 20) => withRetry(() =>
+    api.get('/api/posts/likes/my', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { page, size }
+    })
+  ),
   getReplies: (commentId: number, page = 0, size = 20) => withRetry(() =>
     api.get(`/api/comments/${commentId}/replies`, {
       params: { page, size }
@@ -572,12 +573,11 @@ export const fileUploadApi = {
     })
   ),
 
-  deleteFile: (fileUrl: string, token: string) => withRetry(() =>
-    api.delete('/api/files/delete', {
+  deleteFile: (fileId: string, token: string) => withRetry(() =>
+    api.delete(`/api/files/${fileId}`, {
       headers: {
         'Authorization': `Bearer ${token}`,
-      },
-      params: { fileUrl }
+      }
     })
   ),
 };

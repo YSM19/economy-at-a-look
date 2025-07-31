@@ -28,7 +28,7 @@ public class FileUploadService {
 
     private final FileUploadConfig fileUploadConfig;
 
-    @Value("${app.upload.url:http://localhost:8080/uploads}")
+    @Value("${app.upload.url:http://192.168.0.2:8080/uploads}")
     private String uploadUrl;
 
     private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
@@ -53,6 +53,8 @@ public class FileUploadService {
         String fileUrl = String.format("%s/%s/%s", uploadUrl, subfolder, filename);
 
         log.info("파일 업로드 완료: {} -> {}", originalFilename, fileUrl);
+        log.info("파일 저장 경로: {}", filePath.toAbsolutePath());
+        log.info("파일 존재 여부: {}", Files.exists(filePath));
 
         return FileUploadDto.UploadResponse.builder()
                 .fileUrl(fileUrl)

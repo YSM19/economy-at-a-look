@@ -164,4 +164,16 @@ const showLoginRequiredToast = (
       router.push('/login');
     }, 2000);
   }
+};
+
+/**
+ * 로그인 상태를 확인하고 로그인이 필요하면 커스텀 알림창을 표시하는 함수
+ */
+export const requireLoginWithAlert = (
+  featureName: string,
+  showToast: (msg: string, type?: 'success' | 'error' | 'info', duration?: number) => void,
+  setShowLoginModal: (visible: boolean) => void
+): void => {
+  // 모달을 표시하기 위해 상태를 true로 설정
+  setShowLoginModal(true);
 }; 

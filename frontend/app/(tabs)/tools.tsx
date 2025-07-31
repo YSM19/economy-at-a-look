@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, Platform, Modal, RefreshControl } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Platform, Modal, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ThemedText } from '../../components/ThemedText';
@@ -65,7 +65,11 @@ export default function ToolsScreen() {
   const [modalTitle, setModalTitle] = useState('');
   const [deleteTargetId, setDeleteTargetId] = useState<number | null>(null);
   
+
+  
   const { showToast } = useToast();
+
+
 
   // params.tab이 변경되면 activeTab도 업데이트
   useEffect(() => {
@@ -88,6 +92,8 @@ export default function ToolsScreen() {
       loadExchangeRateHistory();
     }
   }, [activeTab]);
+
+
 
   // 환율 계산기 관련 함수들
   const checkLoginStatus = async () => {
@@ -399,7 +405,7 @@ export default function ToolsScreen() {
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        showToast('로그인 토큰이 없습니다.', 'error');
+        setIsLoginModalVisible(true);
         return;
       }
 
@@ -454,7 +460,7 @@ export default function ToolsScreen() {
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        showToast('로그인 토큰이 없습니다.', 'error');
+        setIsLoginModalVisible(true);
         return;
       }
       
@@ -526,7 +532,7 @@ export default function ToolsScreen() {
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        showToast('로그인 토큰이 없습니다.', 'error');
+        setIsLoginModalVisible(true);
         return;
       }
 
@@ -567,7 +573,7 @@ export default function ToolsScreen() {
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) {
-        showToast('로그인 토큰이 없습니다.', 'error');
+        setIsLoginModalVisible(true);
         return;
       }
 
@@ -703,7 +709,7 @@ export default function ToolsScreen() {
     },
     {
       id: 'exchange-history',
-      title: '환율 저장',
+      title: '환율 기록',
       description: '저장된 환율 기록 관리',
       icon: 'history',
       color: '#9C27B0',
@@ -720,7 +726,7 @@ export default function ToolsScreen() {
     {
       id: 'news',
       title: '경제 뉴스',
-      description: '최신 경제 뉴스 및 분석',
+      description: '최신 경제 뉴스 및 분석 (출시 예정)',
       icon: 'newspaper',
       color: '#45B7D1',
       onPress: () => setActiveTab('news')
@@ -886,15 +892,15 @@ export default function ToolsScreen() {
 
                   {/* 액션 버튼들 */}
                   <View style={styles.actionContainer}>
-                    <TouchableOpacity style={styles.saveButton} onPress={saveExchangeRateHistory} disabled={isSaving}>
-                      <MaterialCommunityIcons name="content-save-edit-outline" size={22} color="#fff" />
-                      <ThemedText style={styles.saveButtonText}>
-                        {isSaving ? '저장 중...' : '현재 환율 저장'}
-                      </ThemedText>
-                    </TouchableOpacity>
                     <TouchableOpacity style={styles.clearButton} onPress={clearAll}>
                       <MaterialCommunityIcons name="refresh" size={16} color="#666" />
                       <ThemedText style={styles.clearButtonText}>초기화</ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.saveButton} onPress={saveExchangeRateHistory} disabled={isSaving}>
+                      <MaterialCommunityIcons name="content-save-edit-outline" size={22} color="#fff" />
+                      <ThemedText style={styles.saveButtonText}>
+                        {isSaving ? '저장 중...' : '환율 저장'}
+                      </ThemedText>
                     </TouchableOpacity>
                   </View>
 
@@ -1049,35 +1055,16 @@ export default function ToolsScreen() {
         return (
           <View style={styles.tabContent}>
             <ThemedView style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>투자 추천</ThemedText>
-              <View style={styles.recommendationContainer}>
-                <View style={styles.recommendationItem}>
-                  <MaterialCommunityIcons name="trending-up" size={24} color="#4CAF50" />
-                  <View style={styles.recommendationContent}>
-                    <ThemedText style={styles.recommendationTitle}>환율 투자</ThemedText>
-                    <ThemedText style={styles.recommendationText}>
-                      현재 달러 강세 추세로 인해 달러 투자를 고려해보세요.
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={styles.recommendationItem}>
-                  <MaterialCommunityIcons name="percent" size={24} color="#2196F3" />
-                  <View style={styles.recommendationContent}>
-                    <ThemedText style={styles.recommendationTitle}>금리 투자</ThemedText>
-                    <ThemedText style={styles.recommendationText}>
-                      기준금리 동결로 안정적인 채권 투자를 권장합니다.
-                    </ThemedText>
-                  </View>
-                </View>
-                <View style={styles.recommendationItem}>
-                  <MaterialCommunityIcons name="chart-line" size={24} color="#FF9800" />
-                  <View style={styles.recommendationContent}>
-                    <ThemedText style={styles.recommendationTitle}>물가 대응</ThemedText>
-                    <ThemedText style={styles.recommendationText}>
-                      인플레이션 대응을 위한 실물 자산 투자를 고려하세요.
-                    </ThemedText>
-                  </View>
-                </View>
+              <ThemedText style={styles.sectionTitle}>투자 추천 (출시 예정)</ThemedText>
+              <View style={styles.comingSoonContainer}>
+                <MaterialCommunityIcons name="trending-up" size={64} color="#4CAF50" style={styles.comingSoonIcon} />
+                <ThemedText style={styles.comingSoonTitle}>투자 추천 서비스</ThemedText>
+                <ThemedText style={styles.comingSoonDescription}>
+                  경제 지표를 기반으로 한 투자 추천 서비스가 출시 예정입니다.
+                </ThemedText>
+                <ThemedText style={styles.comingSoonSubDescription}>
+                  환율, 물가, 경제 심리 지수 등을 분석하여 투자 방향을 제시합니다.
+                </ThemedText>
               </View>
             </ThemedView>
           </View>
@@ -1087,29 +1074,16 @@ export default function ToolsScreen() {
         return (
           <View style={styles.tabContent}>
             <ThemedView style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>경제 뉴스</ThemedText>
-              <View style={styles.newsContainer}>
-                <View style={styles.newsItem}>
-                  <ThemedText style={styles.newsDate}>2024.01.15</ThemedText>
-                  <ThemedText style={styles.newsTitle}>한국은행 기준금리 동결 결정</ThemedText>
-                  <ThemedText style={styles.newsSummary}>
-                    한국은행이 기준금리를 3.50%로 동결했다. 인플레이션 안정화와 경제 성장 균형을 고려한 결정이다.
-                  </ThemedText>
-                </View>
-                <View style={styles.newsItem}>
-                  <ThemedText style={styles.newsDate}>2024.01.14</ThemedText>
-                  <ThemedText style={styles.newsTitle}>달러 강세 지속, 원화 약세</ThemedText>
-                  <ThemedText style={styles.newsSummary}>
-                    글로벌 리스크 회피 심리로 달러 강세가 지속되며 원화가 약세를 보이고 있다.
-                  </ThemedText>
-                </View>
-                <View style={styles.newsItem}>
-                  <ThemedText style={styles.newsDate}>2024.01.13</ThemedText>
-                  <ThemedText style={styles.newsTitle}>소비자물가지수 상승세 지속</ThemedText>
-                  <ThemedText style={styles.newsSummary}>
-                    12월 소비자물가지수가 전년 동월 대비 2.8% 상승했다. 에너지 가격 상승이 주요 요인이다.
-                  </ThemedText>
-                </View>
+              <ThemedText style={styles.sectionTitle}>경제 뉴스 (출시 예정)</ThemedText>
+              <View style={styles.comingSoonContainer}>
+                <MaterialCommunityIcons name="newspaper" size={64} color="#45B7D1" style={styles.comingSoonIcon} />
+                <ThemedText style={styles.comingSoonTitle}>경제 뉴스 서비스</ThemedText>
+                <ThemedText style={styles.comingSoonDescription}>
+                  경제 뉴스와 분석을 제공하는 서비스가 출시 예정입니다.
+                </ThemedText>
+                <ThemedText style={styles.comingSoonSubDescription}>
+                  경제 뉴스, 분석, 투자 정보를 한 곳에서 확인하실 수 있습니다.
+                </ThemedText>
               </View>
             </ThemedView>
           </View>
@@ -1234,7 +1208,7 @@ export default function ToolsScreen() {
   const getTabTitle = () => {
     switch (activeTab) {
       case 'calculator': return '계산기';
-      case 'exchange-history': return '환율 저장';
+      case 'exchange-history': return '환율 기록';
       case 'recommendations': return '투자 추천';
       case 'news': return '경제 뉴스';
       case 'notifications': return '알림 설정';
@@ -1289,7 +1263,7 @@ export default function ToolsScreen() {
       <ConfirmationModal
         visible={isLoginModalVisible}
         title="로그인 필요"
-        message="환율 저장 기능을 사용하려면 로그인이 필요합니다."
+        message="환율 기록 기능을 사용하려면 로그인이 필요합니다."
         confirmText="로그인하기"
         cancelText="취소"
         onConfirm={() => {
@@ -1500,16 +1474,22 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: 10,
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 8,
+    lineHeight: 36,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   headerSubtitle: {
     fontSize: 16,
     color: '#8E8E93',
+    lineHeight: 20,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   toolsMenu: {
     paddingHorizontal: 16,
@@ -1590,6 +1570,27 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6C757D',
     lineHeight: 20,
+  },
+  recommendationMeta: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginTop: 8,
+    gap: 12,
+  },
+  metaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  metaLabel: {
+    fontSize: 12,
+    color: '#999',
+    fontWeight: '500',
+  },
+  metaValue: {
+    fontSize: 12,
+    color: '#333',
+    fontWeight: '600',
   },
   newsContainer: {
     gap: 16,
@@ -1790,7 +1791,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
   },
   saveButton: {
-    flex: 1,
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1805,8 +1806,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   clearButton: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     padding: 16,
     backgroundColor: '#F8F9FA',
     borderRadius: 8,
@@ -2141,5 +2144,36 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     fontSize: 16,
+  },
+  
+  // 출시 예정 스타일
+  comingSoonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 60,
+    paddingHorizontal: 20,
+  },
+  comingSoonIcon: {
+    marginBottom: 20,
+  },
+  comingSoonTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  comingSoonDescription: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    lineHeight: 24,
+    marginBottom: 8,
+  },
+  comingSoonSubDescription: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 }); 

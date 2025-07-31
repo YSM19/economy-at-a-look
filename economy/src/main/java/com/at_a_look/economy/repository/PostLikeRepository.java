@@ -3,6 +3,8 @@ package com.at_a_look.economy.repository;
 import com.at_a_look.economy.entity.PostLike;
 import com.at_a_look.economy.entity.Post;
 import com.at_a_look.economy.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
@@ -18,4 +20,6 @@ public interface PostLikeRepository extends JpaRepository<PostLike, Long> {
     long countByPost(Post post);
     
     void deleteByUserAndPost(User user, Post post);
+    
+    Page<PostLike> findByUserOrderByCreatedAtDesc(User user, Pageable pageable);
 } 

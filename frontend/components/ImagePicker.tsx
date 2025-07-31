@@ -74,11 +74,33 @@ export const ImagePickerComponent: React.FC<ImagePickerComponentProps> = ({
           return;
         }
 
+        // 파일 확장자에 따른 MIME 타입 설정
+        const fileName = asset.fileName || `image_${Date.now()}.jpg`;
+        const extension = fileName.split('.').pop()?.toLowerCase();
+        let contentType: string;
+        switch (extension) {
+          case 'jpg':
+          case 'jpeg':
+            contentType = 'image/jpeg';
+            break;
+          case 'png':
+            contentType = 'image/png';
+            break;
+          case 'gif':
+            contentType = 'image/gif';
+            break;
+          case 'webp':
+            contentType = 'image/webp';
+            break;
+          default:
+            contentType = 'image/jpeg';
+        }
+
         const newImage: ImageAttachment = {
           id: Date.now().toString(),
           uri: asset.uri,
           name: asset.fileName || `image_${Date.now()}.jpg`,
-          type: asset.type || 'image/jpeg',
+          type: contentType,
           size: asset.fileSize || 0,
         };
 

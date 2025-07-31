@@ -3,6 +3,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { Platform } from 'react-native';
 
 export default function TabLayout() {
+
+
+
   return (
     <Tabs
       screenOptions={{
@@ -13,8 +16,8 @@ export default function TabLayout() {
           backgroundColor: '#FFFFFF',
           borderTopWidth: 1,
           borderTopColor: '#E5E5EA',
-          height: Platform.OS === 'ios' ? 88 : 60,
-          paddingBottom: Platform.OS === 'ios' ? 20 : 10,
+          height: Platform.OS === 'ios' ? 120 : 85,
+          paddingBottom: Platform.OS === 'ios' ? 45 : 25,
           paddingTop: 10,
           shadowColor: '#000',
           shadowOffset: { width: 0, height: -2 },
@@ -86,6 +89,24 @@ export default function TabLayout() {
       />
       <Tabs.Screen
         name="profile-management"
+        options={{
+          href: null, // 탭바에서 숨김
+        }}
+      />
+      <Tabs.Screen
+        name="notification-settings"
+        options={{
+          href: null, // 탭바에서 숨김
+        }}
+      />
+      <Tabs.Screen
+        name="help"
+        options={{
+          href: null, // 탭바에서 숨김
+        }}
+      />
+      <Tabs.Screen
+        name="suggestion"
         options={{
           href: null, // 탭바에서 숨김
         }}

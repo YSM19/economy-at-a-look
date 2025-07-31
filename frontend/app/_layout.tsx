@@ -3,15 +3,16 @@ import { useFonts } from 'expo-font';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import 'react-native-reanimated';
-import { View, StyleSheet } from 'react-native';
+import { View, StyleSheet, AppState, AppStateStatus } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 
 import { ToastProvider, useToast } from '../components/ToastProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
 import { setToastFunction } from '../services/api';
+import { checkLoginStatusWithValidation } from '../utils/authUtils';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -24,6 +25,39 @@ function AppContent() {
   const router = useRouter();
   const { showToast } = useToast();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+  const appState = useRef(AppState.currentState);
+
+  // 앱 상태 변경 감지 및 토큰 유효성 검증
+  useEffect(() => {
+    const handleAppStateChange = async (nextAppState: AppStateStatus) => {
+      // 앱이 포그라운드로 돌아올 때만 토큰 검증
+      if (appState.current.match(/inactive|background/) && nextAppState === 'active') {
+        console.log('🔄 앱이 포그라운드로 돌아왔습니다. 토큰 유효성을 검증합니다.');
+        
+        try {
+          const authStatus = await checkLoginStatusWithValidation();
+          
+          if (!authStatus.isLoggedIn) {
+            console.log('❌ 토큰이 유효하지 않습니다. 로그인 페이지로 이동합니다.');
+            showToast('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error');
+            router.replace('/(tabs)/login');
+          } else {
+            console.log('✅ 토큰이 유효합니다.');
+          }
+        } catch (error) {
+          console.error('토큰 검증 중 오류:', error);
+        }
+      }
+      
+      appState.current = nextAppState;
+    };
+
+    const subscription = AppState.addEventListener('change', handleAppStateChange);
+
+    return () => {
+      subscription?.remove();
+    };
+  }, [router, showToast]);
 
   // 로그인 상태 확인 (앱 시작 시 한 번만)
   useEffect(() => {

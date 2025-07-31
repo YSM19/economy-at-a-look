@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, TextInput, TouchableOpacity, Alert, Platform, ScrollView } from 'react-native';
-import { Stack, router } from 'expo-router';
+import React, { useState, useCallback } from 'react';
+import { StyleSheet, View, TextInput, TouchableOpacity, Alert, Platform, ScrollView, useColorScheme } from 'react-native';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { authApi } from '../../services/api';
 import Config from '../../constants/Config';
 import { useToast } from '../../components/ToastProvider';
+import { checkLoginStatusWithValidation } from '../../utils/authUtils';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -14,7 +15,35 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  
+  const router = useRouter();
+  const colorScheme = useColorScheme();
   const { showToast } = useToast();
+
+  // 화면이 포커스될 때마다 로그인 상태 확인
+  useFocusEffect(
+    useCallback(() => {
+      const checkExistingLogin = async () => {
+        try {
+          const authStatus = await checkLoginStatusWithValidation();
+          if (authStatus.isLoggedIn) {
+            console.log('✅ 이미 로그인된 상태입니다. 홈으로 이동합니다.');
+            const user = authStatus.userInfo;
+            if (user && user.role === 'ADMIN') {
+              router.replace('/(tabs)/profile');
+            } else {
+              router.replace('/(tabs)/index');
+            }
+          }
+        } catch (error) {
+          console.error('로그인 상태 확인 중 오류:', error);
+        }
+      };
+
+      checkExistingLogin();
+    }, [router])
+  );
 
   const validateEmail = (email: string) => {
     if (!email.trim()) {
@@ -174,11 +203,6 @@ export default function LoginScreen() {
   return (
     <ThemedView style={{ flex: 1 }}>
       <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
-      <Stack.Screen options={{ 
-        title: '로그인',
-        headerShown: false
-      }} />
-      
       <View style={styles.formContainer}>
         <ThemedText style={styles.title}>이코노뷰</ThemedText>
         <ThemedText style={styles.subtitle}>로그인</ThemedText>

@@ -215,6 +215,25 @@ public class PostController {
         }
     }
 
+    @GetMapping("/likes/my")
+    @Operation(summary = "내 좋아요 목록 조회", description = "사용자가 좋아요한 게시글 목록을 조회합니다.")
+    public ResponseEntity<ApiResponse<PostDto.ListResponse>> getMyLikes(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            HttpServletRequest request) {
+        
+        try {
+            String userEmail = getUserEmailFromToken(request);
+            
+            PostDto.ListResponse response = postService.getMyLikes(userEmail, page, size);
+            
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (Exception e) {
+            log.error("내 좋아요 목록 조회 실패", e);
+            return ResponseEntity.badRequest().body(ApiResponse.error("내 좋아요 목록 조회에 실패했습니다."));
+        }
+    }
+
     @GetMapping("/board-stats")
     @Operation(summary = "게시판 통계 조회", description = "각 게시판별 게시글 수와 최근 게시글 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<PostDto.BoardStatsResponse>> getBoardStats() {

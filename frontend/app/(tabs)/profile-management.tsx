@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Alert, TextInput, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, TextInput, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
@@ -10,6 +10,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useToast } from '../../components/ToastProvider';
 import { authApi } from '../../services/api';
 import Config from '../../constants/Config';
+import { ConfirmationModal } from '../../components/ConfirmationModal';
 
 interface UserInfo {
   id: number;
@@ -33,6 +34,9 @@ export default function ProfileManagementScreen() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  
+  // 모달 상태
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     loadUserInfo();
@@ -192,57 +196,46 @@ export default function ProfileManagementScreen() {
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      '계정 삭제',
-      '정말로 계정을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다.',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setLoading(true);
-              
-              // 현재 토큰 가져오기
-              const token = await AsyncStorage.getItem('userToken');
-              if (!token) {
-                showToast('로그인 정보를 찾을 수 없습니다.', 'error');
-                return;
-              }
+    setShowDeleteModal(true);
+  };
 
-              // API 호출로 계정 삭제
-              await authApi.deleteAccount(token);
+  const confirmDeleteAccount = async () => {
+    try {
+      setLoading(true);
+      setShowDeleteModal(false);
+      
+      // 현재 토큰 가져오기
+      const token = await AsyncStorage.getItem('userToken');
+      if (!token) {
+        showToast('로그인 정보를 찾을 수 없습니다.', 'error');
+        return;
+      }
 
-              // 로컬 스토리지 정리
-              await AsyncStorage.removeItem('userToken');
-              await AsyncStorage.removeItem('userInfo');
-              
-              showToast('계정이 성공적으로 삭제되었습니다.', 'success');
-              router.replace('/(tabs)/login');
-            } catch (error: any) {
-              console.error('계정 삭제 오류:', error);
-              
-              let errorMessage = '계정 삭제에 실패했습니다.';
-              if (error.response?.data?.message) {
-                errorMessage = error.response.data.message;
-              } else if (error.response?.status === 401) {
-                errorMessage = '로그인 세션이 만료되었습니다. 다시 로그인해주세요.';
-              } else if (error.response?.status === 403) {
-                errorMessage = '관리자 계정은 삭제할 수 없습니다.';
-              }
-              
-              showToast(errorMessage, 'error');
-            } finally {
-              setLoading(false);
-            }
-          },
-        },
-      ]
-    );
+      // API 호출로 계정 삭제
+      await authApi.deleteAccount(token);
+
+      // 로컬 스토리지 정리
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userInfo');
+      
+      showToast('계정이 성공적으로 삭제되었습니다.', 'success');
+      router.replace('/(tabs)/login');
+    } catch (error: any) {
+      console.error('계정 삭제 오류:', error);
+      
+      let errorMessage = '계정 삭제에 실패했습니다.';
+      if (error.response?.data?.message) {
+        errorMessage = error.response.data.message;
+      } else if (error.response?.status === 401) {
+        errorMessage = '로그인 세션이 만료되었습니다. 다시 로그인해주세요.';
+      } else if (error.response?.status === 403) {
+        errorMessage = '관리자 계정은 삭제할 수 없습니다.';
+      }
+      
+      showToast(errorMessage, 'error');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -373,6 +366,18 @@ export default function ProfileManagementScreen() {
           </TouchableOpacity>
         </ThemedView>
       </ScrollView>
+      
+      <ConfirmationModal
+        visible={showDeleteModal}
+        title="계정 삭제"
+        message="정말로 계정을 삭제하시겠습니까?\n이 작업은 되돌릴 수 없습니다."
+        confirmText="삭제"
+        cancelText="취소"
+        onConfirm={confirmDeleteAccount}
+        onCancel={() => setShowDeleteModal(false)}
+        iconName="delete"
+        iconColor="#FF3B30"
+      />
     </SafeAreaView>
   );
 }

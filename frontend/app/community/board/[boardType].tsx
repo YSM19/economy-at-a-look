@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, useColorScheme, Platform, RefreshControl, TextInput, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ThemedText } from '../../../components/ThemedText';
 import { ThemedView } from '../../../components/ThemedView';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ReportModal } from '../../../components/ReportModal';
 import { postApi, reportApi } from '../../../services/api';
-import { requireLogin } from '../../../utils/authUtils';
+import { requireLogin, checkLoginStatusWithValidation, requireLoginWithAlert } from '../../../utils/authUtils';
 import { useToast } from '../../../components/ToastProvider';
 import { ConfirmationModal } from '../../../components/ConfirmationModal';
 
@@ -110,6 +110,13 @@ export default function BoardScreen() {
     checkLoginStatus();
     loadPosts();
   }, [boardType, sortBy]);
+
+  // 화면이 포커스될 때마다 게시글 목록을 다시 로드
+  useFocusEffect(
+    useCallback(() => {
+      loadPosts();
+    }, [boardType, sortBy])
+  );
 
   const checkLoginStatus = async () => {
     try {
@@ -213,18 +220,18 @@ export default function BoardScreen() {
   };
 
   const handleWritePress = async () => {
-    const isLoggedIn = await requireLogin('글 작성', showToast);
+    const { isLoggedIn } = await checkLoginStatusWithValidation();
     if (isLoggedIn) {
       router.push(`/community/write?boardType=${boardType}` as any);
     } else {
-      setShowLoginModal(true);
+      requireLoginWithAlert('글 작성', showToast, setShowLoginModal);
     }
   };
 
   const handleReportPost = async (postId: number) => {
-    const isLoggedIn = await requireLogin('게시글 신고', showToast);
+    const { isLoggedIn } = await checkLoginStatusWithValidation();
     if (!isLoggedIn) {
-      setShowLoginModal(true);
+      requireLoginWithAlert('게시글 신고', showToast, setShowLoginModal);
       return;
     }
     
@@ -319,7 +326,7 @@ export default function BoardScreen() {
         }]}>
           <TouchableOpacity
             style={styles.backButton}
-            onPress={() => router.back()}
+            onPress={() => router.push('/(tabs)/community')}
           >
             <MaterialCommunityIcons 
               name="arrow-left" 
@@ -536,10 +543,10 @@ export default function BoardScreen() {
       <ConfirmationModal
         visible={showLoginModal}
         title="로그인 필요"
-        message="로그인 페이지로 이동하시겠습니까?"
+        message="해당 기능을 사용하려면 로그인이 필요합니다. 로그인 페이지로 이동하시겠습니까?"
         confirmText="이동"
         cancelText="취소"
-        onConfirm={() => { setShowLoginModal(false); router.push('/login'); }}
+        onConfirm={() => { setShowLoginModal(false); router.push('/(tabs)/login'); }}
         onCancel={() => setShowLoginModal(false)}
         iconName="login"
         iconColor="#FF9500"
@@ -558,20 +565,20 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
+    paddingHorizontal: 12,
     paddingVertical: 16,
     paddingTop: 40, // 상단 여백 추가
     borderBottomWidth: 1,
   },
   backButton: {
-    padding: 8,
+    padding: 2,
     marginRight: 8,
   },
   boardInfo: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 2,
   },
   boardIcon: {
     width: 48,

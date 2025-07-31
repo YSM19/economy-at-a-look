@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, useColorScheme, Platform, TextInput, Alert, Modal, KeyboardAvoidingView } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, useColorScheme, Platform, TextInput, Alert, Modal, KeyboardAvoidingView, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { ThemedText } from '../../components/ThemedText';
@@ -104,6 +104,57 @@ export default function WritePostScreen() {
     setTags(tags.filter(tag => tag !== tagToRemove));
   };
 
+  const pickImage = async () => {
+    try {
+      const ImagePicker = await import('expo-image-picker');
+      
+      // 권한 요청
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('권한 필요', '사진 라이브러리 접근을 위해 권한이 필요합니다.');
+        return;
+      }
+
+      const options = {
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: false, // CROP 기능 제거
+        aspect: undefined,
+        quality: 0.8,
+      };
+
+      const result = await ImagePicker.launchImageLibraryAsync(options);
+
+      if (!result.canceled && result.assets[0]) {
+        const asset = result.assets[0];
+        
+        // 파일 크기 체크
+        if (asset.fileSize && asset.fileSize > 10 * 1024 * 1024) {
+          Alert.alert('파일 크기 초과', '10MB 이하의 이미지만 업로드할 수 있습니다.');
+          return;
+        }
+
+        // 최대 이미지 수 체크
+        if (images.length >= 5) {
+          Alert.alert('이미지 수 초과', '최대 5개의 이미지만 첨부할 수 있습니다.');
+          return;
+        }
+
+        const newImage: ImageAttachment = {
+          id: Date.now().toString(),
+          uri: asset.uri,
+          name: asset.fileName || `image_${Date.now()}.jpg`,
+          type: asset.type || 'image/jpeg',
+          size: asset.fileSize || 0,
+        };
+
+        setImages([...images, newImage]);
+      }
+    } catch (error) {
+      console.error('이미지 선택 오류:', error);
+      Alert.alert('오류', '이미지를 선택하는 중 오류가 발생했습니다.');
+    }
+  };
+
   const handleSubmit = async () => {
     if (!title.trim()) {
       Alert.alert('알림', '제목을 입력해주세요.');
@@ -125,25 +176,59 @@ export default function WritePostScreen() {
       }
 
       // 이미지 업로드 처리
-      let uploadedImageUrls: string[] = [];
+      let uploadedImages: any[] = [];
       if (images.length > 0) {
         try {
           console.log('이미지 업로드 시작...');
-          const uploadPromises = images.map(async (image) => {
+          const uploadPromises = images.map(async (image, index) => {
             const formData = new FormData();
+            
+            // 파일 확장자에 따른 MIME 타입 설정
+            const extension = image.name.split('.').pop()?.toLowerCase();
+            let contentType: string;
+            switch (extension) {
+              case 'jpg':
+              case 'jpeg':
+                contentType = 'image/jpeg';
+                break;
+              case 'png':
+                contentType = 'image/png';
+                break;
+              case 'gif':
+                contentType = 'image/gif';
+                break;
+              case 'webp':
+                contentType = 'image/webp';
+                break;
+              default:
+                contentType = 'image/jpeg';
+            }
+            
             formData.append('file', {
               uri: image.uri,
-              type: image.type,
+              type: contentType,
               name: image.name,
             } as any);
             formData.append('category', 'post');
             
             const uploadResponse = await fileUploadApi.uploadImage(formData, token);
-            return uploadResponse.data?.data?.fileUrl;
+            console.log('이미지 업로드 응답:', uploadResponse.data);
+            
+            if (uploadResponse.data?.success && uploadResponse.data?.data) {
+              return {
+                uploadedImageUrl: uploadResponse.data.data.fileUrl,
+                originalFilename: uploadResponse.data.data.originalFilename,
+                contentType: uploadResponse.data.data.contentType,
+                fileSize: uploadResponse.data.data.fileSize,
+                displayOrder: index + 1
+              };
+            } else {
+              throw new Error('이미지 업로드 실패');
+            }
           });
           
-          uploadedImageUrls = await Promise.all(uploadPromises);
-          console.log('업로드된 이미지 URLs:', uploadedImageUrls);
+          uploadedImages = await Promise.all(uploadPromises);
+          console.log('업로드된 이미지 정보:', uploadedImages);
         } catch (uploadError) {
           console.error('이미지 업로드 오류:', uploadError);
           Alert.alert('경고', '이미지 업로드에 실패했습니다. 텍스트만 작성하시겠습니까?', [
@@ -154,42 +239,25 @@ export default function WritePostScreen() {
         }
       }
 
-      // 이미지 정보를 백엔드가 기대하는 형식으로 변환
-      const postImages = uploadedImageUrls.map((url, index) => ({
-        uploadedImageUrl: url,
-        originalFilename: `image_${index + 1}.jpg`,
-        contentType: 'image/jpeg',
-        fileSize: 0,
-        displayOrder: index + 1
-      }));
-
       const postData = {
         title: title.trim(),
         content: content.trim(),
         boardType: selectedBoard,
         tags: tags,
-        images: postImages
+        images: uploadedImages
       };
 
       console.log('글 작성 데이터:', postData);
       console.log('선택된 게시판 타입:', selectedBoard);
+      console.log('업로드된 이미지 개수:', uploadedImages.length);
+      console.log('업로드된 이미지 상세:', JSON.stringify(uploadedImages, null, 2));
       
       const response = await postApi.createPost(postData, token);
       console.log('글 작성 응답:', response);
       
       if (response.data?.success) {
-        Alert.alert(
-          '성공',
-          '글이 성공적으로 작성되었습니다.',
-          [
-            {
-              text: '확인',
-              onPress: () => {
-                router.back();
-              }
-            }
-          ]
-        );
+        showToast('글이 성공적으로 작성되었습니다.', 'success');
+        router.back();
       } else {
         throw new Error(response.data?.message || '글 작성에 실패했습니다.');
       }
@@ -287,55 +355,83 @@ export default function WritePostScreen() {
 
           <ScrollView style={styles.scrollView} keyboardShouldPersistTaps="handled">
             {/* 게시판 선택 */}
-            <TouchableOpacity
-              style={[styles.boardSelector, {
-                backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
-                borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-              }]}
-              onPress={() => setIsBoardModalVisible(true)}
-            >
-              <View style={styles.boardSelectorContent}>
-                <View style={[styles.boardIconSmall, { backgroundColor: `${selectedBoardInfo.color}15` }]}>
-                  <MaterialCommunityIcons 
-                    name={selectedBoardInfo.icon as any} 
-                    size={20} 
-                    color={selectedBoardInfo.color} 
-                  />
+            <View style={styles.boardSelectorContainer}>
+              <ThemedText style={[styles.boardSelectorLabel, {
+                color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+              }]}>
+                게시판
+              </ThemedText>
+              <TouchableOpacity
+                style={[styles.boardSelector, {
+                  backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                  borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+                }]}
+                onPress={() => setIsBoardModalVisible(true)}
+              >
+                <View style={styles.boardSelectorContent}>
+                  <View style={[styles.boardIconSmall, { backgroundColor: `${selectedBoardInfo.color}15` }]}>
+                    <MaterialCommunityIcons 
+                      name={selectedBoardInfo.icon as any} 
+                      size={20} 
+                      color={selectedBoardInfo.color} 
+                    />
+                  </View>
+                  <ThemedText style={[styles.boardSelectorText, {
+                    color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                  }]}>
+                    {selectedBoardInfo.name}
+                  </ThemedText>
                 </View>
-                <ThemedText style={styles.boardSelectorText}>{selectedBoardInfo.name}</ThemedText>
-              </View>
-              <MaterialCommunityIcons 
-                name="chevron-down" 
-                size={20} 
-                color={colorScheme === 'dark' ? '#8e8e93' : '#8e8e93'} 
-              />
-            </TouchableOpacity>
+                <MaterialCommunityIcons 
+                  name="chevron-down" 
+                  size={20} 
+                  color={colorScheme === 'dark' ? '#8e8e93' : '#8e8e93'} 
+                />
+              </TouchableOpacity>
+            </View>
 
             {/* 제목 입력 */}
-            <View style={[styles.inputContainer, {
-              backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
-              borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-            }]}>
-              <TextInput
-                style={[styles.titleInput, {
-                  color: colorScheme === 'dark' ? '#ffffff' : '#000000'
-                }]}
-                placeholder="제목을 입력하세요"
-                placeholderTextColor={colorScheme === 'dark' ? '#8e8e93' : '#8e8e93'}
-                value={title}
-                onChangeText={setTitle}
-                maxLength={100}
-                multiline={false}
-              />
-              <ThemedText style={styles.characterCount}>{title.length}/100</ThemedText>
+            <View style={styles.inputSection}>
+              <ThemedText style={[styles.inputLabel, {
+                color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+              }]}>
+                제목
+              </ThemedText>
+              <View style={[styles.inputContainer, {
+                backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }]}>
+                <TextInput
+                  style={[styles.titleInput, {
+                    color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                  }]}
+                  placeholder="제목을 입력하세요"
+                  placeholderTextColor={colorScheme === 'dark' ? '#8e8e93' : '#8e8e93'}
+                  value={title}
+                  onChangeText={setTitle}
+                  maxLength={100}
+                  multiline={false}
+                />
+                <ThemedText style={[styles.characterCount, {
+                  color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+                }]}>
+                  {title.length}/100
+                </ThemedText>
+              </View>
             </View>
 
             {/* 내용 입력 */}
-            <View style={[styles.inputContainer, {
-              backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
-              borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
-              minHeight: 300
-            }]}>
+            <View style={styles.inputSection}>
+              <ThemedText style={[styles.inputLabel, {
+                color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+              }]}>
+                내용
+              </ThemedText>
+              <View style={[styles.inputContainer, {
+                backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)',
+                minHeight: 300
+              }]}>
               <TextInput
                 style={[styles.contentInput, {
                   color: colorScheme === 'dark' ? '#ffffff' : '#000000'
@@ -348,17 +444,127 @@ export default function WritePostScreen() {
                 multiline={true}
                 textAlignVertical="top"
               />
+              
               <View style={styles.contentFooter}>
-                <ThemedText style={styles.characterCount}>{content.length}/5000</ThemedText>
+                <ThemedText style={[styles.characterCount, {
+                  color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+                }]}>
+                  {content.length}/5000
+                </ThemedText>
               </View>
             </View>
+          </View>
 
-            {/* 태그 입력 */}
+          {/* 이미지 첨부 섹션 */}
+          <View style={styles.inputSection}>
+            <ThemedText style={[styles.inputLabel, {
+              color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+            }]}>
+              첨부 이미지
+            </ThemedText>
             <View style={[styles.inputContainer, {
               backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
               borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
             }]}>
-              <ThemedText style={styles.sectionTitle}>태그 (선택사항)</ThemedText>
+              <View style={styles.imageAttachHeader}>
+                <ThemedText style={[styles.imageAttachTitle, {
+                  color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                }]}>
+                  이미지 추가
+                </ThemedText>
+                <ThemedText style={[styles.imageAttachCount, {
+                  color: colorScheme === 'dark' ? '#8e8e93' : '#8e8e93'
+                }]}>
+                  {images.length}/5
+                </ThemedText>
+              </View>
+              
+              <TouchableOpacity
+                style={[styles.imageAttachButton, {
+                  backgroundColor: colorScheme === 'dark' ? '#1c1c1e' : '#f8f9fa',
+                  borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                }]}
+                onPress={() => pickImage()}
+                disabled={images.length >= 5}
+              >
+                <View style={[styles.imageAttachIcon, {
+                  backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#e9ecef'
+                }]}>
+                  <MaterialCommunityIcons 
+                    name="camera-plus" 
+                    size={24} 
+                    color={selectedBoardInfo.color} 
+                  />
+                </View>
+                <View style={styles.imageAttachTextContainer}>
+                  <ThemedText style={[styles.imageAttachText, {
+                    color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                  }]}>
+                    이미지 선택
+                  </ThemedText>
+                  <ThemedText style={[styles.imageAttachSubtext, {
+                    color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+                  }]}>
+                    최대 5개, 10MB 이하
+                  </ThemedText>
+                </View>
+              </TouchableOpacity>
+              
+              {/* 첨부된 이미지 미리보기 */}
+              {images.length > 0 && (
+                <View style={styles.imagePreviewContainer}>
+                  <ThemedText style={[styles.imagePreviewTitle, {
+                    color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                  }]}>
+                    첨부된 이미지
+                  </ThemedText>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.imagePreviewScroll}>
+                    {images.map((image, index) => (
+                      <View key={image.id} style={styles.imagePreviewItem}>
+                        <Image source={{ uri: image.uri }} style={styles.imagePreview} />
+                        <View style={styles.imagePreviewOverlay}>
+                          <TouchableOpacity
+                            style={styles.removeImageButton}
+                            onPress={() => {
+                              const newImages = images.filter((_, i) => i !== index);
+                              setImages(newImages);
+                            }}
+                          >
+                            <MaterialCommunityIcons name="close" size={16} color="#ffffff" />
+                          </TouchableOpacity>
+                        </View>
+                        <View style={styles.imagePreviewInfo}>
+                          <ThemedText style={styles.imagePreviewName} numberOfLines={1}>
+                            {image.name}
+                          </ThemedText>
+                          <ThemedText style={styles.imagePreviewSize}>
+                            {(image.size / 1024).toFixed(1)}KB
+                          </ThemedText>
+                        </View>
+                      </View>
+                    ))}
+                  </ScrollView>
+                </View>
+              )}
+            </View>
+          </View>
+
+            {/* 태그 입력 */}
+            <View style={styles.inputSection}>
+              <ThemedText style={[styles.inputLabel, {
+                color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+              }]}>
+                태그 (선택사항)
+              </ThemedText>
+              <View style={[styles.inputContainer, {
+                backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
+                borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
+              }]}>
+                <ThemedText style={[styles.sectionTitle, {
+                  color: colorScheme === 'dark' ? '#ffffff' : '#000000'
+                }]}>
+                  태그 추가
+                </ThemedText>
               
               {tags.length > 0 && (
                 <View style={styles.tagContainer}>
@@ -404,23 +610,15 @@ export default function WritePostScreen() {
                 </TouchableOpacity>
               </View>
               
-              <ThemedText style={styles.tagHelper}>
+              <ThemedText style={[styles.tagHelper, {
+                color: colorScheme === 'dark' ? '#8e8e93' : '#6c757d'
+              }]}>
                 {tags.length}/5 개의 태그 • 엔터키로도 추가할 수 있습니다
               </ThemedText>
             </View>
+          </View>
 
-            {/* 이미지 첨부 */}
-            <View style={[styles.inputContainer, {
-              backgroundColor: colorScheme === 'dark' ? '#2c2c2e' : '#ffffff',
-              borderColor: colorScheme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)'
-            }]}>
-              <ImagePickerComponent
-                images={images}
-                onImagesChange={setImages}
-                maxImages={5}
-                maxSizeInMB={10}
-              />
-            </View>
+
           </ScrollView>
 
           {/* 게시판 선택 모달 */}
@@ -542,6 +740,14 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 20,
   },
+  boardSelectorContainer: {
+    marginBottom: 20,
+  },
+  boardSelectorLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
   boardSelector: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -549,7 +755,6 @@ const styles = StyleSheet.create({
     padding: 16,
     borderRadius: 12,
     borderWidth: 1,
-    marginBottom: 16,
   },
   boardSelectorContent: {
     flexDirection: 'row',
@@ -567,11 +772,18 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 12,
   },
+  inputSection: {
+    marginBottom: 20,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
   inputContainer: {
     borderRadius: 12,
     borderWidth: 1,
     padding: 16,
-    marginBottom: 16,
   },
   titleInput: {
     fontSize: 18,
@@ -677,5 +889,98 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 12,
     flex: 1,
+  },
+  // 이미지 첨부 관련 스타일
+  imageAttachSection: {
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  imageAttachHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  imageAttachTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  imageAttachCount: {
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  imageAttachButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    gap: 12,
+  },
+  imageAttachIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageAttachTextContainer: {
+    flex: 1,
+  },
+  imageAttachText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  imageAttachSubtext: {
+    fontSize: 13,
+    fontWeight: '400',
+  },
+  imagePreviewContainer: {
+    marginTop: 16,
+  },
+  imagePreviewTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  imagePreviewScroll: {
+    flexDirection: 'row',
+  },
+  imagePreviewItem: {
+    position: 'relative',
+    marginRight: 12,
+    width: 100,
+  },
+  imagePreview: {
+    width: 100,
+    height: 100,
+    borderRadius: 12,
+  },
+  imagePreviewOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  removeImageButton: {
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 12,
+    width: 24,
+    height: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imagePreviewInfo: {
+    marginTop: 8,
+  },
+  imagePreviewName: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 2,
+  },
+  imagePreviewSize: {
+    fontSize: 11,
+    opacity: 0.6,
   },
 }); 

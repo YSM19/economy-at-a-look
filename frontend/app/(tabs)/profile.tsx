@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, ScrollView, StyleSheet, TouchableOpacity, Alert, Modal, useColorScheme, Linking, Platform } from 'react-native';
+import { View, ScrollView, StyleSheet, TouchableOpacity, Modal, useColorScheme, Linking, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { ThemedText } from '../../components/ThemedText';
 import { ThemedView } from '../../components/ThemedView';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useFocusEffect } from '@react-navigation/native';
-
 import { useToast } from '../../components/ToastProvider';
+import { checkLoginStatusWithValidation, requireLoginWithAlert } from '../../utils/authUtils';
+import { ConfirmationModal } from '../../components/ConfirmationModal';
 
 interface UserInfo {
   username: string;
@@ -36,7 +36,11 @@ export default function ProfileScreen() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userRole, setUserRole] = useState('');
   
-
+  // 로그인 모달 상태
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  
+  // 로그아웃 모달 상태
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   
   // 앱 정보 모달 상태
   const [appInfoModalVisible, setAppInfoModalVisible] = useState(false);
@@ -55,11 +59,11 @@ export default function ProfileScreen() {
       if (supported) {
         await Linking.openURL(url);
       } else {
-        Alert.alert('오류', '링크를 열 수 없습니다.');
+        showToast('링크를 열 수 없습니다.', 'error');
       }
     } catch (error) {
       console.error('링크 열기 오류:', error);
-      Alert.alert('오류', '링크를 여는 중 오류가 발생했습니다.');
+      showToast('링크를 여는 중 오류가 발생했습니다.', 'error');
     }
   };
 
@@ -72,13 +76,16 @@ export default function ProfileScreen() {
 
   const checkLoginStatus = async () => {
     try {
-      const token = await AsyncStorage.getItem('userToken');
-      const userInfoString = await AsyncStorage.getItem('userInfo');
+      // 토큰 유효성 검증을 포함한 로그인 상태 확인
+      const authStatus = await checkLoginStatusWithValidation();
       
-      console.log('로그인 상태 확인:', { token: !!token, userInfo: !!userInfoString });
+      console.log('로그인 상태 확인:', { 
+        isLoggedIn: authStatus.isLoggedIn, 
+        hasUserInfo: !!authStatus.userInfo 
+      });
       
-      if (token && userInfoString) {
-        const user = JSON.parse(userInfoString);
+      if (authStatus.isLoggedIn && authStatus.userInfo) {
+        const user = authStatus.userInfo;
         console.log('사용자 정보:', user);
         
         setUserInfo({
@@ -91,51 +98,42 @@ export default function ProfileScreen() {
         setIsLoggedIn(true);
         console.log('로그인 상태 설정 완료:', { isLoggedIn: true, role: user.role });
       } else {
-        console.log('토큰 또는 사용자 정보 없음');
+        console.log('로그인되지 않은 사용자입니다.');
         setIsLoggedIn(false);
         setUserInfo(null);
         setUserRole('');
+        // 로그인되지 않은 사용자도 마이페이지를 볼 수 있도록 자동 이동하지 않음
       }
     } catch (error) {
       console.error('로그인 상태 확인 오류:', error);
       setIsLoggedIn(false);
       setUserInfo(null);
       setUserRole('');
+      // 오류 발생 시에도 자동 이동하지 않음
     }
   };
 
 
 
   const handleLogout = async () => {
-    Alert.alert(
-      '로그아웃',
-      '정말 로그아웃하시겠습니까?',
-      [
-        {
-          text: '취소',
-          style: 'cancel',
-        },
-        {
-          text: '로그아웃',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              // 토큰 제거
-              await AsyncStorage.removeItem('userToken');
-              await AsyncStorage.removeItem('userInfo');
-              
-              // 상태 업데이트
-              setIsLoggedIn(false);
-              setUserInfo(null);
-              showToast('로그아웃되었습니다.', 'success');
-            } catch (error) {
-              console.error('로그아웃 오류:', error);
-              showToast('로그아웃 중 오류가 발생했습니다.', 'error');
-            }
-          },
-        },
-      ]
-    );
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      // 토큰 제거
+      await AsyncStorage.removeItem('userToken');
+      await AsyncStorage.removeItem('userInfo');
+      
+      // 상태 업데이트
+      setIsLoggedIn(false);
+      setUserInfo(null);
+      setShowLogoutModal(false);
+      showToast('로그아웃되었습니다.', 'success');
+    } catch (error) {
+      console.error('로그아웃 오류:', error);
+      showToast('로그아웃 중 오류가 발생했습니다.', 'error');
+    }
   };
 
   const menuItems: MenuItem[] = [
@@ -145,8 +143,14 @@ export default function ProfileScreen() {
       description: '계정 정보 및 프로필 설정',
       icon: 'account-edit',
       color: '#FF6B6B',
-      onPress: () => {
-        router.push('/(tabs)/profile-management');
+      onPress: async () => {
+        // 로그인 상태 확인
+        const { isLoggedIn } = await checkLoginStatusWithValidation();
+        if (isLoggedIn) {
+          router.push('/(tabs)/profile-management');
+        } else {
+          requireLoginWithAlert('개인정보 관리', showToast, setShowLoginModal);
+        }
       }
     },
     {
@@ -156,17 +160,7 @@ export default function ProfileScreen() {
       icon: 'bell',
       color: '#FFEAA7',
       onPress: () => {
-        showToast('알림 설정 기능은 준비 중입니다.', 'info');
-      }
-    },
-    {
-      id: 'settings',
-      title: '앱 설정',
-      description: '테마, 언어, 기타 설정',
-      icon: 'cog',
-      color: '#DDA0DD',
-      onPress: () => {
-        showToast('앱 설정 기능은 준비 중입니다.', 'info');
+        router.push('/(tabs)/notification-settings');
       }
     },
     {
@@ -176,7 +170,7 @@ export default function ProfileScreen() {
       icon: 'help-circle',
       color: '#FFB74D',
       onPress: () => {
-        showToast('도움말 기능은 준비 중입니다.', 'info');
+        router.push('/(tabs)/help');
       }
     },
     {
@@ -186,7 +180,7 @@ export default function ProfileScreen() {
       icon: 'comment-question-outline',
       color: '#AF52DE',
       onPress: () => {
-        showToast('건의 및 문의 기능은 준비 중입니다.', 'info');
+        router.push('/(tabs)/suggestion');
       }
     },
     {
@@ -209,8 +203,14 @@ export default function ProfileScreen() {
       description: '게시글, 댓글, 신고 관리',
       icon: 'account-group',
       color: '#2ED573',
-      onPress: () => {
-        router.push('/admin/community');
+      onPress: async () => {
+        // 로그인 상태 확인
+        const { isLoggedIn } = await checkLoginStatusWithValidation();
+        if (isLoggedIn) {
+          router.push('/admin/community');
+        } else {
+          requireLoginWithAlert('커뮤니티 관리', showToast, setShowLoginModal);
+        }
       }
     },
     {
@@ -219,8 +219,14 @@ export default function ProfileScreen() {
       description: '환율, 금리, 물가 데이터 관리',
       icon: 'api',
       color: '#3742FA',
-      onPress: () => {
-        router.push('/admin/api-requests');
+      onPress: async () => {
+        // 로그인 상태 확인
+        const { isLoggedIn } = await checkLoginStatusWithValidation();
+        if (isLoggedIn) {
+          router.push('/admin/api-requests');
+        } else {
+          requireLoginWithAlert('API 데이터 관리', showToast, setShowLoginModal);
+        }
       }
     }
   ];
@@ -286,26 +292,66 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </ThemedView>
 
-        {/* 통계 */}
+        {/* 내 활동 */}
         <ThemedView style={styles.statsSection}>
-          <ThemedText style={styles.sectionTitle}>활동 통계</ThemedText>
+          <ThemedText style={styles.sectionTitle}>내 활동</ThemedText>
           <View style={styles.statsGrid}>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statValue}>12</ThemedText>
-              <ThemedText style={styles.statLabel}>저장한 환율</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statValue}>5</ThemedText>
-              <ThemedText style={styles.statLabel}>작성한 글</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statValue}>8</ThemedText>
-              <ThemedText style={styles.statLabel}>북마크</ThemedText>
-            </View>
-            <View style={styles.statItem}>
-              <ThemedText style={styles.statValue}>15</ThemedText>
-              <ThemedText style={styles.statLabel}>댓글</ThemedText>
-            </View>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={async () => {
+                const { isLoggedIn } = await checkLoginStatusWithValidation();
+                if (isLoggedIn) {
+                  router.push('/community/my-posts' as any);
+                } else {
+                  requireLoginWithAlert('작성글 보기', showToast, setShowLoginModal);
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="file-document" size={24} color="#007AFF" />
+              <ThemedText style={styles.statValue}>작성글</ThemedText>
+            </TouchableOpacity>
+                          <TouchableOpacity 
+                style={styles.statItem}
+                onPress={async () => {
+                  const { isLoggedIn } = await checkLoginStatusWithValidation();
+                  if (isLoggedIn) {
+                    router.push('/community/my-comments' as any);
+                  } else {
+                    requireLoginWithAlert('작성댓글 보기', showToast, setShowLoginModal);
+                  }
+                }}
+              >
+                <MaterialCommunityIcons name="comment-text" size={24} color="#34C759" />
+                <ThemedText style={styles.statValue}>작성댓글</ThemedText>
+              </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={async () => {
+                const { isLoggedIn } = await checkLoginStatusWithValidation();
+                if (isLoggedIn) {
+                  router.push('/community/my-likes' as any);
+                } else {
+                  requireLoginWithAlert('좋아요 보기', showToast, setShowLoginModal);
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="heart" size={24} color="#FF3B30" />
+              <ThemedText style={styles.statValue}>좋아요</ThemedText>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.statItem}
+              onPress={async () => {
+                const { isLoggedIn } = await checkLoginStatusWithValidation();
+                if (isLoggedIn) {
+                  router.push('/community/bookmarks' as any);
+                } else {
+                  requireLoginWithAlert('북마크 보기', showToast, setShowLoginModal);
+                }
+              }}
+            >
+              <MaterialCommunityIcons name="bookmark" size={24} color="#FF9500" />
+              <ThemedText style={styles.statValue}>북마크</ThemedText>
+            </TouchableOpacity>
           </View>
         </ThemedView>
 
@@ -442,6 +488,29 @@ export default function ProfileScreen() {
         </View>
       </Modal>
 
+      <ConfirmationModal
+        visible={showLoginModal}
+        title="로그인 필요"
+        message="해당 기능을 사용하려면 로그인이 필요합니다. 로그인 페이지로 이동하시겠습니까?"
+        confirmText="로그인"
+        cancelText="취소"
+        onConfirm={() => { setShowLoginModal(false); router.push('/(tabs)/login'); }}
+        onCancel={() => setShowLoginModal(false)}
+        iconName="login"
+        iconColor="#FF9500"
+      />
+
+      <ConfirmationModal
+        visible={showLogoutModal}
+        title="로그아웃"
+        message="정말 로그아웃하시겠습니까?"
+        confirmText="로그아웃"
+        cancelText="취소"
+        onConfirm={confirmLogout}
+        onCancel={() => setShowLogoutModal(false)}
+        iconName="logout"
+        iconColor="#FF3B30"
+      />
 
     </SafeAreaView>
   );
@@ -457,16 +526,22 @@ const styles = StyleSheet.create({
   },
   header: {
     padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 20 : 40,
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 8,
+    lineHeight: 36,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   headerSubtitle: {
     fontSize: 16,
     color: '#8E8E93',
+    lineHeight: 20,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   loginContainer: {
     flex: 1,
@@ -586,12 +661,17 @@ const styles = StyleSheet.create({
   statItem: {
     alignItems: 'center',
     flex: 1,
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: '#F8F9FA',
+    marginHorizontal: 4,
   },
   statValue: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#007AFF',
-    marginBottom: 4,
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 8,
+    textAlign: 'center',
   },
   statLabel: {
     fontSize: 12,

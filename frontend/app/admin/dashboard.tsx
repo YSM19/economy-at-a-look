@@ -1,17 +1,52 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, View, TouchableOpacity, ScrollView, Alert, Platform, useColorScheme } from 'react-native';
-import { Stack, router } from 'expo-router';
+import { Stack, router, useFocusEffect } from 'expo-router';
 import { ThemedText } from '../../components/ThemedText';
 // 사이드바 기능 비활성화
 // import { Sidebar } from '../../components/Sidebar';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { checkLoginStatusWithValidation } from '../../utils/authUtils';
+import { useToast } from '../../components/ToastProvider';
 
 export default function AdminDashboardScreen() {
   const colorScheme = useColorScheme();
   // 사이드바 기능 비활성화
   // const [isSidebarVisible, setIsSidebarVisible] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const { showToast } = useToast();
+
+  // 화면이 포커스될 때마다 토큰 유효성 검증
+  useFocusEffect(
+    useCallback(() => {
+      const validateToken = async () => {
+        try {
+          const authStatus = await checkLoginStatusWithValidation();
+          if (!authStatus.isLoggedIn) {
+            console.log('❌ 관리자 대시보드: 토큰이 유효하지 않습니다.');
+            showToast('로그인 세션이 만료되었습니다. 다시 로그인해주세요.', 'error');
+            router.replace('/(tabs)/login');
+            return;
+          }
+
+          // 관리자 권한 확인
+          if (authStatus.userInfo && authStatus.userInfo.role !== 'ADMIN') {
+            console.log('❌ 관리자 대시보드: 관리자 권한이 없습니다.');
+            showToast('관리자 권한이 필요합니다.', 'error');
+            router.replace('/(tabs)/profile');
+            return;
+          }
+
+          setIsAuthenticated(true);
+        } catch (error) {
+          console.error('토큰 검증 중 오류:', error);
+          router.replace('/(tabs)/login');
+        }
+      };
+
+      validateToken();
+    }, [router, showToast])
+  );
 
   useEffect(() => {
     checkAuthentication();

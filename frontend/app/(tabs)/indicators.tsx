@@ -771,18 +771,24 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     padding: 20,
-    paddingTop: Platform.OS === 'ios' ? 20 : 40,
+    paddingTop: Platform.OS === 'ios' ? 10 : 20,
   },
   headerTitle: {
     fontSize: 28,
     fontWeight: 'bold',
-    marginBottom: 4,
+    marginBottom: 8,
+    lineHeight: 36,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
   headerSubtitle: {
     fontSize: 16,
     color: '#8E8E93',
+    lineHeight: 20,
+    paddingVertical: 0,
+    marginVertical: 0,
   },
 
   tabContainer: {

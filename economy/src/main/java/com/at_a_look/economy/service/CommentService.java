@@ -242,7 +242,13 @@ public class CommentService {
     private CommentDto.Response convertToDto(Comment comment, String userEmail) {
         CommentDto.Response.AuthorInfo authorInfo = CommentDto.Response.AuthorInfo.builder()
                 .username(comment.getUser().getUsername())
+                .build();
 
+        // 게시글 정보 추가
+        CommentDto.Response.PostInfo postInfo = CommentDto.Response.PostInfo.builder()
+                .id(comment.getPost().getId())
+                .title(comment.getPost().getTitle())
+                .boardType(comment.getPost().getBoardType().name())
                 .build();
 
         // 사용자 상호작용 정보 확인
@@ -267,6 +273,7 @@ public class CommentService {
                 .createdAt(comment.getCreatedAt())
                 .updatedAt(comment.getUpdatedAt())
                 .author(authorInfo)
+                .post(postInfo)
                 .userInteraction(userInteraction)
                 .build();
     }

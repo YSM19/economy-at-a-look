@@ -832,37 +832,26 @@ export default function PostDetailScreen() {
                 </View>
               )}
 
-              <ThemedText style={styles.postContent}>{post.content}</ThemedText>
-
-              {/* 이미지 갤러리 */}
+              {/* 이미지 갤러리 - 내용 위에 표시 */}
               {post.images && post.images.length > 0 && (
                 <View style={styles.imageGallery}>
-                  <ThemedText style={styles.imageGalleryTitle}>첨부 이미지</ThemedText>
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    style={styles.imageList}
-                  >
-                    {post.images.map((image, index) => (
-                      <TouchableOpacity
-                        key={image.id}
-                        style={styles.imageContainer}
-                        onPress={() => openImageViewer(index)}
-                      >
-                        <Image source={{ uri: image.uri }} style={styles.thumbnailImage} />
-                        <View style={styles.imageInfo}>
-                          <ThemedText style={styles.imageName} numberOfLines={1}>
-                            {image.name}
-                          </ThemedText>
-                          <ThemedText style={styles.imageSize}>
-                            {formatFileSize(image.size)}
-                          </ThemedText>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </ScrollView>
+                  {post.images.map((image, index) => (
+                    <TouchableOpacity
+                      key={image.id}
+                      style={styles.imageContainer}
+                      onPress={() => openImageViewer(index)}
+                    >
+                      <Image 
+                        source={{ uri: image.uri }} 
+                        style={styles.thumbnailImage}
+                        resizeMode="cover"
+                      />
+                    </TouchableOpacity>
+                  ))}
                 </View>
               )}
+
+              <ThemedText style={styles.postContent}>{post.content}</ThemedText>
 
               {/* 좋아요 버튼 */}
               <View style={styles.postActions}>
@@ -1323,35 +1312,28 @@ const styles = StyleSheet.create({
   },
   // 이미지 갤러리 스타일
   imageGallery: {
-    marginVertical: 20,
-  },
-  imageGalleryTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 12,
-  },
-  imageList: {
-    flexDirection: 'row',
+    marginBottom: 20,
   },
   imageContainer: {
-    marginRight: 12,
+    marginBottom: 12,
   },
   thumbnailImage: {
-    width: 120,
-    height: 90,
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+  },
+
+  // 디버깅 정보 스타일
+  debugInfo: {
+    padding: 12,
+    backgroundColor: '#f0f0f0',
+    marginVertical: 8,
     borderRadius: 8,
   },
-  imageInfo: {
-    marginTop: 4,
-    width: 120,
-  },
-  imageName: {
+  debugText: {
     fontSize: 12,
-    fontWeight: '600',
-  },
-  imageSize: {
-    fontSize: 10,
-    opacity: 0.6,
+    color: '#666',
+    marginBottom: 4,
   },
   // 이미지 뷰어 모달 스타일
   imageModalOverlay: {
