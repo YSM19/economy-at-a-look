@@ -67,6 +67,8 @@ export default function ProfileScreen() {
     }
   };
 
+
+
   // 로그인 상태 확인 (페이지 포커스될 때마다)
   useFocusEffect(
     useCallback(() => {
@@ -164,16 +166,6 @@ export default function ProfileScreen() {
       }
     },
     {
-      id: 'help',
-      title: '도움말',
-      description: '앱 사용법 및 FAQ',
-      icon: 'help-circle',
-      color: '#FFB74D',
-      onPress: () => {
-        router.push('/(tabs)/help');
-      }
-    },
-    {
       id: 'suggestion',
       title: '건의 및 문의',
       description: '앱 개선사항이나 문의사항을 남겨주세요',
@@ -214,6 +206,22 @@ export default function ProfileScreen() {
       }
     },
     {
+      id: 'admin-inquiries',
+      title: '문의 관리',
+      description: '건의사항, 버그신고, 기능요청 처리',
+      icon: 'message-question',
+      color: '#FF6B6B',
+      onPress: async () => {
+        // 로그인 상태 확인
+        const { isLoggedIn } = await checkLoginStatusWithValidation();
+        if (isLoggedIn) {
+          router.push('/admin/inquiries');
+        } else {
+          requireLoginWithAlert('문의 관리', showToast, setShowLoginModal);
+        }
+      }
+    },
+    {
       id: 'admin-api',
       title: 'API 데이터 관리',
       description: '환율, 금리, 물가 데이터 관리',
@@ -226,6 +234,22 @@ export default function ProfileScreen() {
           router.push('/admin/api-requests');
         } else {
           requireLoginWithAlert('API 데이터 관리', showToast, setShowLoginModal);
+        }
+      }
+    },
+    {
+      id: 'admin-help',
+      title: '도움말 관리',
+      description: '도움말 글 작성 및 관리',
+      icon: 'help-circle-outline',
+      color: '#FFB74D',
+      onPress: async () => {
+        // 로그인 상태 확인
+        const { isLoggedIn } = await checkLoginStatusWithValidation();
+        if (isLoggedIn) {
+          router.push('/admin/help');
+        } else {
+          requireLoginWithAlert('도움말 관리', showToast, setShowLoginModal);
         }
       }
     }

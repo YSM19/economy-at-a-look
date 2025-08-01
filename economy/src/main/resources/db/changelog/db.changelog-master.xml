@@ -33,4 +33,12 @@
     <include file="db/changelog/018-add-original-data-to-reports.xml"/>
     <include file="db/changelog/019-add-user-suspension-fields.xml"/>
 
+    <!-- 마이페이지 기능 관련 테이블들 -->
+    <include file="db/changelog/020-create-user-notification-settings-table.xml"/>
+    <include file="db/changelog/021-create-help-articles-table.xml"/>
+    <include file="db/changelog/022-create-inquiries-table.xml"/>
+    
+    <!-- 기본 도움말 데이터 추가 -->
+    <include file="db/changelog/023-add-default-help-articles.xml"/>
+
 </databaseChangeLog>

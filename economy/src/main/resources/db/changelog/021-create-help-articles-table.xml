@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+        xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+        xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+        xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                      http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.29.xsd">
+
+    <changeSet id="021-create-help-articles-table" author="system">
+        <createTable tableName="help_articles">
+            <column name="id" type="BIGINT" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="title" type="VARCHAR(200)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="content" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="display_order" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_active" type="BOOLEAN" defaultValueBoolean="true">
+                <constraints nullable="false"/>
+            </column>
+            <column name="view_count" type="INT" defaultValueNumeric="0">
+                <constraints nullable="false"/>
+            </column>
+            <column name="created_at" type="DATETIME" defaultValueComputed="CURRENT_TIMESTAMP">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="DATETIME"/>
+        </createTable>
+
+        <createIndex tableName="help_articles" indexName="idx_help_articles_category">
+            <column name="category"/>
+        </createIndex>
+
+        <createIndex tableName="help_articles" indexName="idx_help_articles_is_active">
+            <column name="is_active"/>
+        </createIndex>
+
+        <createIndex tableName="help_articles" indexName="idx_help_articles_display_order">
+            <column name="display_order"/>
+        </createIndex>
+
+        <createIndex tableName="help_articles" indexName="idx_help_articles_created_at">
+            <column name="created_at"/>
+        </createIndex>
+    </changeSet>
+
+    <!-- 기본 도움말 데이터 추가 -->
+    <changeSet id="021-insert-default-help-articles" author="system">
+        <insert tableName="help_articles">
+            <column name="title" value="앱 사용법 가이드"/>
+            <column name="content" value="경제알리미 앱의 기본 사용법에 대해 알아보세요.
+
+1. 경제지표 확인
+- 환율, 금리, 소비자물가지수, 경제지표를 한눈에 확인할 수 있습니다.
+- 각 지표의 변화 추이를 차트로 확인할 수 있습니다.
+
+2. 커뮤니티 이용
+- 다양한 경제 정보를 공유하고 토론할 수 있습니다.
+- 자유게시판, 투자 정보, Q&A, 뉴스 토론 등 카테고리별로 이용 가능합니다.
+
+3. 알림 설정
+- 관심 있는 경제지표의 변화를 실시간으로 알림받을 수 있습니다.
+- 알림 빈도와 종류를 개인 설정으로 조정할 수 있습니다."/>
+            <column name="category" value="GENERAL"/>
+            <column name="display_order" valueNumeric="1"/>
+        </insert>
+
+        <insert tableName="help_articles">
+            <column name="title" value="경제지표 해석 방법"/>
+            <column name="content" value="경제지표의 의미와 해석 방법을 알아보세요.
+
+1. 환율 (Exchange Rate)
+- 원화 대비 외화의 가치를 나타냅니다.
+- 상승: 원화 가치 하락, 수출 경쟁력 향상
+- 하락: 원화 가치 상승, 수입품 가격 하락
+
+2. 금리 (Interest Rate)
+- 중앙은행의 기준금리를 의미합니다.
+- 상승: 통화 긴축, 경제 성장 둔화
+- 하락: 통화 완화, 경제 성장 촉진
+
+3. 소비자물가지수 (CPI)
+- 소비자들이 구매하는 상품과 서비스의 가격 변화를 측정합니다.
+- 상승: 인플레이션, 구매력 하락
+- 하락: 디플레이션, 구매력 상승
+
+4. 경제지표
+- GDP, 실업률, 무역수지 등 종합적인 경제 상황을 반영합니다."/>
+            <column name="category" value="ECONOMIC_INDICATORS"/>
+            <column name="display_order" valueNumeric="1"/>
+        </insert>
+
+        <insert tableName="help_articles">
+            <column name="title" value="커뮤니티 이용 규칙"/>
+            <column name="content" value="건전한 커뮤니티 이용을 위한 규칙입니다.
+
+1. 기본 원칙
+- 서로를 존중하고 예의를 지켜주세요.
+- 건전한 토론 문화를 만들어주세요.
+- 타인의 권리를 침해하지 마세요.
+
+2. 금지 사항
+- 욕설, 비방, 차별적 발언
+- 스팸, 광고성 게시글
+- 개인정보 노출
+- 저작권 침해
+- 허위 정보 유포
+
+3. 게시글 작성 시 주의사항
+- 제목과 내용이 일치하는 게시글을 작성해주세요.
+- 적절한 카테고리에 게시글을 작성해주세요.
+- 관련 없는 내용은 다른 게시글로 분리해주세요.
+
+4. 신고 기능
+- 위반 사항을 발견하면 신고 기능을 이용해주세요.
+- 신고 시 구체적인 사유를 명시해주세요."/>
+            <column name="category" value="COMMUNITY"/>
+            <column name="display_order" valueNumeric="1"/>
+        </insert>
+
+        <insert tableName="help_articles">
+            <column name="title" value="계정 관리 방법"/>
+            <column name="content" value="계정 관리에 관한 도움말입니다.
+
+1. 회원가입
+- 이메일과 사용자명으로 가입할 수 있습니다.
+- 중복된 이메일이나 사용자명은 사용할 수 없습니다.
+
+2. 로그인/로그아웃
+- 가입한 이메일과 비밀번호로 로그인합니다.
+- 보안을 위해 공용 기기에서는 반드시 로그아웃해주세요.
+
+3. 비밀번호 변경
+- 정기적으로 비밀번호를 변경하는 것을 권장합니다.
+- 안전한 비밀번호를 사용해주세요.
+
+4. 사용자명 변경
+- 사용자명은 30일마다 한 번씩 변경할 수 있습니다.
+- 변경 후 30일간은 다시 변경할 수 없습니다.
+
+5. 계정 삭제
+- 계정 삭제 시 모든 데이터가 영구적으로 삭제됩니다.
+- 신중하게 결정해주세요."/>
+            <column name="category" value="ACCOUNT"/>
+            <column name="display_order" valueNumeric="1"/>
+        </insert>
+
+        <insert tableName="help_articles">
+            <column name="title" value="알림 설정 방법"/>
+            <column name="content" value="알림 설정에 관한 도움말입니다.
+
+1. 알림 종류
+- 환율 알림: 환율 변화 시 알림
+- 금리 알림: 금리 변화 시 알림
+- CPI 알림: 소비자물가지수 변화 시 알림
+- 경제지표 알림: 주요 경제지표 발표 시 알림
+- 커뮤니티 알림: 댓글, 좋아요 등 커뮤니티 활동 알림
+
+2. 알림 빈도 설정
+- 즉시: 변화 발생 시 즉시 알림
+- 시간별: 1시간마다 요약 알림
+- 일별: 하루에 한 번 요약 알림
+- 주별: 일주일에 한 번 요약 알림
+
+3. 알림 방법
+- 푸시 알림: 앱 내 알림
+- 이메일 알림: 이메일로 알림 (선택사항)
+
+4. 알림 해제
+- 각 알림 종류별로 개별 해제 가능
+- 전체 알림 해제도 가능"/>
+            <column name="category" value="NOTIFICATIONS"/>
+            <column name="display_order" valueNumeric="1"/>
+        </insert>
+
+        <insert tableName="help_articles">
+            <column name="title" value="자주 묻는 질문 (FAQ)"/>
+            <column name="content" value="자주 묻는 질문과 답변입니다.
+
+Q1. 앱이 실행되지 않아요.
+A1. 앱을 완전히 종료한 후 다시 실행해보세요. 문제가 지속되면 앱을 재설치해주세요.
+
+Q2. 데이터가 업데이트되지 않아요.
+A2. 인터넷 연결을 확인해주세요. 서버 점검 중일 수 있습니다.
+
+Q3. 알림이 오지 않아요.
+A3. 알림 설정을 확인해주세요. 기기의 알림 권한도 확인해주세요.
+
+Q4. 로그인이 안 돼요.
+A4. 이메일과 비밀번호를 정확히 입력했는지 확인해주세요. 비밀번호를 잊어버렸다면 재설정해주세요.
+
+Q5. 게시글이 삭제되었어요.
+A5. 커뮤니티 이용 규칙을 위반한 경우 관리자에 의해 삭제될 수 있습니다.
+
+Q6. 계정이 정지되었어요.
+A6. 커뮤니티 이용 규칙을 위반한 경우 계정이 정지될 수 있습니다. 정지 사유를 확인해주세요."/>
+            <column name="category" value="TROUBLESHOOTING"/>
+            <column name="display_order" valueNumeric="1"/>
+        </insert>
+    </changeSet>
+
+</databaseChangeLog> 

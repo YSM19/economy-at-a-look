@@ -15,7 +15,14 @@ import { CPIChart } from '../../components/charts/CPIChart';
 import ExchangeRateRecommendations from '../../components/ExchangeRateRecommendations';
 import InterestRateRecommendations from '../../components/InterestRateRecommendations';
 import CPIRecommendations from '../../components/CPIRecommendations';
+import NotificationSettingsModal from '../../components/NotificationSettingsModal';
 import { economicIndexApi } from '../../services/api';
+import { 
+  initializeNotifications, 
+  checkExchangeRateNotification, 
+  checkInterestRateNotification, 
+  checkCPINotification 
+} from '../../utils/notificationUtils';
 
 interface ExchangeRateData {
   currentRate: number;
@@ -70,6 +77,12 @@ export default function IndicatorsScreen() {
   const [cpiHistoryData, setCpiHistoryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
+  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+
+  // 알림 초기화
+  useEffect(() => {
+    initializeNotifications();
+  }, []);
 
   // params.tab이 변경되면 activeTab도 업데이트
   useEffect(() => {
@@ -100,22 +113,33 @@ export default function IndicatorsScreen() {
         const apiData = currentResponse.data.data;
         let currentRate = 0;
         
+        // 국가별 기본값 설정
+        const getDefaultRate = (country: string) => {
+          switch(country) {
+            case 'usa': return 1300;
+            case 'japan': return 1000;
+            case 'china': return 180;
+            case 'europe': return 1400;
+            default: return 1300;
+          }
+        };
+        
         // 선택된 국가에 따라 환율 설정
         switch(activeCountry) {
           case 'usa':
-            currentRate = apiData.usdRate || 0;
+            currentRate = apiData.usdRate || getDefaultRate('usa');
             break;
           case 'japan':
-            currentRate = apiData.jpyRate || 0;
+            currentRate = apiData.jpyRate || getDefaultRate('japan');
             break;
           case 'china':
-            currentRate = apiData.cnyRate || 0;
+            currentRate = apiData.cnyRate || getDefaultRate('china');
             break;
           case 'europe':
-            currentRate = apiData.eurRate || 0;
+            currentRate = apiData.eurRate || getDefaultRate('europe');
             break;
           default:
-            currentRate = apiData.usdRate || 0;
+            currentRate = apiData.usdRate || getDefaultRate('usa');
         }
         
         setExchangeRateData({
@@ -124,6 +148,9 @@ export default function IndicatorsScreen() {
           changeRate: 0,
           trend: '보합'
         });
+
+        // 환율 알림 체크
+        await checkExchangeRateNotification(apiData);
       }
       
       // 7일 데이터 가져오기
@@ -196,6 +223,9 @@ export default function IndicatorsScreen() {
         }));
         
         setInterestRateHistoryData(historyData);
+
+        // 금리 알림 체크
+        await checkInterestRateNotification(currentRateResponse.data.data);
       }
     } catch (err) {
       console.error('금리 차트 데이터 로딩 실패:', err);
@@ -257,6 +287,9 @@ export default function IndicatorsScreen() {
           
           setCpiHistoryData(finalHistory);
         }
+
+        // 물가 알림 체크
+        await checkCPINotification(cpiData);
       }
     } catch (err) {
       console.error('물가 데이터 로딩 실패:', err);
@@ -306,7 +339,7 @@ export default function IndicatorsScreen() {
               <View style={styles.loadingContainer}>
                 <ThemedText>로딩 중...</ThemedText>
               </View>
-            ) : exchangeRateData ? (
+            ) : (exchangeRateData && !loading) ? (
               <>
                 <ExchangeRateGauge 
                   value={exchangeRateData.currentRate}
@@ -649,6 +682,12 @@ export default function IndicatorsScreen() {
           <ThemedText style={styles.headerTitle}>{getTabTitle()}</ThemedText>
           <ThemedText style={styles.headerSubtitle}>{getTabSubtitle()}</ThemedText>
         </View>
+        <TouchableOpacity 
+          style={styles.notificationButton}
+          onPress={() => setNotificationModalVisible(true)}
+        >
+          <MaterialCommunityIcons name="bell" size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
 
       {/* 탭 버튼 */}
@@ -759,6 +798,12 @@ export default function IndicatorsScreen() {
       <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
         {renderTabContent()}
       </ScrollView>
+
+      {/* 알림 설정 모달 */}
+      <NotificationSettingsModal
+        visible={notificationModalVisible}
+        onClose={() => setNotificationModalVisible(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -789,6 +834,13 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     paddingVertical: 0,
     marginVertical: 0,
+  },
+  notificationButton: {
+    padding: 8,
+    backgroundColor: '#F0F8FF',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
 
   tabContainer: {

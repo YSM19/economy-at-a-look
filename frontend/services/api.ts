@@ -720,6 +720,139 @@ export const adminApi = {
   ),
 }; 
 
+// 알림 설정 관련 API 호출
+export const notificationSettingsApi = {
+  getNotificationSettings: (token: string) => withRetry(() =>
+    api.get('/api/notification-settings', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+
+  updateNotificationSettings: (data: any, token: string) => withRetry(() =>
+    api.put('/api/notification-settings', data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+};
+
+// 도움말 관련 API 호출
+export const helpApi = {
+  getHelpArticles: (page = 0, size = 10) => withRetry(() =>
+    api.get('/api/help', {
+      params: { page, size }
+    })
+  ),
+
+  getHelpCategories: () => withRetry(() =>
+    api.get('/api/help/categories')
+  ),
+
+  getHelpArticlesByCategory: (category: string) => withRetry(() =>
+    api.get(`/api/help/category/${category}`)
+  ),
+
+  getHelpArticle: (id: number) => withRetry(() =>
+    api.get(`/api/help/${id}`)
+  ),
+
+  searchHelpArticles: (keyword: string, page = 0, size = 10) => withRetry(() =>
+    api.get('/api/help/search', {
+      params: { keyword, page, size }
+    })
+  ),
+
+  searchHelpArticlesByCategory: (category: string, keyword: string, page = 0, size = 10) => withRetry(() =>
+    api.get(`/api/help/search/category/${category}`, {
+      params: { keyword, page, size }
+    })
+  ),
+  
+  // 관리자용 도움말 API
+  getAdminHelpArticles: (page = 0, size = 20, keyword?: string, category?: string) => withRetry(() => {
+    const params: any = { page, size };
+    if (keyword) params.keyword = keyword;
+    if (category) params.category = category;
+    return api.get('/api/help/admin', { params });
+  }),
+
+  createHelpArticle: (data: {
+    title: string;
+    content: string;
+    category: string;
+    displayOrder?: number;
+  }) => withRetry(() => api.post('/api/help/admin', data)),
+
+  updateHelpArticle: (id: number, data: {
+    title?: string;
+    content?: string;
+    category?: string;
+    displayOrder?: number;
+    isActive?: boolean;
+  }) => withRetry(() => api.put(`/api/help/admin/${id}`, data)),
+
+  deleteHelpArticle: (id: number) => withRetry(() => api.delete(`/api/help/admin/${id}`)),
+
+  toggleHelpArticle: (id: number) => withRetry(() => api.put(`/api/help/admin/${id}/toggle`)),
+};
+
+// 건의 및 문의 관련 API 호출
+export const inquiryApi = {
+  createInquiry: (data: any, token?: string) => withRetry(() => {
+    const headers: any = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return api.post('/api/inquiries', data, { headers });
+  }),
+
+  getMyInquiries: (token: string, page = 0, size = 10) => withRetry(() =>
+    api.get('/api/inquiries/my', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { page, size }
+    })
+  ),
+
+  getInquiry: (id: number, token?: string) => withRetry(() => {
+    const headers: any = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    return api.get(`/api/inquiries/${id}`, { headers });
+  }),
+
+  getInquiryTypes: () => withRetry(() =>
+    api.get('/api/inquiries/types')
+  ),
+
+  getInquiryStatuses: () => withRetry(() =>
+    api.get('/api/inquiries/statuses')
+  ),
+
+  // 관리자용 API
+  getAllInquiries: (token: string, type?: string, status?: string, page = 0, size = 10) => withRetry(() =>
+    api.get('/api/inquiries/admin', {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      },
+      params: { type, status, page, size }
+    })
+  ),
+
+  updateInquiryStatus: (id: number, data: any, token: string) => withRetry(() =>
+    api.put(`/api/inquiries/admin/${id}`, data, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+      }
+    })
+  ),
+};
+
 // 인증 관련 API 호출
 export const authApi = {
   login: (data: any) => withRetry(() => 

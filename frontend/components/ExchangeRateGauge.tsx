@@ -26,11 +26,23 @@ const formatNumberWithUnit = (value: number | string, unit: string): string => {
 };
 
 const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 'usa' }) => {
-  const [rate, setRate] = useState(value || 0); // 기본값을 0으로 설정
+  // 국가별 기본 환율 값 설정 (0 대신 적절한 기본값 사용)
+  const getDefaultRate = (countryCode: string) => {
+    switch(countryCode) {
+      case 'usa': return 1300; // USD 기본값
+      case 'japan': return 1000; // JPY 기본값
+      case 'china': return 180; // CNY 기본값
+      case 'europe': return 1400; // EUR 기본값
+      default: return 1300;
+    }
+  };
+  
+  const [rate, setRate] = useState(value || getDefaultRate(country));
   const [rateText, setRateText] = useState('');
   const [rateColor, setRateColor] = useState('#FFC107');
   const [activeSection, setActiveSection] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [showGauge, setShowGauge] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [currencyTitle, setCurrencyTitle] = useState('환율 (USD/KRW)');
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
@@ -44,7 +56,10 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
   ]);
   
   useEffect(() => {
-    // 국가에 따라 제목, 그리고 범위 설정 (기본값 제거)
+    // 국가 변경 시 계기판 숨기기
+    setShowGauge(false);
+    
+    // 국가에 따라 제목, 그리고 범위 설정
     switch(country) {
       case 'usa':
         setCurrencyTitle('환율 (USD/KRW)');
@@ -183,6 +198,11 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
           if (selectedCurrencyData && selectedCurrencyData.date) {
             setLastUpdated(selectedCurrencyData.date);
           }
+          
+          // 0.1초 후에 계기판 표시
+          setTimeout(() => {
+            setShowGauge(true);
+          }, 100);
         } else {
           throw new Error(`선택된 국가(${country})의 환율 데이터를 찾을 수 없습니다.\n사용 가능한 통화: ${exchangeRates.map(r => r.curUnit).join(', ')}\n\n💡 관리자에게 환율 데이터 업데이트를 요청하세요.`);
         }
@@ -299,6 +319,13 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
       }
     }
   }, [rate, sections, country]);
+  
+  // value prop이 변경될 때 rate 업데이트
+  useEffect(() => {
+    if (value && value > 0) {
+      setRate(value);
+    }
+  }, [value]);
 
   const screenWidth = Dimensions.get('window').width;
   const size = screenWidth - 32;
@@ -428,7 +455,7 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
           <ActivityIndicator size="large" color="#0066CC" />
           <ThemedText style={styles.loadingText}>환율 데이터를 불러오는 중...</ThemedText>
         </View>
-      ) : (rate && rate > 0) ? (
+      ) : (rate && rate > 0 && !loading && showGauge) ? (
         <>
           {/* 에러 메시지가 있으면 작은 경고로 표시 */}
           {error && (

@@ -110,7 +110,11 @@ function AppContent() {
       <View style={styles.container}>
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="admin/dashboard" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/inquiries" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/help" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/reports" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/community" options={{ headerShown: false }} />
+        <Stack.Screen name="admin/api-requests" options={{ headerShown: false }} />
         <Stack.Screen name="community/board/[boardType]" options={{ headerShown: false }} />
         <Stack.Screen name="community/post/[postId]" options={{ headerShown: false }} />
         <Stack.Screen name="community/write" options={{ headerShown: false }} />

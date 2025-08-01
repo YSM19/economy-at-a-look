@@ -45,6 +45,9 @@ dependencies {
 	// Database - MySQL
 	runtimeOnly 'com.mysql:mysql-connector-j'
 	
+	// Hibernate Commons Annotations (Hibernate 6.x compatibility)
+	implementation 'org.hibernate.common:hibernate-commons-annotations:6.0.6.Final'
+	
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
