@@ -14,7 +14,7 @@
             <column name="display_order">1</column>
             <column name="is_active" valueNumeric="1"/>
             <column name="view_count">0</column>
-            <column name="created_at">CURRENT_TIMESTAMP</column>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
         </insert>
 
         <insert tableName="help_articles">
@@ -24,7 +24,7 @@
             <column name="display_order">2</column>
             <column name="is_active" valueNumeric="1"/>
             <column name="view_count">0</column>
-            <column name="created_at">CURRENT_TIMESTAMP</column>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
         </insert>
 
         <insert tableName="help_articles">
@@ -34,7 +34,7 @@
             <column name="display_order">3</column>
             <column name="is_active" valueNumeric="1"/>
             <column name="view_count">0</column>
-            <column name="created_at">CURRENT_TIMESTAMP</column>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
         </insert>
 
         <insert tableName="help_articles">
@@ -44,7 +44,7 @@
             <column name="display_order">4</column>
             <column name="is_active" valueNumeric="1"/>
             <column name="view_count">0</column>
-            <column name="created_at">CURRENT_TIMESTAMP</column>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
         </insert>
 
         <insert tableName="help_articles">
@@ -54,7 +54,7 @@
             <column name="display_order">5</column>
             <column name="is_active" valueNumeric="1"/>
             <column name="view_count">0</column>
-            <column name="created_at">CURRENT_TIMESTAMP</column>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
         </insert>
 
         <insert tableName="help_articles">
@@ -64,7 +64,7 @@
             <column name="display_order">6</column>
             <column name="is_active" valueNumeric="1"/>
             <column name="view_count">0</column>
-            <column name="created_at">CURRENT_TIMESTAMP</column>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
         </insert>
 
         <insert tableName="help_articles">
@@ -74,7 +74,7 @@
             <column name="display_order">7</column>
             <column name="is_active" valueNumeric="1"/>
             <column name="view_count">0</column>
-            <column name="created_at">CURRENT_TIMESTAMP</column>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
         </insert>
 
         <insert tableName="help_articles">
@@ -84,7 +84,7 @@
             <column name="display_order">8</column>
             <column name="is_active" valueNumeric="1"/>
             <column name="view_count">0</column>
-            <column name="created_at">CURRENT_TIMESTAMP</column>
+            <column name="created_at" valueComputed="CURRENT_TIMESTAMP"/>
         </insert>
     </changeSet>
 
