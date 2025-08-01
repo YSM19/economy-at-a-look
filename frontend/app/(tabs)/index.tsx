@@ -189,37 +189,18 @@ export default function HomeScreen() {
           </View>
         </ThemedView>
 
-        {/* 최신 뉴스/알림 */}
+        {/* 경제 뉴스 */}
         <ThemedView style={styles.section}>
-          <ThemedText style={styles.sectionTitle}>최신 소식</ThemedText>
+          <ThemedText style={styles.sectionTitle}>경제 뉴스</ThemedText>
           <View style={styles.newsContainer}>
-            <TouchableOpacity 
-              style={styles.newsItem}
-              onPress={() => handleQuickAccess({ id: '2', title: '금리', icon: 'percent', route: '/(tabs)/indicators?tab=interest', color: '#4ECDC4' })}
-            >
-              <MaterialCommunityIcons name="newspaper" size={20} color="#007AFF" />
-              <ThemedText style={styles.newsText}>
-                한국은행 기준금리 {summaryData.interestRate > 0 ? `${summaryData.interestRate}%` : '동결'} 유지
+            <View style={styles.comingSoonContainer}>
+              <MaterialCommunityIcons name="newspaper-variant" size={48} color="#8E8E93" />
+              <ThemedText style={styles.comingSoonTitle}>경제 뉴스</ThemedText>
+              <ThemedText style={styles.comingSoonText}>추가 예정입니다</ThemedText>
+              <ThemedText style={styles.comingSoonSubtext}>
+                실시간 경제 뉴스와 시장 동향을 제공할 예정입니다
               </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.newsItem}
-              onPress={() => handleQuickAccess({ id: '1', title: '환율', icon: 'currency-usd', route: '/(tabs)/indicators?tab=exchange', color: '#FF6B6B' })}
-            >
-              <MaterialCommunityIcons name="bell" size={20} color="#FF9500" />
-              <ThemedText style={styles.newsText}>
-                환율 현황: {summaryData.exchangeRate > 0 ? `${summaryData.exchangeRate.toLocaleString()}원` : '확인 중'}
-              </ThemedText>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={styles.newsItem}
-              onPress={() => handleQuickAccess({ id: '3', title: '물가', icon: 'chart-line', route: '/(tabs)/indicators?tab=cpi', color: '#45B7D1' })}
-            >
-              <MaterialCommunityIcons name="chart-line" size={20} color="#34C759" />
-              <ThemedText style={styles.newsText}>
-                소비자물가지수 {summaryData.cpi > 0 ? `${summaryData.cpi}%` : '상승세'} 지속
-              </ThemedText>
-            </TouchableOpacity>
+            </View>
           </View>
         </ThemedView>
       </ScrollView>
@@ -337,5 +318,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginLeft: 12,
     flex: 1,
+  },
+  comingSoonContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 40,
+  },
+  comingSoonTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  comingSoonText: {
+    fontSize: 16,
+    color: '#8E8E93',
+    marginBottom: 8,
+  },
+  comingSoonSubtext: {
+    fontSize: 14,
+    color: '#8E8E93',
+    textAlign: 'center',
+    lineHeight: 20,
   },
 }); 
