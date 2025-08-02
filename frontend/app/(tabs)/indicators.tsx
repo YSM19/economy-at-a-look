@@ -79,9 +79,17 @@ export default function IndicatorsScreen() {
   const [chartLoading, setChartLoading] = useState(false);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
 
-  // 알림 초기화
+  // 알림 초기화 (Expo Go 환경에서는 제한적)
   useEffect(() => {
-    initializeNotifications();
+    const initNotifications = async () => {
+      try {
+        await initializeNotifications();
+      } catch (error) {
+        console.log('알림 초기화 실패 (Expo Go 환경일 수 있음):', error);
+      }
+    };
+    
+    initNotifications();
   }, []);
 
   // params.tab이 변경되면 activeTab도 업데이트

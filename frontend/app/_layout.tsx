@@ -6,13 +6,13 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, useRef } from 'react';
 import 'react-native-reanimated';
 import { View, StyleSheet, AppState, AppStateStatus } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
 
 import { ToastProvider, useToast } from '../components/ToastProvider';
 import { NotificationProvider } from '../components/NotificationProvider';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { setToastFunction } from '../services/api';
 import { checkLoginStatusWithValidation } from '../utils/authUtils';
+import { safeGetItem, safeParseJSON } from '../utils/safeStorage';
 
 // Prevent the splash screen from auto-hiding before asset loading is complete.
 SplashScreen.preventAutoHideAsync();
@@ -63,17 +63,20 @@ function AppContent() {
   useEffect(() => {
     const checkAuthStatus = async () => {
       try {
-        const token = await AsyncStorage.getItem('userToken');
-        const userInfo = await AsyncStorage.getItem('userInfo');
+        const token = await safeGetItem('userToken');
+        const userInfo = await safeGetItem('userInfo');
         
         if (token && userInfo) {
           // 로그인된 상태에서 로그인/회원가입 페이지에 있다면 홈으로 이동
           if (pathname === '/(tabs)/login' || pathname === '/(tabs)/signup') {
-            const user = JSON.parse(userInfo);
-            if (user.role === 'ADMIN') {
+            const user = safeParseJSON(userInfo, null) as any;
+            if (user && user.role === 'ADMIN') {
               router.replace('/(tabs)/profile');
-            } else {
+            } else if (user) {
               router.back();
+            } else {
+              // 파싱 오류 시 로그인 페이지로 이동
+              router.replace('/(tabs)/login');
             }
           }
         } else {
@@ -85,6 +88,8 @@ function AppContent() {
         }
       } catch (error) {
         console.error('인증 상태 확인 오류:', error);
+        // 오류 발생 시 로그인 페이지로 이동
+        router.replace('/(tabs)/login');
       } finally {
         setIsCheckingAuth(false);
       }
@@ -92,7 +97,9 @@ function AppContent() {
 
     if (loaded) {
       checkAuthStatus();
-      SplashScreen.hideAsync();
+      SplashScreen.hideAsync().catch(error => {
+        console.error('스플래시 스크린 숨김 오류:', error);
+      });
     }
   }, [loaded, pathname, router]);
 
@@ -130,11 +137,13 @@ function AppContent() {
 
 export default function RootLayout() {
   return (
-    <ToastProvider>
-      <NotificationProvider>
-        <AppContent />
-      </NotificationProvider>
-    </ToastProvider>
+    <ErrorBoundary>
+      <ToastProvider>
+        <NotificationProvider>
+          <AppContent />
+        </NotificationProvider>
+      </ToastProvider>
+    </ErrorBoundary>
   );
 }
 

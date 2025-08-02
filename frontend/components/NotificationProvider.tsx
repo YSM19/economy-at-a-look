@@ -1,6 +1,10 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { notificationApi } from '../services/api';
+import { 
+  getEnvironment, 
+  isServerNotificationSupported 
+} from '../utils/environmentUtils';
 
 export interface Notification {
   id: string;
@@ -79,6 +83,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   const loadNotifications = async () => {
     try {
+      // 서버 알림이 지원되지 않는 환경에서는 샘플 데이터만 사용
+      if (!isServerNotificationSupported()) {
+        const environment = getEnvironment();
+        console.log(`${environment} 환경에서는 서버 알림이 제한됩니다.`);
+        setNotifications(sampleNotifications);
+        return;
+      }
+
       setIsLoading(true);
       
       const token = await AsyncStorage.getItem('userToken');
@@ -116,6 +128,18 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   };
 
   const markAsRead = async (id: string) => {
+    // 서버 알림이 지원되지 않는 환경에서는 로컬 상태만 업데이트
+    if (!isServerNotificationSupported()) {
+      setNotifications(prev => 
+        prev.map(notification => 
+          notification.id === id 
+            ? { ...notification, isRead: true }
+            : notification
+        )
+      );
+      return;
+    }
+
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
@@ -143,6 +167,14 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   };
 
   const markAllAsRead = async () => {
+    // 서버 알림이 지원되지 않는 환경에서는 로컬 상태만 업데이트
+    if (!isServerNotificationSupported()) {
+      setNotifications(prev => 
+        prev.map(notification => ({ ...notification, isRead: true }))
+      );
+      return;
+    }
+
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
@@ -162,6 +194,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
   };
 
   const removeNotification = async (id: string) => {
+    // 서버 알림이 지원되지 않는 환경에서는 로컬 상태만 업데이트
+    if (!isServerNotificationSupported()) {
+      setNotifications(prev => prev.filter(notification => notification.id !== id));
+      return;
+    }
+
     try {
       const token = await AsyncStorage.getItem('userToken');
       if (!token) return;
@@ -178,12 +216,26 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({ chil
 
   useEffect(() => {
     // 컴포넌트 마운트 시 알림 로드
-    loadNotifications();
+    const initializeNotifications = async () => {
+      try {
+        await loadNotifications();
+      } catch (error) {
+        console.error('알림 초기화 오류:', error);
+        // 오류 발생 시 샘플 데이터라도 표시
+        setNotifications(sampleNotifications);
+      }
+    };
     
-    // 실시간 알림을 위한 폴링 (선택사항)
+    initializeNotifications();
+    
+    // 서버 알림이 지원되지 않는 환경에서는 폴링 간격을 늘리거나 비활성화
     const interval = setInterval(() => {
-      loadNotifications();
-    }, 30000); // 30초마다 확인
+      if (isServerNotificationSupported()) {
+        loadNotifications().catch(error => {
+          console.error('알림 폴링 오류:', error);
+        });
+      }
+    }, isServerNotificationSupported() ? 30000 : 60000); // 지원 환경에서는 30초, 제한 환경에서는 1분
     
     return () => clearInterval(interval);
   }, []);

@@ -1,5 +1,28 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Notifications from 'expo-notifications';
+import { 
+  getEnvironment, 
+  isPushNotificationSupported 
+} from './environmentUtils';
+
+// 조건부로 expo-notifications import
+let Notifications: any = null;
+
+// 안전한 모듈 로드 함수
+const loadNotificationsModule = () => {
+  if (Notifications) return Notifications;
+  
+  try {
+    const environment = getEnvironment();
+    if (environment === 'development-build' || environment === 'production') {
+      Notifications = require('expo-notifications');
+      return Notifications;
+    }
+  } catch (error) {
+    console.log('expo-notifications 모듈을 로드할 수 없습니다:', error);
+  }
+  
+  return null;
+};
 
 interface NotificationSettings {
   enabled: boolean;
@@ -59,20 +82,39 @@ const PREVIOUS_VALUES_KEY = 'notification_previous_values';
 
 // 알림 권한 요청
 export const requestNotificationPermissions = async () => {
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-  
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-  
-  if (finalStatus !== 'granted') {
-    console.log('알림 권한이 거부되었습니다.');
+  // 푸시 알림이 지원되지 않는 환경에서는 비활성화
+  if (!isPushNotificationSupported()) {
+    const environment = getEnvironment();
+    console.log(`${environment} 환경에서는 푸시 알림이 지원되지 않습니다.`);
     return false;
   }
-  
-  return true;
+
+  const notificationsModule = loadNotificationsModule();
+  if (!notificationsModule) {
+    const environment = getEnvironment();
+    console.log(`${environment} 환경에서는 푸시 알림 모듈을 로드할 수 없습니다.`);
+    return false;
+  }
+
+  try {
+    const { status: existingStatus } = await notificationsModule.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    
+    if (existingStatus !== 'granted') {
+      const { status } = await notificationsModule.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    
+    if (finalStatus !== 'granted') {
+      console.log('알림 권한이 거부되었습니다.');
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.log('알림 권한 요청 실패:', error);
+    return false;
+  }
 };
 
 // 이전 값 로드
@@ -335,8 +377,22 @@ const sendNotification = async (notification: {
   body: string;
   data?: any;
 }) => {
+  // 푸시 알림이 지원되지 않는 환경에서는 알림 발송 건너뛰기
+  if (!isPushNotificationSupported()) {
+    const environment = getEnvironment();
+    console.log(`${environment} 환경에서는 푸시 알림이 지원되지 않습니다.`);
+    return;
+  }
+
+  const notificationsModule = loadNotificationsModule();
+  if (!notificationsModule) {
+    const environment = getEnvironment();
+    console.log(`${environment} 환경에서는 푸시 알림 모듈을 로드할 수 없습니다.`);
+    return;
+  }
+
   try {
-    await Notifications.scheduleNotificationAsync({
+    await notificationsModule.scheduleNotificationAsync({
       content: {
         title: notification.title,
         body: notification.body,
@@ -354,22 +410,41 @@ const sendNotification = async (notification: {
 
 // 알림 설정 초기화
 export const initializeNotifications = async () => {
-  const hasPermission = await requestNotificationPermissions();
-  if (!hasPermission) {
-    console.log('알림 권한이 없습니다.');
+  // 푸시 알림이 지원되지 않는 환경에서는 알림 기능 비활성화
+  if (!isPushNotificationSupported()) {
+    const environment = getEnvironment();
+    console.log(`${environment} 환경에서는 푸시 알림이 지원되지 않습니다.`);
     return false;
   }
 
-  // 알림 핸들러 설정
-  Notifications.setNotificationHandler({
-    handleNotification: async () => ({
-      shouldShowAlert: true,
-      shouldPlaySound: true,
-      shouldSetBadge: false,
-    }),
-  });
+  const notificationsModule = loadNotificationsModule();
+  if (!notificationsModule) {
+    const environment = getEnvironment();
+    console.log(`${environment} 환경에서는 푸시 알림 모듈을 로드할 수 없습니다.`);
+    return false;
+  }
 
-  return true;
+  try {
+    const hasPermission = await requestNotificationPermissions();
+    if (!hasPermission) {
+      console.log('알림 권한이 없습니다.');
+      return false;
+    }
+
+    // 알림 핸들러 설정
+    notificationsModule.setNotificationHandler({
+      handleNotification: async () => ({
+        shouldShowAlert: true,
+        shouldPlaySound: true,
+        shouldSetBadge: false,
+      }),
+    });
+
+    return true;
+  } catch (error) {
+    console.log('알림 초기화 실패:', error);
+    return false;
+  }
 };
 
 // 모든 알림 체크 (주기적으로 호출)
@@ -378,6 +453,11 @@ export const checkAllNotifications = async (
   interestRateData?: InterestRateData,
   cpiData?: CPIData
 ) => {
+  // 푸시 알림이 지원되지 않는 환경에서는 알림 체크 건너뛰기
+  if (!isPushNotificationSupported()) {
+    return;
+  }
+
   const settings = await loadNotificationSettings();
   if (!settings || !settings.enabled) {
     return;

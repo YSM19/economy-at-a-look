@@ -5,6 +5,10 @@ import { ThemedText } from './ThemedText';
 import { ThemedView } from './ThemedView';
 import { useNotifications, Notification } from './NotificationProvider';
 import { useRouter } from 'expo-router';
+import { 
+  getEnvironment, 
+  isServerNotificationSupported 
+} from '../utils/environmentUtils';
 
 export const NotificationBell: React.FC = () => {
   const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, removeNotification, loadNotifications } = useNotifications();
@@ -141,7 +145,12 @@ export const NotificationBell: React.FC = () => {
                     color={colorScheme === 'dark' ? '#8e8e93' : '#c7c7cc'} 
                   />
                   <ThemedText style={styles.emptyText}>알림이 없습니다</ThemedText>
-                  <ThemedText style={styles.emptySubText}>새로운 알림이 오면 여기에 표시됩니다</ThemedText>
+                  <ThemedText style={styles.emptySubText}>
+                    {!isServerNotificationSupported() 
+                      ? `${getEnvironment()} 환경에서는 샘플 알림만 표시됩니다.`
+                      : '새로운 알림이 오면 여기에 표시됩니다'
+                    }
+                  </ThemedText>
                 </View>
               ) : (
                 notifications.map((notification) => {
