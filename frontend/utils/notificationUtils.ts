@@ -14,8 +14,16 @@ const loadNotificationsModule = () => {
   try {
     const environment = getEnvironment();
     if (environment === 'development-build' || environment === 'production') {
-      Notifications = require('expo-notifications');
-      return Notifications;
+      // 동적 import를 사용하여 더 안전하게 로드
+      const expoNotifications = require('expo-notifications');
+      
+      // 모듈이 제대로 로드되었는지 확인
+      if (expoNotifications && typeof expoNotifications.getPermissionsAsync === 'function') {
+        Notifications = expoNotifications;
+        return Notifications;
+      } else {
+        console.log('expo-notifications 모듈이 올바르게 로드되지 않았습니다.');
+      }
     }
   } catch (error) {
     console.log('expo-notifications 모듈을 로드할 수 없습니다:', error);
@@ -431,14 +439,19 @@ export const initializeNotifications = async () => {
       return false;
     }
 
-    // 알림 핸들러 설정
-    notificationsModule.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: false,
-      }),
-    });
+    // 알림 핸들러 설정 (더 안전한 방식으로)
+    try {
+      notificationsModule.setNotificationHandler({
+        handleNotification: async () => ({
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: false,
+        }),
+      });
+    } catch (handlerError) {
+      console.log('알림 핸들러 설정 실패:', handlerError);
+      // 핸들러 설정 실패해도 계속 진행
+    }
 
     return true;
   } catch (error) {
