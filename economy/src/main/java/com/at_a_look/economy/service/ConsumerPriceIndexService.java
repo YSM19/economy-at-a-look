@@ -175,6 +175,15 @@ public class ConsumerPriceIndexService {
     public void fetchAndSaveCPIData(String startDate, String endDate, String cycle) {
         log.info("📅 CPI 데이터 수집 시작: {} ~ {} (주기: {})", startDate, endDate, cycle);
         
+        // 파라미터 검증
+        if (startDate == null || endDate == null || cycle == null) {
+            throw new IllegalArgumentException("시작일, 종료일, 주기는 null일 수 없습니다.");
+        }
+        
+        if (startDate.length() != 6 || endDate.length() != 6) {
+            throw new IllegalArgumentException("날짜 형식이 올바르지 않습니다. YYYYMM 형식이어야 합니다.");
+        }
+        
         // 현재 DB 데이터 상태 확인
         long totalCount = consumerPriceIndexRepository.count();
         log.info("🔍 현재 DB 총 CPI 데이터: {}개", totalCount);
@@ -223,23 +232,38 @@ public class ConsumerPriceIndexService {
             
             log.info("✅ 소비자물가지수 데이터 저장 완료: {}개", cpiData.size());
             
-        } catch (Exception e) {
-            String errorMsg;
-            
-            // 이미 한국은행 API 에러인 경우 (에러 코드 포함)
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            // 네트워크 연결 실패
+            String errorMsg = "한국은행 서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.";
+            log.error("❌ 네트워크 연결 실패: {}", e.getMessage());
+            throw new RuntimeException(errorMsg, e);
+        } catch (org.springframework.web.client.RestClientException e) {
+            // REST API 호출 실패
+            String errorMsg = "한국은행 API 호출 중 오류가 발생했습니다: " + e.getMessage();
+            log.error("❌ REST API 호출 실패: {}", e.getMessage());
+            throw new RuntimeException(errorMsg, e);
+        } catch (org.springframework.dao.DataAccessException e) {
+            // 데이터베이스 접근 실패
+            String errorMsg = "데이터베이스 접근 중 오류가 발생했습니다: " + e.getMessage();
+            log.error("❌ 데이터베이스 접근 실패: {}", e.getMessage());
+            throw new RuntimeException(errorMsg, e);
+        } catch (IllegalArgumentException e) {
+            // 파라미터 검증 실패
+            String errorMsg = "잘못된 파라미터: " + e.getMessage();
+            log.error("❌ 파라미터 검증 실패: {}", e.getMessage());
+            throw e; // 원본 예외 그대로 전파
+        } catch (RuntimeException e) {
+            // 이미 처리된 런타임 에러 (API 에러 등)
             if (e.getMessage() != null && e.getMessage().startsWith("한국은행 API 에러:")) {
-                errorMsg = e.getMessage();
-                log.error("❌ ECOS API 에러: {}", errorMsg);
-            } else if (e.getMessage() != null && (e.getMessage().contains("ecos.bok.or.kr") || e.getMessage().contains("I/O error"))) {
-                // 네트워크 에러인 경우
-                errorMsg = "한국은행 서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.";
-                log.error("❌ 네트워크 에러: {}", e.getMessage());
+                log.error("❌ ECOS API 에러: {}", e.getMessage());
             } else {
-                // 기타 에러
-                errorMsg = "소비자물가지수 데이터 조회 실패: " + e.getMessage();
-                log.error("❌ 소비자물가지수 API 호출 실패: {}", e.getMessage(), e);
+                log.error("❌ 런타임 에러: {}", e.getMessage());
             }
-            
+            throw e; // 원본 예외 그대로 전파
+        } catch (Exception e) {
+            // 예상치 못한 에러
+            String errorMsg = "소비자물가지수 데이터 조회 중 예상치 못한 오류가 발생했습니다: " + e.getMessage();
+            log.error("❌ 예상치 못한 에러: {}", e.getMessage(), e);
             throw new RuntimeException(errorMsg, e);
         }
     }
@@ -350,6 +374,11 @@ public class ConsumerPriceIndexService {
     private List<ConsumerPriceIndex> parseEcosResponse(String response) {
         List<ConsumerPriceIndex> cpiList = new ArrayList<>();
         
+        if (response == null || response.trim().isEmpty()) {
+            log.error("❌ 파싱할 응답이 null이거나 비어있습니다.");
+            throw new IllegalArgumentException("API 응답이 null이거나 비어있습니다.");
+        }
+        
         try {
             JsonNode root = objectMapper.readTree(response);
             
@@ -357,48 +386,97 @@ public class ConsumerPriceIndexService {
             
             if (!dataArray.isArray() || dataArray.size() == 0) {
                 log.warn("⚠️ 응답에서 데이터 배열을 찾을 수 없거나 비어있습니다.");
-                log.info("📝 응답 구조: {}", root.toPrettyString());
+                log.debug("📝 응답 구조: {}", root.toPrettyString());
                 return cpiList;
             }
             
             log.info("🔍 파싱할 데이터 개수: {}", dataArray.size());
             
+            int successCount = 0;
+            int skipCount = 0;
+            int errorCount = 0;
+            
             for (JsonNode dataNode : dataArray) {
-                String timeStr = dataNode.path("TIME").asText();
-                String dataValue = dataNode.path("DATA_VALUE").asText();
-                String itemCode = dataNode.path("ITEM_CODE1").asText();
-                
-                log.debug("📊 데이터 항목: 시간={}, 값={}, 항목코드={}", timeStr, dataValue, itemCode);
-                
-                if (timeStr.isEmpty() || dataValue.isEmpty() || "-".equals(dataValue)) {
-                    log.debug("⚠️ 유효하지 않은 데이터 건너뜀: 시간={}, 값={}", timeStr, dataValue);
-                    continue;
-                }
-                
                 try {
-                    // YYYYMM 형식 그대로 사용
-                    String date = timeStr;
-                    Double cpiValue = Double.parseDouble(dataValue);
+                    String timeStr = dataNode.path("TIME").asText();
+                    String dataValue = dataNode.path("DATA_VALUE").asText();
+                    String itemCode = dataNode.path("ITEM_CODE1").asText();
                     
+                    log.debug("📊 데이터 항목: 시간={}, 값={}, 항목코드={}", timeStr, dataValue, itemCode);
+                    
+                    // 데이터 유효성 검증
+                    if (timeStr == null || timeStr.trim().isEmpty()) {
+                        log.debug("⚠️ 시간 정보가 비어있어 건너뜀");
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    if (dataValue == null || dataValue.trim().isEmpty() || "-".equals(dataValue.trim())) {
+                        log.debug("⚠️ 데이터 값이 비어있거나 '-'로 건너뜀: 시간={}", timeStr);
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    // 숫자 변환 검증
+                    Double cpiValue;
+                    try {
+                        cpiValue = Double.parseDouble(dataValue.trim());
+                        if (cpiValue <= 0) {
+                            log.debug("⚠️ CPI 값이 0 이하로 건너뜀: 시간={}, 값={}", timeStr, cpiValue);
+                            skipCount++;
+                            continue;
+                        }
+                    } catch (NumberFormatException e) {
+                        log.debug("⚠️ 숫자 변환 실패로 건너뜀: 시간={}, 값={}, 에러={}", timeStr, dataValue, e.getMessage());
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    // 날짜 형식 검증 (YYYYMM)
+                    if (timeStr.length() != 6) {
+                        log.debug("⚠️ 날짜 형식이 올바르지 않아 건너뜀: 시간={}", timeStr);
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    try {
+                        Integer.parseInt(timeStr); // 숫자인지 확인
+                    } catch (NumberFormatException e) {
+                        log.debug("⚠️ 날짜가 숫자가 아니어서 건너뜀: 시간={}", timeStr);
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    // CPI 데이터 생성
                     ConsumerPriceIndex cpi = ConsumerPriceIndex.builder()
-                        .date(date)
+                        .date(timeStr)
                         .cpiValue(cpiValue)
                         .monthlyChange(0.0) // 나중에 계산
                         .annualChange(0.0)  // 나중에 계산
                         .build();
                         
                     cpiList.add(cpi);
-                    log.debug("✅ CPI 데이터 생성: 날짜={}, 값={}", date, cpiValue);
+                    successCount++;
+                    log.debug("✅ CPI 데이터 생성: 날짜={}, 값={}", timeStr, cpiValue);
                     
                 } catch (Exception e) {
-                    log.warn("⚠️ 데이터 파싱 실패 - 시간: {}, 값: {}, 에러: {}", timeStr, dataValue, e.getMessage());
+                    errorCount++;
+                    log.warn("⚠️ 개별 데이터 파싱 실패: {}", e.getMessage());
                 }
             }
             
-            log.info("🔧 파싱 완료: 총 {}개 데이터 생성", cpiList.size());
+            log.info("🔧 파싱 완료: 성공={}개, 건너뜀={}개, 에러={}개", successCount, skipCount, errorCount);
             
+            if (successCount == 0) {
+                log.warn("⚠️ 파싱된 유효한 데이터가 없습니다.");
+            }
+            
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.error("❌ JSON 파싱 실패: {}", e.getMessage());
+            throw new RuntimeException("API 응답 JSON 파싱 실패: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("❌ ECOS 응답 파싱 실패: {}", e.getMessage(), e);
+            log.error("❌ ECOS 응답 파싱 중 예상치 못한 에러: {}", e.getMessage(), e);
+            throw new RuntimeException("API 응답 파싱 중 예상치 못한 에러: " + e.getMessage(), e);
         }
         
         return cpiList;
@@ -410,43 +488,91 @@ public class ConsumerPriceIndexService {
     private void saveCPIDataWithChanges(List<ConsumerPriceIndex> cpiData) {
         log.info("💾 CPI 데이터 저장 시작: {}개 데이터", cpiData.size());
         
+        if (cpiData == null || cpiData.isEmpty()) {
+            log.warn("⚠️ 저장할 CPI 데이터가 없습니다.");
+            return;
+        }
+        
         // 날짜 순으로 정렬 (YYYYMM 문자열 정렬)
         cpiData.sort(Comparator.comparing(ConsumerPriceIndex::getDate));
         
         int savedCount = 0;
         int updatedCount = 0;
+        int errorCount = 0;
         
         for (int i = 0; i < cpiData.size(); i++) {
-            ConsumerPriceIndex current = cpiData.get(i);
-            
-            // 월별 변화율 계산 (전월 대비)
-            if (i > 0) {
-                ConsumerPriceIndex previous = cpiData.get(i - 1);
-                double monthlyChange = ((current.getCpiValue() - previous.getCpiValue()) / previous.getCpiValue()) * 100;
-                current.setMonthlyChange(Math.round(monthlyChange * 100.0) / 100.0);
+            try {
+                ConsumerPriceIndex current = cpiData.get(i);
+                
+                // 데이터 유효성 검증
+                if (current == null) {
+                    log.warn("⚠️ null CPI 데이터 건너뜀: 인덱스 {}", i);
+                    errorCount++;
+                    continue;
+                }
+                
+                if (current.getDate() == null || current.getCpiValue() == null) {
+                    log.warn("⚠️ 필수 필드가 null인 CPI 데이터 건너뜀: 인덱스 {}, 날짜={}, 값={}", 
+                            i, current.getDate(), current.getCpiValue());
+                    errorCount++;
+                    continue;
+                }
+                
+                // 월별 변화율 계산 (전월 대비)
+                if (i > 0) {
+                    ConsumerPriceIndex previous = cpiData.get(i - 1);
+                    if (previous != null && previous.getCpiValue() != null && previous.getCpiValue() > 0) {
+                        try {
+                            double monthlyChange = ((current.getCpiValue() - previous.getCpiValue()) / previous.getCpiValue()) * 100;
+                            current.setMonthlyChange(Math.round(monthlyChange * 100.0) / 100.0);
+                        } catch (ArithmeticException e) {
+                            log.warn("⚠️ 월별 변화율 계산 실패: {}", e.getMessage());
+                            current.setMonthlyChange(0.0);
+                        }
+                    } else {
+                        current.setMonthlyChange(0.0);
+                    }
+                }
+                
+                // 연간 변화율 계산 (전년 동월 대비)
+                if (i >= 12) {
+                    ConsumerPriceIndex yearAgo = cpiData.get(i - 12);
+                    if (yearAgo != null && yearAgo.getCpiValue() != null && yearAgo.getCpiValue() > 0) {
+                        try {
+                            double annualChange = ((current.getCpiValue() - yearAgo.getCpiValue()) / yearAgo.getCpiValue()) * 100;
+                            current.setAnnualChange(Math.round(annualChange * 100.0) / 100.0);
+                        } catch (ArithmeticException e) {
+                            log.warn("⚠️ 연간 변화율 계산 실패: {}", e.getMessage());
+                            current.setAnnualChange(0.0);
+                        }
+                    } else {
+                        current.setAnnualChange(0.0);
+                    }
+                }
+                
+                // 저장 또는 업데이트
+                boolean isNew = saveOrUpdateCPI(current);
+                if (isNew) {
+                    savedCount++;
+                } else {
+                    updatedCount++;
+                }
+                
+                log.debug("📊 처리 완료: 날짜={}, CPI={}, 월변화율={}, 년변화율={}", 
+                        current.getDate(), current.getCpiValue(), 
+                        current.getMonthlyChange(), current.getAnnualChange());
+                        
+            } catch (Exception e) {
+                errorCount++;
+                log.error("❌ CPI 데이터 처리 실패 (인덱스 {}): {}", i, e.getMessage());
             }
-            
-            // 연간 변화율 계산 (전년 동월 대비)
-            if (i >= 12) {
-                ConsumerPriceIndex yearAgo = cpiData.get(i - 12);
-                double annualChange = ((current.getCpiValue() - yearAgo.getCpiValue()) / yearAgo.getCpiValue()) * 100;
-                current.setAnnualChange(Math.round(annualChange * 100.0) / 100.0);
-            }
-            
-            // 저장 또는 업데이트
-            boolean isNew = saveOrUpdateCPI(current);
-            if (isNew) {
-                savedCount++;
-            } else {
-                updatedCount++;
-            }
-            
-            log.debug("📊 처리 완료: 날짜={}, CPI={}, 월변화율={}, 년변화율={}", 
-                    current.getDate(), current.getCpiValue(), 
-                    current.getMonthlyChange(), current.getAnnualChange());
         }
         
-        log.info("✅ CPI 데이터 저장 완료: 신규 {}개, 업데이트 {}개", savedCount, updatedCount);
+        log.info("✅ CPI 데이터 저장 완료: 신규 {}개, 업데이트 {}개, 에러 {}개", savedCount, updatedCount, errorCount);
+        
+        if (errorCount > 0) {
+            log.warn("⚠️ {}개의 CPI 데이터 처리 중 에러가 발생했습니다.", errorCount);
+        }
     }
 
     /**
@@ -454,18 +580,41 @@ public class ConsumerPriceIndexService {
      * @return true if new data saved, false if existing data updated
      */
     private boolean saveOrUpdateCPI(ConsumerPriceIndex newCPI) {
-        Optional<ConsumerPriceIndex> existing = consumerPriceIndexRepository.findByDate(newCPI.getDate());
+        if (newCPI == null) {
+            log.error("❌ 저장할 CPI 데이터가 null입니다.");
+            throw new IllegalArgumentException("저장할 CPI 데이터가 null입니다.");
+        }
         
-        if (existing.isPresent()) {
-            ConsumerPriceIndex existingCPI = existing.get();
-            existingCPI.setCpiValue(newCPI.getCpiValue());
-            existingCPI.setMonthlyChange(newCPI.getMonthlyChange());
-            existingCPI.setAnnualChange(newCPI.getAnnualChange());
-            consumerPriceIndexRepository.save(existingCPI);
-            return false; // 기존 데이터 업데이트
-        } else {
-            consumerPriceIndexRepository.save(newCPI);
-            return true; // 신규 데이터 저장
+        if (newCPI.getDate() == null || newCPI.getCpiValue() == null) {
+            log.error("❌ CPI 데이터의 필수 필드가 null입니다: 날짜={}, 값={}", newCPI.getDate(), newCPI.getCpiValue());
+            throw new IllegalArgumentException("CPI 데이터의 필수 필드가 null입니다.");
+        }
+        
+        try {
+            Optional<ConsumerPriceIndex> existing = consumerPriceIndexRepository.findByDate(newCPI.getDate());
+            
+            if (existing.isPresent()) {
+                ConsumerPriceIndex existingCPI = existing.get();
+                existingCPI.setCpiValue(newCPI.getCpiValue());
+                existingCPI.setMonthlyChange(newCPI.getMonthlyChange());
+                existingCPI.setAnnualChange(newCPI.getAnnualChange());
+                consumerPriceIndexRepository.save(existingCPI);
+                log.debug("📝 CPI 데이터 업데이트: 날짜={}, 값={}", newCPI.getDate(), newCPI.getCpiValue());
+                return false; // 기존 데이터 업데이트
+            } else {
+                consumerPriceIndexRepository.save(newCPI);
+                log.debug("💾 CPI 데이터 신규 저장: 날짜={}, 값={}", newCPI.getDate(), newCPI.getCpiValue());
+                return true; // 신규 데이터 저장
+            }
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            log.error("❌ CPI 데이터 저장 중 데이터 무결성 위반: 날짜={}, 에러={}", newCPI.getDate(), e.getMessage());
+            throw new RuntimeException("CPI 데이터 저장 중 데이터 무결성 위반: " + e.getMessage(), e);
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.error("❌ CPI 데이터 저장 중 데이터베이스 접근 에러: 날짜={}, 에러={}", newCPI.getDate(), e.getMessage());
+            throw new RuntimeException("CPI 데이터 저장 중 데이터베이스 접근 에러: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("❌ CPI 데이터 저장 중 예상치 못한 에러: 날짜={}, 에러={}", newCPI.getDate(), e.getMessage());
+            throw new RuntimeException("CPI 데이터 저장 중 예상치 못한 에러: " + e.getMessage(), e);
         }
     }
 

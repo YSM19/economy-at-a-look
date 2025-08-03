@@ -59,29 +59,56 @@ public class ExchangeRateController {
      * 오늘의 환율 데이터를 조회합니다.
      */
     @GetMapping("/today")
-    public ResponseEntity<List<ExchangeRateResponseDTO>> getTodayExchangeRates() {
-        List<ExchangeRateResponseDTO> rates = exchangeRateService.getTodayExchangeRates();
-        return ResponseEntity.ok(rates);
+    public ResponseEntity<ApiResponse<List<ExchangeRateResponseDTO>>> getTodayExchangeRates() {
+        try {
+            List<ExchangeRateResponseDTO> rates = exchangeRateService.getTodayExchangeRates();
+            return ResponseEntity.ok(ApiResponse.success(rates));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [ExchangeRateController] 오늘 환율 데이터 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("💥 [ExchangeRateController] 오늘 환율 데이터 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("오늘 환율 데이터 조회 중 오류가 발생했습니다."));
+        }
     }
 
     /**
      * 최근 환율 데이터를 조회합니다.
      */
     @GetMapping("/latest")
-    public ResponseEntity<List<ExchangeRateResponseDTO>> getLatestExchangeRates() {
-        List<ExchangeRateResponseDTO> rates = exchangeRateService.getLatestExchangeRates();
-        return ResponseEntity.ok(rates);
+    public ResponseEntity<ApiResponse<List<ExchangeRateResponseDTO>>> getLatestExchangeRates() {
+        try {
+            List<ExchangeRateResponseDTO> rates = exchangeRateService.getLatestExchangeRates();
+            return ResponseEntity.ok(ApiResponse.success(rates));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [ExchangeRateController] 최근 환율 데이터 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("💥 [ExchangeRateController] 최근 환율 데이터 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("최근 환율 데이터 조회 중 오류가 발생했습니다."));
+        }
     }
 
     /**
      * 특정 통화 코드의 환율 데이터를 조회합니다.
      */
     @GetMapping("/currency/{curUnit}")
-    public ResponseEntity<List<ExchangeRateResponseDTO>> getExchangeRatesByCurrency(
+    public ResponseEntity<ApiResponse<List<ExchangeRateResponseDTO>>> getExchangeRatesByCurrency(
             @PathVariable String curUnit) {
-        
-        List<ExchangeRateResponseDTO> rates = exchangeRateService.getExchangeRatesByCurrency(curUnit);
-        return ResponseEntity.ok(rates);
+        try {
+            if (curUnit == null || curUnit.trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("통화 코드를 입력해주세요."));
+            }
+            
+            List<ExchangeRateResponseDTO> rates = exchangeRateService.getExchangeRatesByCurrency(curUnit);
+            return ResponseEntity.ok(ApiResponse.success(rates));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [ExchangeRateController] 통화별 환율 데이터 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("💥 [ExchangeRateController] 통화별 환율 데이터 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("통화별 환율 데이터 조회 중 오류가 발생했습니다."));
+        }
     }
 
     /**

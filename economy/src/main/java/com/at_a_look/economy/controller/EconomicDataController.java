@@ -17,6 +17,7 @@ import com.at_a_look.economy.service.InterestRateService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/economic")
@@ -42,16 +44,32 @@ public class EconomicDataController {
     @GetMapping("/index")
     @Operation(summary = "경제 심리 지수 조회", description = "금리, 환율, 물가지수를 종합한 경제 심리 지수를 조회합니다.")
     public ResponseEntity<ApiResponse<EconomicIndexResponse>> getEconomicIndex() {
-        EconomicIndexResponse response = economicIndexService.getEconomicIndex();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        try {
+            EconomicIndexResponse response = economicIndexService.getEconomicIndex();
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [EconomicDataController] 경제 심리 지수 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("💥 [EconomicDataController] 경제 심리 지수 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("경제 심리 지수 조회 중 오류가 발생했습니다."));
+        }
     }
 
     // 최신 환율 정보 조회
     @GetMapping("/exchange-rate")
     @Operation(summary = "최신 환율 정보 조회", description = "최신 원/달러, 원/유로, 원/엔 환율 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<ExchangeRateResponse>> getExchangeRate() {
-        ExchangeRateResponse response = exchangeRateService.fetchLatestExchangeRates();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        try {
+            ExchangeRateResponse response = exchangeRateService.fetchLatestExchangeRates();
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [EconomicDataController] 환율 정보 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("💥 [EconomicDataController] 환율 정보 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("환율 정보 조회 중 오류가 발생했습니다."));
+        }
     }
 
     // 특정 기간 환율 정보 조회
@@ -60,16 +78,39 @@ public class EconomicDataController {
     public ResponseEntity<ApiResponse<List<ExchangeRateDto>>> getExchangeRateByPeriod(
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
-        List<ExchangeRateDto> response = exchangeRateService.getExchangeRatesByDateRange(startDate, endDate);
-        return ResponseEntity.ok(ApiResponse.success(response));
+        try {
+            if (startDate == null || endDate == null) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("시작일과 종료일을 모두 입력해주세요."));
+            }
+            if (startDate.isAfter(endDate)) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("시작일은 종료일보다 이전이어야 합니다."));
+            }
+            
+            List<ExchangeRateDto> response = exchangeRateService.getExchangeRatesByDateRange(startDate, endDate);
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [EconomicDataController] 기간별 환율 정보 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("💥 [EconomicDataController] 기간별 환율 정보 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("기간별 환율 정보 조회 중 오류가 발생했습니다."));
+        }
     }
 
     // 최신 금리 정보 조회
     @GetMapping("/interest-rate")
     @Operation(summary = "최신 금리 정보 조회", description = "최신 한국은행 기준금리, 미 연준 기준금리, 시장금리 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<InterestRateResponse>> getInterestRate() {
-        InterestRateResponse response = interestRateService.fetchLatestInterestRates();
-        return ResponseEntity.ok(ApiResponse.success(response));
+        try {
+            InterestRateResponse response = interestRateService.fetchLatestInterestRates();
+            return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [EconomicDataController] 금리 정보 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            log.error("💥 [EconomicDataController] 금리 정보 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("금리 정보 조회 중 오류가 발생했습니다."));
+        }
     }
     
     // 금리 데이터 강제 새로고침

@@ -9,6 +9,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClientException;
+import org.springframework.dao.DataAccessException;
+import org.springframework.dao.DataIntegrityViolationException;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.security.SecurityException;
 
 import java.net.SocketTimeoutException;
 import java.net.ProtocolException;
@@ -93,6 +99,142 @@ public class GlobalExceptionHandler {
         
         String userMessage = "외부 서비스와의 통신 중 문제가 발생했습니다. 잠시 후 다시 시도해주세요.";
         log.warn("💬 [GlobalExceptionHandler] REST 오류 - 사용자에게 전달되는 메시지: {}", userMessage);
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(userMessage));
+    }
+    
+    /**
+     * 데이터베이스 접근 예외 처리
+     */
+    @ExceptionHandler(DataAccessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataAccessException(DataAccessException ex) {
+        log.error("🗄️ [GlobalExceptionHandler] 데이터베이스 접근 예외: {}", ex.getMessage());
+        log.error("📋 [GlobalExceptionHandler] 데이터베이스 오류 상세 정보:", ex);
+        
+        String userMessage = "데이터베이스 접근 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        log.warn("💬 [GlobalExceptionHandler] 데이터베이스 오류 - 사용자에게 전달되는 메시지: {}", userMessage);
+        
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(ApiResponse.error(userMessage));
+    }
+    
+    /**
+     * 데이터 무결성 위반 예외 처리
+     */
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ApiResponse<Void>> handleDataIntegrityViolationException(DataIntegrityViolationException ex) {
+        log.error("🔒 [GlobalExceptionHandler] 데이터 무결성 위반 예외: {}", ex.getMessage());
+        log.error("📋 [GlobalExceptionHandler] 데이터 무결성 오류 상세 정보:", ex);
+        
+        String userMessage = "데이터 무결성 검증에 실패했습니다. 입력 데이터를 확인하고 다시 시도해주세요.";
+        log.warn("💬 [GlobalExceptionHandler] 데이터 무결성 오류 - 사용자에게 전달되는 메시지: {}", userMessage);
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(userMessage));
+    }
+    
+    /**
+     * 파라미터 검증 예외 처리
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        log.error("⚠️ [GlobalExceptionHandler] 파라미터 검증 예외: {}", ex.getMessage());
+        log.error("📋 [GlobalExceptionHandler] 파라미터 검증 오류 상세 정보:", ex);
+        
+        String userMessage = "잘못된 파라미터가 전달되었습니다. 요청 정보를 확인하고 다시 시도해주세요.";
+        log.warn("💬 [GlobalExceptionHandler] 파라미터 검증 오류 - 사용자에게 전달되는 메시지: {}", userMessage);
+        
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(ApiResponse.error(userMessage));
+    }
+    
+    /**
+     * JWT 토큰 만료 예외 처리
+     */
+    @ExceptionHandler(ExpiredJwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleExpiredJwtException(ExpiredJwtException ex) {
+        log.warn("⏰ [GlobalExceptionHandler] JWT 토큰 만료: {}", ex.getMessage());
+        
+        String userMessage = "토큰이 만료되었습니다. 다시 로그인해주세요.";
+        log.warn("💬 [GlobalExceptionHandler] JWT 만료 - 사용자에게 전달되는 메시지: {}", userMessage);
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(userMessage));
+    }
+
+    /**
+     * JWT 토큰 형식 오류 예외 처리
+     */
+    @ExceptionHandler(MalformedJwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleMalformedJwtException(MalformedJwtException ex) {
+        log.warn("🔧 [GlobalExceptionHandler] JWT 토큰 형식 오류: {}", ex.getMessage());
+        
+        String userMessage = "유효하지 않은 토큰입니다. 다시 로그인해주세요.";
+        log.warn("💬 [GlobalExceptionHandler] JWT 형식 오류 - 사용자에게 전달되는 메시지: {}", userMessage);
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(userMessage));
+    }
+
+    /**
+     * JWT 토큰 서명 오류 예외 처리
+     */
+    @ExceptionHandler(SecurityException.class)
+    public ResponseEntity<ApiResponse<Void>> handleJwtSecurityException(SecurityException ex) {
+        log.warn("🔒 [GlobalExceptionHandler] JWT 토큰 서명 오류: {}", ex.getMessage());
+        
+        String userMessage = "토큰 인증에 실패했습니다. 다시 로그인해주세요.";
+        log.warn("💬 [GlobalExceptionHandler] JWT 서명 오류 - 사용자에게 전달되는 메시지: {}", userMessage);
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(userMessage));
+    }
+
+    /**
+     * JWT 토큰 지원되지 않는 형식 예외 처리
+     */
+    @ExceptionHandler(UnsupportedJwtException.class)
+    public ResponseEntity<ApiResponse<Void>> handleUnsupportedJwtException(UnsupportedJwtException ex) {
+        log.warn("🚫 [GlobalExceptionHandler] 지원되지 않는 JWT 토큰: {}", ex.getMessage());
+        
+        String userMessage = "지원되지 않는 토큰 형식입니다. 다시 로그인해주세요.";
+        log.warn("💬 [GlobalExceptionHandler] JWT 지원되지 않는 형식 - 사용자에게 전달되는 메시지: {}", userMessage);
+        
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiResponse.error(userMessage));
+    }
+
+    /**
+     * 스케줄러 관련 런타임 예외 처리
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<ApiResponse<Void>> handleRuntimeException(RuntimeException ex) {
+        log.error("⚡ [GlobalExceptionHandler] 런타임 예외: {}", ex.getMessage());
+        log.error("📋 [GlobalExceptionHandler] 런타임 오류 상세 정보:", ex);
+        
+        String userMessage;
+        
+        // 스케줄러 관련 메시지인지 확인
+        if (ex.getMessage() != null) {
+            if (ex.getMessage().contains("한국은행 API 에러:")) {
+                userMessage = "한국은행 API에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+            } else if (ex.getMessage().contains("네트워크 연결")) {
+                userMessage = "네트워크 연결에 문제가 있습니다. 연결 상태를 확인하고 다시 시도해주세요.";
+            } else if (ex.getMessage().contains("데이터베이스")) {
+                userMessage = "데이터베이스 처리 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+            } else if (ex.getMessage().contains("API 호출")) {
+                userMessage = "외부 API 호출 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+            } else if (ex.getMessage().contains("토큰 생성")) {
+                userMessage = "인증 토큰 생성 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+            } else {
+                userMessage = "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+            }
+        } else {
+            userMessage = "서버에서 오류가 발생했습니다. 잠시 후 다시 시도해주세요.";
+        }
+        
+        log.warn("💬 [GlobalExceptionHandler] 런타임 오류 - 사용자에게 전달되는 메시지: {}", userMessage);
         
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(ApiResponse.error(userMessage));

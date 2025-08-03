@@ -147,12 +147,24 @@ public class UserService {
     @Transactional
     public void initializeAdminAccount() {
         log.info("🔐 [UserService] 관리자 계정 초기화 시작");
-        log.info("📧 [UserService] 관리자 이메일: {}", adminEmail);
-        log.info("🔑 [UserService] 관리자 비밀번호 길이: {}", adminPassword != null ? adminPassword.length() : "null");
-        log.info("🔧 [UserService] PasswordEncoder 상태: {}", passwordEncoder != null ? "정상" : "null");
-        log.info("🗄️ [UserService] UserRepository 상태: {}", userRepository != null ? "정상" : "null");
         
         try {
+            // 설정값 검증
+            if (adminEmail == null || adminEmail.trim().isEmpty()) {
+                log.error("❌ [UserService] 관리자 이메일이 설정되지 않았습니다.");
+                throw new IllegalStateException("관리자 이메일이 설정되지 않았습니다.");
+            }
+            
+            if (adminPassword == null || adminPassword.trim().isEmpty()) {
+                log.error("❌ [UserService] 관리자 비밀번호가 설정되지 않았습니다.");
+                throw new IllegalStateException("관리자 비밀번호가 설정되지 않았습니다.");
+            }
+            
+            log.info("📧 [UserService] 관리자 이메일: {}", adminEmail);
+            log.info("🔑 [UserService] 관리자 비밀번호 길이: {}", adminPassword.length());
+            log.info("🔧 [UserService] PasswordEncoder 상태: {}", passwordEncoder != null ? "정상" : "null");
+            log.info("🗄️ [UserService] UserRepository 상태: {}", userRepository != null ? "정상" : "null");
+            
             boolean emailExists = userRepository.existsByEmail(adminEmail);
             log.info("📊 [UserService] 관리자 이메일 존재 여부: {}", emailExists);
             
@@ -207,9 +219,15 @@ public class UserService {
                     log.error("❌ [UserService] 관리자 계정을 찾을 수 없습니다: email={}", adminEmail);
                 }
             }
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.error("❌ [UserService] 관리자 계정 초기화 중 데이터베이스 오류: {}", e.getMessage(), e);
+            throw new RuntimeException("관리자 계정 초기화 중 데이터베이스 오류가 발생했습니다.", e);
+        } catch (IllegalStateException e) {
+            log.error("❌ [UserService] 관리자 계정 초기화 중 설정 오류: {}", e.getMessage());
+            throw e;
         } catch (Exception e) {
-            log.error("💥 [UserService] 관리자 계정 초기화 중 예외 발생: {}", e.getMessage());
-            throw e; // 예외를 다시 던져서 DataInitializer에서 확인할 수 있도록 함
+            log.error("❌ [UserService] 관리자 계정 초기화 중 예상치 못한 오류: {}", e.getMessage(), e);
+            throw new RuntimeException("관리자 계정 초기화 중 예상치 못한 오류가 발생했습니다.", e);
         }
     }
 

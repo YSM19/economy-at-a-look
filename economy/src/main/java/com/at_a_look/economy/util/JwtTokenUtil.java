@@ -34,7 +34,23 @@ public class JwtTokenUtil {
      * 시크릿 키 생성
      */
     private SecretKey getSigningKey() {
-        return Keys.hmacShaKeyFor(secret.getBytes());
+        try {
+            if (secret == null || secret.trim().isEmpty()) {
+                throw new IllegalStateException("JWT 시크릿 키가 설정되지 않았습니다.");
+            }
+            
+            if (secret.length() < 32) {
+                log.warn("⚠️ [JwtTokenUtil] JWT 시크릿 키가 너무 짧습니다. 최소 32자 이상을 권장합니다.");
+            }
+            
+            return Keys.hmacShaKeyFor(secret.getBytes());
+        } catch (IllegalStateException e) {
+            log.error("❌ [JwtTokenUtil] 시크릿 키 생성 실패 - 설정 오류: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("❌ [JwtTokenUtil] 시크릿 키 생성 중 예상치 못한 오류: {}", e.getMessage(), e);
+            throw new RuntimeException("시크릿 키 생성 중 오류가 발생했습니다.", e);
+        }
     }
 
     /**
@@ -124,12 +140,34 @@ public class JwtTokenUtil {
      * 사용자 정보로 JWT 토큰 생성
      */
     public String generateToken(Long userId, String email, String username, String role) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userId);
-        claims.put("username", username);
-        claims.put("role", role);
-        
-        return createToken(claims, email, expiration);
+        try {
+            // 파라미터 검증
+            if (userId == null || userId <= 0) {
+                throw new IllegalArgumentException("유효하지 않은 사용자 ID입니다.");
+            }
+            if (email == null || email.trim().isEmpty()) {
+                throw new IllegalArgumentException("이메일이 비어있습니다.");
+            }
+            if (username == null || username.trim().isEmpty()) {
+                throw new IllegalArgumentException("사용자명이 비어있습니다.");
+            }
+            if (role == null || role.trim().isEmpty()) {
+                throw new IllegalArgumentException("사용자 역할이 비어있습니다.");
+            }
+            
+            Map<String, Object> claims = new HashMap<>();
+            claims.put("userId", userId);
+            claims.put("username", username);
+            claims.put("role", role);
+            
+            return createToken(claims, email, expiration);
+        } catch (IllegalArgumentException e) {
+            log.error("❌ [JwtTokenUtil] 토큰 생성 실패 - 잘못된 파라미터: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("❌ [JwtTokenUtil] 토큰 생성 중 예상치 못한 오류: {}", e.getMessage(), e);
+            throw new RuntimeException("토큰 생성 중 오류가 발생했습니다.", e);
+        }
     }
 
     /**
@@ -147,16 +185,35 @@ public class JwtTokenUtil {
      * JWT 토큰 생성 (내부 메서드)
      */
     private String createToken(Map<String, Object> claims, String subject, Long expiration) {
-        Date now = new Date();
-        Date expiryDate = new Date(now.getTime() + expiration * 1000);
+        try {
+            // 파라미터 검증
+            if (claims == null) {
+                throw new IllegalArgumentException("클레임이 null입니다.");
+            }
+            if (subject == null || subject.trim().isEmpty()) {
+                throw new IllegalArgumentException("주체(subject)가 비어있습니다.");
+            }
+            if (expiration == null || expiration <= 0) {
+                throw new IllegalArgumentException("유효하지 않은 만료 시간입니다.");
+            }
+            
+            Date now = new Date();
+            Date expiryDate = new Date(now.getTime() + expiration * 1000);
 
-        return Jwts.builder()
-                .claims(claims)
-                .subject(subject)
-                .issuedAt(now)
-                .expiration(expiryDate)
-                .signWith(getSigningKey())
-                .compact();
+            return Jwts.builder()
+                    .claims(claims)
+                    .subject(subject)
+                    .issuedAt(now)
+                    .expiration(expiryDate)
+                    .signWith(getSigningKey())
+                    .compact();
+        } catch (IllegalArgumentException e) {
+            log.error("❌ [JwtTokenUtil] 토큰 생성 실패 - 잘못된 파라미터: {}", e.getMessage());
+            throw e;
+        } catch (Exception e) {
+            log.error("❌ [JwtTokenUtil] 토큰 생성 중 예상치 못한 오류: {}", e.getMessage(), e);
+            throw new RuntimeException("토큰 생성 중 오류가 발생했습니다.", e);
+        }
     }
 
     /**

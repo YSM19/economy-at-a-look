@@ -320,19 +320,32 @@ public class InterestRateService {
      */
     private void fetchKoreaDailyData(String countryCode, CountryInfo countryInfo, 
                                     LocalDate startDate, LocalDate endDate) {
+        // 파라미터 검증
+        if (countryCode == null || countryInfo == null || startDate == null || endDate == null) {
+            throw new IllegalArgumentException("필수 파라미터가 null입니다.");
+        }
+        
+        if (startDate.isAfter(endDate)) {
+            throw new IllegalArgumentException("시작일이 종료일보다 늦습니다: " + startDate + " > " + endDate);
+        }
+        
         // 기간별로 샘플링하여 기존 데이터 확인 (효율성을 위해)
         // 시작일, 중간일, 종료일에 데이터가 있는지 확인
         LocalDate middleDate = startDate.plusDays(ChronoUnit.DAYS.between(startDate, endDate) / 2);
         
-        boolean hasStartData = interestRateRepository.findByDateAndCountryCode(startDate, countryCode).isPresent();
-        boolean hasMiddleData = interestRateRepository.findByDateAndCountryCode(middleDate, countryCode).isPresent();
-        boolean hasEndData = interestRateRepository.findByDateAndCountryCode(endDate, countryCode).isPresent();
-        
-        // 샘플 날짜에 모두 데이터가 있으면 전체 기간에 데이터가 있을 가능성이 높으므로 건너뜀
-        if (hasStartData && hasMiddleData && hasEndData) {
-            log.info("📋 {} 국가의 {}~{} 기간에 충분한 데이터가 있는 것으로 추정됩니다. API 호출을 건너뜁니다.", 
-                    countryCode, startDate, endDate);
-            return;
+        try {
+            boolean hasStartData = interestRateRepository.findByDateAndCountryCode(startDate, countryCode).isPresent();
+            boolean hasMiddleData = interestRateRepository.findByDateAndCountryCode(middleDate, countryCode).isPresent();
+            boolean hasEndData = interestRateRepository.findByDateAndCountryCode(endDate, countryCode).isPresent();
+            
+            // 샘플 날짜에 모두 데이터가 있으면 전체 기간에 데이터가 있을 가능성이 높으므로 건너뜀
+            if (hasStartData && hasMiddleData && hasEndData) {
+                log.info("📋 {} 국가의 {}~{} 기간에 충분한 데이터가 있는 것으로 추정됩니다. API 호출을 건너뜁니다.", 
+                        countryCode, startDate, endDate);
+                return;
+            }
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.warn("⚠️ 기존 데이터 확인 중 데이터베이스 에러 발생, API 호출을 진행합니다: {}", e.getMessage());
         }
         
         String startDateStr = startDate.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
@@ -343,10 +356,14 @@ public class InterestRateService {
             ecosApiKey, startDateStr, endDateStr
         );
         
-        log.info("🔗 ECOS API 한국 일별 기준금리 호출: {}", url);
+        log.info("🔗 ECOS API 한국 일별 기준금리 호출: {}", url.replaceAll(ecosApiKey, "***API_KEY***"));
         
         try {
             String response = restTemplate.getForObject(url, String.class);
+            
+            if (response == null) {
+                throw new RuntimeException("한국은행 API로부터 응답을 받지 못했습니다.");
+            }
             
             // API 응답 검증
             String errorMessage = validateEcosApiResponse(response);
@@ -362,24 +379,33 @@ public class InterestRateService {
             
             log.info("✅ {} 국가 일별 데이터 처리 완료: {}일", countryCode, rateData.size());
             
-        } catch (Exception e) {
-            String errorMsg;
-            
-            // ECOS API 에러인지 확인 (이미 에러 코드가 포함된 메시지)
+        } catch (org.springframework.web.client.ResourceAccessException e) {
+            // 네트워크 연결 실패
+            String errorMsg = "한국은행 서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.";
+            log.error("❌ {} 국가 네트워크 연결 실패: {}", countryCode, e.getMessage());
+            throw new RuntimeException(errorMsg, e);
+        } catch (org.springframework.web.client.RestClientException e) {
+            // REST API 호출 실패
+            String errorMsg = "한국은행 API 호출 중 오류가 발생했습니다: " + e.getMessage();
+            log.error("❌ {} 국가 REST API 호출 실패: {}", countryCode, e.getMessage());
+            throw new RuntimeException(errorMsg, e);
+        } catch (org.springframework.dao.DataAccessException e) {
+            // 데이터베이스 접근 실패
+            String errorMsg = "데이터베이스 접근 중 오류가 발생했습니다: " + e.getMessage();
+            log.error("❌ {} 국가 데이터베이스 접근 실패: {}", countryCode, e.getMessage());
+            throw new RuntimeException(errorMsg, e);
+        } catch (RuntimeException e) {
+            // 이미 처리된 런타임 에러 (API 에러 등)
             if (e.getMessage() != null && e.getMessage().startsWith("한국은행 API 에러:")) {
-                // ECOS API 에러 메시지를 그대로 사용 (에러 코드 포함)
-                errorMsg = e.getMessage();
-                log.error("❌ {} 국가 ECOS API 에러: {}", countryCode, errorMsg);
-            } else if (e.getMessage() != null && (e.getMessage().contains("ecos.bok.or.kr") || e.getMessage().contains("I/O error"))) {
-                // 네트워크 에러인 경우
-                errorMsg = "한국은행 서버에 연결할 수 없습니다. 네트워크 연결을 확인하거나 잠시 후 다시 시도해주세요.";
-                log.error("❌ {} 국가 네트워크 에러: {}", countryCode, e.getMessage());
+                log.error("❌ {} 국가 ECOS API 에러: {}", countryCode, e.getMessage());
             } else {
-                // 기타 에러
-                errorMsg = "한국은행 기준금리 데이터 조회 실패: " + e.getMessage();
-                log.error("❌ {} 국가 일별 데이터 조회 실패: {}", countryCode, errorMsg);
+                log.error("❌ {} 국가 런타임 에러: {}", countryCode, e.getMessage());
             }
-            
+            throw e; // 원본 예외 그대로 전파
+        } catch (Exception e) {
+            // 예상치 못한 에러
+            String errorMsg = "한국은행 기준금리 데이터 조회 중 예상치 못한 오류가 발생했습니다: " + e.getMessage();
+            log.error("❌ {} 국가 예상치 못한 에러: {}", countryCode, e.getMessage(), e);
             throw new RuntimeException(errorMsg, e);
         }
     }
@@ -394,62 +420,114 @@ public class InterestRateService {
     private void saveActualDataOnly(List<InterestRate> rateData, String countryCode) {
         log.info("🔍 {} 국가의 실제 금리 데이터만 저장 및 발표일 식별 중...", countryCode);
         
+        if (rateData == null) {
+            log.warn("⚠️ {} 국가의 금리 데이터가 null입니다.", countryCode);
+            return;
+        }
+        
         if (rateData.isEmpty()) {
             log.warn("⚠️ {} 국가의 금리 데이터가 없습니다.", countryCode);
             return;
+        }
+        
+        if (countryCode == null || countryCode.trim().isEmpty()) {
+            log.error("❌ 국가 코드가 null이거나 비어있습니다.");
+            throw new IllegalArgumentException("국가 코드가 null이거나 비어있습니다.");
         }
         
         // 날짜순으로 정렬
         rateData.sort((a, b) -> a.getDate().compareTo(b.getDate()));
         
         int announcementCount = 0;
+        int savedCount = 0;
+        int updatedCount = 0;
+        int errorCount = 0;
         
         for (InterestRate currentRate : rateData) {
-            // 이전 금리 조회 (DB에서)
-            Optional<InterestRate> previousRate = interestRateRepository
-                .findPreviousRateByCountryAndDate(countryCode, currentRate.getDate());
-            
-            // 기존 데이터 확인
-            Optional<InterestRate> existing = interestRateRepository
-                .findByDateAndCountryCode(currentRate.getDate(), currentRate.getCountryCode());
+            try {
+                // 데이터 유효성 검증
+                if (currentRate == null) {
+                    log.warn("⚠️ null 금리 데이터 건너뜀");
+                    errorCount++;
+                    continue;
+                }
                 
-            boolean isAnnouncement = false;
-            
-            // 금리 변경 확인
-            if (previousRate.isPresent()) {
-                Double prevRateValue = previousRate.get().getInterestRate();
-                if (!prevRateValue.equals(currentRate.getInterestRate())) {
+                if (currentRate.getDate() == null || currentRate.getInterestRate() == null) {
+                    log.warn("⚠️ 필수 필드가 null인 금리 데이터 건너뜀: 날짜={}, 금리={}", 
+                            currentRate.getDate(), currentRate.getInterestRate());
+                    errorCount++;
+                    continue;
+                }
+                
+                // 이전 금리 조회 (DB에서)
+                Optional<InterestRate> previousRate = interestRateRepository
+                    .findPreviousRateByCountryAndDate(countryCode, currentRate.getDate());
+                
+                // 기존 데이터 확인
+                Optional<InterestRate> existing = interestRateRepository
+                    .findByDateAndCountryCode(currentRate.getDate(), currentRate.getCountryCode());
+                    
+                boolean isAnnouncement = false;
+                
+                // 금리 변경 확인
+                if (previousRate.isPresent()) {
+                    Double prevRateValue = previousRate.get().getInterestRate();
+                    if (prevRateValue != null && !prevRateValue.equals(currentRate.getInterestRate())) {
+                        isAnnouncement = true;
+                        announcementCount++;
+                        log.debug("📢 발표일 식별: {} - {}% → {}%", 
+                                currentRate.getDate(), prevRateValue, currentRate.getInterestRate());
+                    }
+                } else {
+                    // 첫 번째 데이터는 발표일로 간주
                     isAnnouncement = true;
                     announcementCount++;
-                    log.info("📢 발표일 식별: {} - {}% → {}%", 
-                            currentRate.getDate(), prevRateValue, currentRate.getInterestRate());
+                    log.debug("📢 첫 번째 데이터 (발표일): {} - {}%", 
+                            currentRate.getDate(), currentRate.getInterestRate());
                 }
-            } else {
-                // 첫 번째 데이터는 발표일로 간주
-                isAnnouncement = true;
-                announcementCount++;
-                log.info("📢 첫 번째 데이터 (발표일): {} - {}%", 
-                        currentRate.getDate(), currentRate.getInterestRate());
-            }
-            
-            currentRate.setIsAnnouncementDate(isAnnouncement);
-            
-            if (existing.isPresent()) {
-                // 이미 존재하는 경우 업데이트
-                InterestRate existingRate = existing.get();
-                existingRate.setInterestRate(currentRate.getInterestRate());
-                existingRate.setBankName(currentRate.getBankName());
-                existingRate.setRateType(currentRate.getRateType());
-                existingRate.setIsAnnouncementDate(isAnnouncement);
-                interestRateRepository.save(existingRate);
-            } else {
-                // 새로운 데이터 저장
-                interestRateRepository.save(currentRate);
+                
+                currentRate.setIsAnnouncementDate(isAnnouncement);
+                
+                if (existing.isPresent()) {
+                    // 이미 존재하는 경우 업데이트
+                    InterestRate existingRate = existing.get();
+                    existingRate.setInterestRate(currentRate.getInterestRate());
+                    existingRate.setBankName(currentRate.getBankName());
+                    existingRate.setRateType(currentRate.getRateType());
+                    existingRate.setIsAnnouncementDate(isAnnouncement);
+                    interestRateRepository.save(existingRate);
+                    updatedCount++;
+                    log.debug("📝 금리 데이터 업데이트: 날짜={}, 금리={}%", 
+                            currentRate.getDate(), currentRate.getInterestRate());
+                } else {
+                    // 새로운 데이터 저장
+                    interestRateRepository.save(currentRate);
+                    savedCount++;
+                    log.debug("💾 금리 데이터 신규 저장: 날짜={}, 금리={}%", 
+                            currentRate.getDate(), currentRate.getInterestRate());
+                }
+                
+            } catch (org.springframework.dao.DataIntegrityViolationException e) {
+                errorCount++;
+                log.error("❌ 금리 데이터 저장 중 데이터 무결성 위반: 날짜={}, 에러={}", 
+                        currentRate != null ? currentRate.getDate() : "null", e.getMessage());
+            } catch (org.springframework.dao.DataAccessException e) {
+                errorCount++;
+                log.error("❌ 금리 데이터 저장 중 데이터베이스 접근 에러: 날짜={}, 에러={}", 
+                        currentRate != null ? currentRate.getDate() : "null", e.getMessage());
+            } catch (Exception e) {
+                errorCount++;
+                log.error("❌ 금리 데이터 처리 중 예상치 못한 에러: 날짜={}, 에러={}", 
+                        currentRate != null ? currentRate.getDate() : "null", e.getMessage());
             }
         }
         
-        log.info("✅ {} 국가 실제 데이터 저장 완료: {}개 데이터, {}개 발표일", 
-                countryCode, rateData.size(), announcementCount);
+        log.info("✅ {} 국가 실제 데이터 저장 완료: 신규 {}개, 업데이트 {}개, 발표일 {}개, 에러 {}개", 
+                countryCode, savedCount, updatedCount, announcementCount, errorCount);
+        
+        if (errorCount > 0) {
+            log.warn("⚠️ {}개의 금리 데이터 처리 중 에러가 발생했습니다.", errorCount);
+        }
     }
 
     /**
@@ -569,36 +647,113 @@ public class InterestRateService {
     private List<InterestRate> parseEcosDailyResponse(String response, CountryInfo countryInfo) {
         List<InterestRate> rates = new ArrayList<>();
         
+        if (response == null || response.trim().isEmpty()) {
+            log.error("❌ 파싱할 응답이 null이거나 비어있습니다.");
+            throw new IllegalArgumentException("API 응답이 null이거나 비어있습니다.");
+        }
+        
+        if (countryInfo == null) {
+            log.error("❌ 국가 정보가 null입니다.");
+            throw new IllegalArgumentException("국가 정보가 null입니다.");
+        }
+        
         try {
             JsonNode root = objectMapper.readTree(response);
             JsonNode dataArray = root.path("StatisticSearch").path("row");
             
-            for (JsonNode dataNode : dataArray) {
-                String timeStr = dataNode.path("TIME").asText();
-                String dataValue = dataNode.path("DATA_VALUE").asText();
-                
-                if (timeStr.isEmpty() || dataValue.isEmpty() || "-".equals(dataValue)) {
-                    continue;
-                }
-                
-                LocalDate date = parseDailyDate(timeStr);
-                Double rate = Double.parseDouble(dataValue);
-                
-                InterestRate interestRate = InterestRate.builder()
-                    .date(date)
-                    .countryCode(countryInfo.code)
-                    .countryName(countryInfo.name)
-                    .bankName(countryInfo.bankName)
-                    .rateType(countryInfo.rateType)
-                    .interestRate(rate)
-                    .isAnnouncementDate(false)  // 기본값, 나중에 식별
-                    .build();
-                    
-                rates.add(interestRate);
+            if (!dataArray.isArray() || dataArray.size() == 0) {
+                log.warn("⚠️ 응답에서 데이터 배열을 찾을 수 없거나 비어있습니다.");
+                log.debug("📝 응답 구조: {}", root.toPrettyString());
+                return rates;
             }
             
+            log.info("🔍 파싱할 데이터 개수: {}", dataArray.size());
+            
+            int successCount = 0;
+            int skipCount = 0;
+            int errorCount = 0;
+            
+            for (JsonNode dataNode : dataArray) {
+                try {
+                    String timeStr = dataNode.path("TIME").asText();
+                    String dataValue = dataNode.path("DATA_VALUE").asText();
+                    
+                    // 데이터 유효성 검증
+                    if (timeStr == null || timeStr.trim().isEmpty()) {
+                        log.debug("⚠️ 시간 정보가 비어있어 건너뜀");
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    if (dataValue == null || dataValue.trim().isEmpty() || "-".equals(dataValue.trim())) {
+                        log.debug("⚠️ 데이터 값이 비어있거나 '-'로 건너뜀: 시간={}", timeStr);
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    // 날짜 파싱
+                    LocalDate date;
+                    try {
+                        date = parseDailyDate(timeStr);
+                        if (date == null) {
+                            log.debug("⚠️ 날짜 파싱 실패로 건너뜀: 시간={}", timeStr);
+                            skipCount++;
+                            continue;
+                        }
+                    } catch (Exception e) {
+                        log.debug("⚠️ 날짜 파싱 중 예외로 건너뜀: 시간={}, 에러={}", timeStr, e.getMessage());
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    // 금리 값 파싱
+                    Double rate;
+                    try {
+                        rate = Double.parseDouble(dataValue.trim());
+                        if (rate < 0) {
+                            log.debug("⚠️ 금리 값이 음수로 건너뜀: 시간={}, 값={}", timeStr, rate);
+                            skipCount++;
+                            continue;
+                        }
+                    } catch (NumberFormatException e) {
+                        log.debug("⚠️ 숫자 변환 실패로 건너뜀: 시간={}, 값={}, 에러={}", timeStr, dataValue, e.getMessage());
+                        skipCount++;
+                        continue;
+                    }
+                    
+                    // InterestRate 객체 생성
+                    InterestRate interestRate = InterestRate.builder()
+                        .date(date)
+                        .countryCode(countryInfo.code)
+                        .countryName(countryInfo.name)
+                        .bankName(countryInfo.bankName)
+                        .rateType(countryInfo.rateType)
+                        .interestRate(rate)
+                        .isAnnouncementDate(false)  // 기본값, 나중에 식별
+                        .build();
+                        
+                    rates.add(interestRate);
+                    successCount++;
+                    log.debug("✅ 금리 데이터 생성: 날짜={}, 금리={}%", date, rate);
+                    
+                } catch (Exception e) {
+                    errorCount++;
+                    log.warn("⚠️ 개별 데이터 파싱 실패: {}", e.getMessage());
+                }
+            }
+            
+            log.info("🔧 파싱 완료: 성공={}개, 건너뜀={}개, 에러={}개", successCount, skipCount, errorCount);
+            
+            if (successCount == 0) {
+                log.warn("⚠️ 파싱된 유효한 데이터가 없습니다.");
+            }
+            
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            log.error("❌ JSON 파싱 실패: {}", e.getMessage());
+            throw new RuntimeException("API 응답 JSON 파싱 실패: " + e.getMessage(), e);
         } catch (Exception e) {
-            log.error("❌ ECOS 일별 응답 파싱 실패: {}", e.getMessage());
+            log.error("❌ ECOS 일별 응답 파싱 중 예상치 못한 에러: {}", e.getMessage(), e);
+            throw new RuntimeException("API 응답 파싱 중 예상치 못한 에러: " + e.getMessage(), e);
         }
         
         return rates;
@@ -608,13 +763,49 @@ public class InterestRateService {
      * 일별 날짜 파싱 (YYYYMMDD -> LocalDate)
      */
     private LocalDate parseDailyDate(String timeStr) {
-        if (timeStr.length() == 8) {
+        if (timeStr == null || timeStr.trim().isEmpty()) {
+            log.debug("⚠️ 날짜 문자열이 null이거나 비어있습니다.");
+            return null;
+        }
+        
+        if (timeStr.length() != 8) {
+            log.debug("⚠️ 날짜 형식이 올바르지 않습니다. YYYYMMDD 형식이어야 합니다: {}", timeStr);
+            return null;
+        }
+        
+        try {
             int year = Integer.parseInt(timeStr.substring(0, 4));
             int month = Integer.parseInt(timeStr.substring(4, 6));
             int day = Integer.parseInt(timeStr.substring(6, 8));
+            
+            // 날짜 유효성 검증
+            if (year < 1900 || year > 2100) {
+                log.debug("⚠️ 연도가 유효하지 않습니다: {}", year);
+                return null;
+            }
+            
+            if (month < 1 || month > 12) {
+                log.debug("⚠️ 월이 유효하지 않습니다: {}", month);
+                return null;
+            }
+            
+            if (day < 1 || day > 31) {
+                log.debug("⚠️ 일이 유효하지 않습니다: {}", day);
+                return null;
+            }
+            
             return LocalDate.of(year, month, day);
+            
+        } catch (NumberFormatException e) {
+            log.debug("⚠️ 날짜 문자열을 숫자로 변환할 수 없습니다: {}, 에러: {}", timeStr, e.getMessage());
+            return null;
+        } catch (java.time.DateTimeException e) {
+            log.debug("⚠️ 유효하지 않은 날짜입니다: {}, 에러: {}", timeStr, e.getMessage());
+            return null;
+        } catch (Exception e) {
+            log.debug("⚠️ 날짜 파싱 중 예상치 못한 에러: {}, 에러: {}", timeStr, e.getMessage());
+            return null;
         }
-        throw new IllegalArgumentException("Invalid date format: " + timeStr);
     }
 
 
@@ -623,17 +814,41 @@ public class InterestRateService {
      * 금리 데이터 저장 또는 업데이트
      */
     private void saveOrUpdateRate(InterestRate newRate) {
-        Optional<InterestRate> existing = interestRateRepository
-            .findByDateAndCountryCode(newRate.getDate(), newRate.getCountryCode());
-            
-        if (existing.isPresent()) {
-            InterestRate existingRate = existing.get();
-            existingRate.setInterestRate(newRate.getInterestRate());
-            existingRate.setBankName(newRate.getBankName());
-            existingRate.setRateType(newRate.getRateType());
-            interestRateRepository.save(existingRate);
-        } else {
-            interestRateRepository.save(newRate);
+        if (newRate == null) {
+            log.error("❌ 저장할 금리 데이터가 null입니다.");
+            throw new IllegalArgumentException("저장할 금리 데이터가 null입니다.");
+        }
+        
+        if (newRate.getDate() == null || newRate.getInterestRate() == null || newRate.getCountryCode() == null) {
+            log.error("❌ 금리 데이터의 필수 필드가 null입니다: 날짜={}, 금리={}, 국가코드={}", 
+                    newRate.getDate(), newRate.getInterestRate(), newRate.getCountryCode());
+            throw new IllegalArgumentException("금리 데이터의 필수 필드가 null입니다.");
+        }
+        
+        try {
+            Optional<InterestRate> existing = interestRateRepository
+                .findByDateAndCountryCode(newRate.getDate(), newRate.getCountryCode());
+                
+            if (existing.isPresent()) {
+                InterestRate existingRate = existing.get();
+                existingRate.setInterestRate(newRate.getInterestRate());
+                existingRate.setBankName(newRate.getBankName());
+                existingRate.setRateType(newRate.getRateType());
+                interestRateRepository.save(existingRate);
+                log.debug("📝 금리 데이터 업데이트: 날짜={}, 금리={}%", newRate.getDate(), newRate.getInterestRate());
+            } else {
+                interestRateRepository.save(newRate);
+                log.debug("💾 금리 데이터 신규 저장: 날짜={}, 금리={}%", newRate.getDate(), newRate.getInterestRate());
+            }
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            log.error("❌ 금리 데이터 저장 중 데이터 무결성 위반: 날짜={}, 에러={}", newRate.getDate(), e.getMessage());
+            throw new RuntimeException("금리 데이터 저장 중 데이터 무결성 위반: " + e.getMessage(), e);
+        } catch (org.springframework.dao.DataAccessException e) {
+            log.error("❌ 금리 데이터 저장 중 데이터베이스 접근 에러: 날짜={}, 에러={}", newRate.getDate(), e.getMessage());
+            throw new RuntimeException("금리 데이터 저장 중 데이터베이스 접근 에러: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("❌ 금리 데이터 저장 중 예상치 못한 에러: 날짜={}, 에러={}", newRate.getDate(), e.getMessage());
+            throw new RuntimeException("금리 데이터 저장 중 예상치 못한 에러: " + e.getMessage(), e);
         }
     }
 

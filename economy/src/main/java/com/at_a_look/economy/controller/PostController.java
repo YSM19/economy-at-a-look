@@ -38,12 +38,23 @@ public class PostController {
             @RequestParam(required = false) String search) {
         
         try {
+            // 파라미터 검증
+            if (page < 0) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("페이지 번호는 0 이상이어야 합니다."));
+            }
+            if (size <= 0 || size > 100) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("페이지 크기는 1에서 100 사이여야 합니다."));
+            }
+            
             PostDto.ListResponse response = postService.getPosts(boardType, sort, page, size);
             
             return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [PostController] 게시글 목록 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            log.error("게시글 목록 조회 실패", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("게시글 목록 조회에 실패했습니다."));
+            log.error("💥 [PostController] 게시글 목록 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("게시글 목록 조회 중 오류가 발생했습니다."));
         }
     }
 
@@ -54,19 +65,28 @@ public class PostController {
             HttpServletRequest request) {
         
         try {
+            // 파라미터 검증
+            if (postId == null || postId <= 0) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("유효하지 않은 게시글 ID입니다."));
+            }
+            
             String userEmail = null;
             try {
                 userEmail = getUserEmailFromToken(request);
             } catch (Exception e) {
                 // 비로그인 사용자의 경우 null로 처리
+                log.debug("비로그인 사용자 접근: {}", e.getMessage());
             }
             
             PostDto.Response response = postService.getPost(postId, userEmail);
             
             return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [PostController] 게시글 상세 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            log.error("게시글 상세 조회 실패", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("게시글 조회에 실패했습니다."));
+            log.error("💥 [PostController] 게시글 상세 조회 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("게시글 조회 중 오류가 발생했습니다."));
         }
     }
 
@@ -77,15 +97,31 @@ public class PostController {
             HttpServletRequest httpRequest) {
         
         try {
-            log.info("게시글 작성 요청 받음: {}", request);
+            log.info("📝 [PostController] 게시글 작성 요청: {}", request.getTitle());
+            
+            // 요청 데이터 검증
+            if (request.getTitle() == null || request.getTitle().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("제목을 입력해주세요."));
+            }
+            if (request.getContent() == null || request.getContent().trim().isEmpty()) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("내용을 입력해주세요."));
+            }
+            if (request.getBoardType() == null) {
+                return ResponseEntity.badRequest().body(ApiResponse.error("게시판을 선택해주세요."));
+            }
+            
             String userEmail = getUserEmailFromToken(httpRequest);
             
             PostDto.Response response = postService.createPost(userEmail, request);
             
+            log.info("✅ [PostController] 게시글 작성 성공: postId={}", response.getId());
             return ResponseEntity.ok(ApiResponse.success(response));
+        } catch (IllegalArgumentException e) {
+            log.warn("❌ [PostController] 게시글 작성 실패 - 잘못된 파라미터: {}", e.getMessage());
+            return ResponseEntity.badRequest().body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            log.error("게시글 작성 실패", e);
-            return ResponseEntity.badRequest().body(ApiResponse.error("게시글 작성에 실패했습니다."));
+            log.error("💥 [PostController] 게시글 작성 중 예상치 못한 오류: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(ApiResponse.error("게시글 작성 중 오류가 발생했습니다."));
         }
     }
 
