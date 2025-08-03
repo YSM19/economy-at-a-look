@@ -50,16 +50,7 @@
         "android.permission.WAKE_LOCK"
       ],
       "blockedPermissions": [
-      ],
-      "usesCleartextTraffic": true,
-      "networkSecurityConfig": {
-        "domainConfig": [
-          {
-            "domains": ["atalook.kro.kr", "192.168.0.2", "localhost"],
-            "cleartextTrafficPermitted": true
-          }
-        ]
-      }
+      ]
     },
     "web": {
       "bundler": "metro",
@@ -87,7 +78,16 @@
             "targetSdkVersion": 35,
             "buildToolsVersion": "35.0.0",
             "enableProguardInReleaseBuilds": false,
-            "enableSeparateBuildPerCPUArchitecture": false
+            "enableSeparateBuildPerCPUArchitecture": false,
+            "usesCleartextTraffic": true,
+            "networkSecurityConfig": {
+              "domainConfig": [
+                {
+                  "domains": ["atalook.kro.kr", "192.168.0.2", "localhost"],
+                  "cleartextTrafficPermitted": true
+                }
+              ]
+            }
           }
         }
       ]
