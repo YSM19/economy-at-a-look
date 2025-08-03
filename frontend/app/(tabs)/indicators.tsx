@@ -43,6 +43,7 @@ interface CPIData {
   prevMonthCPI: number;
   changeRate: number;
   annualRate: number;
+  date?: string;
 }
 
 interface PeriodData {
@@ -268,15 +269,24 @@ export default function IndicatorsScreen() {
       if (response.data && response.data.success && response.data.data) {
         const cpiData = response.data.data;
         
-        // 전년동월대비 변화율 사용
-        const currentCPI = cpiData.yearlyChange || cpiData.annualRate || 0;
+        console.log('🔍 [indicators] CPI API 응답 데이터:', cpiData);
+        console.log('🔍 [indicators] CPI date 필드:', cpiData.date);
+        console.log('🔍 [indicators] CPI 사용 가능한 필드:', Object.keys(cpiData));
+        
+        // 전년동월대비 변화율 사용 (annualRate가 주 필드)
+        const currentCPI = cpiData.annualRate || cpiData.yearlyChange || 0;
+        
+        console.log('📅 [indicators] CPI date 저장:', cpiData.date);
         
         setCpiData({
           currentCPI: currentCPI,
           prevMonthCPI: currentCPI,
           changeRate: 0,
-          annualRate: currentCPI
+          annualRate: currentCPI,
+          date: cpiData.date
         });
+        
+        console.log('✅ [indicators] CPI 데이터 설정 완료, date:', cpiData.date);
         
         // 히스토리 데이터 처리
         if (cpiData.history && Array.isArray(cpiData.history)) {
@@ -534,7 +544,7 @@ export default function IndicatorsScreen() {
               </View>
             ) : cpiData ? (
               <>
-                <CPIGauge value={cpiData.currentCPI} />
+                <CPIGauge value={cpiData.currentCPI} dataDate={cpiData.date} />
                 
                 <CPIRecommendations />
                 

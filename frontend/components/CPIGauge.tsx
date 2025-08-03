@@ -6,20 +6,21 @@ import { economicIndexApi } from '../services/api';
 
 type CPIGaugeProps = {
   value?: number;
+  dataDate?: string;
 };
 
 const formatNumberWithUnit = (value: number | string, unit: string): string => {
   return `${value}${unit}`;
 };
 
-const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
+const CPIGauge: React.FC<CPIGaugeProps> = ({ value, dataDate }) => {
   const [cpiRate, setCpiRate] = useState(value || 0);
   const [rateText, setRateText] = useState('');
   const [rateColor, setRateColor] = useState('#4CAF50');
   const [activeSection, setActiveSection] = useState(1);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState('');
+  const [lastUpdated, setLastUpdated] = useState('초기화 중...');
   
   const getInflationDescription = (rate: number): string => {
     if (rate >= -1 && rate < 0) {
@@ -41,19 +42,59 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
   useEffect(() => {
     const fetchCPIRate = async () => {
       if (value !== undefined) {
+        console.log('✅ [CPIGauge] value prop으로 CPI 값 받음:', value);
         setCpiRate(value);
         setLoading(false);
+        
+        // dataDate prop이 있으면 실제 데이터 날짜 사용, 없으면 현재 날짜 사용
+        if (dataDate) {
+          console.log('🔍 [CPIGauge] dataDate prop 받음:', dataDate);
+          
+          // YYYYMM 형식인지 확인
+          if (dataDate.length === 6 && !isNaN(Number(dataDate))) {
+            const year = parseInt(dataDate.substring(0, 4));
+            const month = parseInt(dataDate.substring(4, 6)) - 1;
+            const dateObj = new Date(year, month, 1);
+            const formattedDate = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+            setLastUpdated(formattedDate);
+            console.log('✅ [CPIGauge] dataDate 사용 (YYYYMM):', dataDate, '→', formattedDate);
+          } else if (dataDate.includes('-') || dataDate.includes('/')) {
+            // YYYY-MM-DD 또는 YYYY/MM/DD 형식
+            const dateObj = new Date(dataDate);
+            if (!isNaN(dateObj.getTime())) {
+              const formattedDate = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+              setLastUpdated(formattedDate);
+              console.log('✅ [CPIGauge] dataDate 사용 (표준 형식):', dataDate, '→', formattedDate);
+            } else {
+              const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+              setLastUpdated(currentDate);
+              console.log('⚠️ [CPIGauge] dataDate 파싱 실패, 현재 날짜 사용:', currentDate);
+            }
+          } else {
+            const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+            setLastUpdated(currentDate);
+            console.log('⚠️ [CPIGauge] dataDate 형식 불명, 현재 날짜 사용:', currentDate);
+          }
+        } else {
+          const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+          setLastUpdated(currentDate);
+          console.log('📅 [CPIGauge] dataDate 없음, 현재 날짜 사용:', currentDate);
+        }
         return;
       }
 
       try {
+        console.log('🚀 [CPIGauge] API 호출 시작');
         setLoading(true);
         setError(null);
         const response = await economicIndexApi.getConsumerPriceIndex();
         
-        console.log('🔍 [CPIGauge] API 응답:', response.data);
+        console.log('🔍 [CPIGauge] API 응답 전체:', response);
+        console.log('🔍 [CPIGauge] API 응답 데이터:', response.data);
+        console.log('🔍 [CPIGauge] API 응답 상태:', response.status);
         
         if (response.data?.success && response.data.data) {
+          console.log('✅ [CPIGauge] API 성공, 데이터 처리 시작');
           const cpiData = response.data.data;
           
           console.log('🔍 [CPIGauge] CPI 데이터:', cpiData);
@@ -61,44 +102,88 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
           console.log('📅 [CPIGauge] cpiData.lastUpdated:', cpiData.lastUpdated);
           console.log('🔍 [CPIGauge] 모든 필드:', Object.keys(cpiData));
           
-          // 전년동월대비 변화율 사용
-          if (cpiData.yearlyChange !== undefined) {
-            const yearlyRate = parseFloat(cpiData.yearlyChange.toString());
-            console.log('✅ [CPIGauge] 전년동월대비 변화율 설정:', yearlyRate);
-            setCpiRate(yearlyRate);
-          } else if (cpiData.annualRate !== undefined) {
+          // 전년동월대비 변화율 사용 (annualRate가 주 필드)
+          if (cpiData.annualRate !== undefined) {
             const annualRate = parseFloat(cpiData.annualRate.toString());
             console.log('✅ [CPIGauge] 연간 변화율 설정:', annualRate);
             setCpiRate(annualRate);
+          } else if (cpiData.yearlyChange !== undefined) {
+            const yearlyRate = parseFloat(cpiData.yearlyChange.toString());
+            console.log('✅ [CPIGauge] 전년동월대비 변화율 설정:', yearlyRate);
+            setCpiRate(yearlyRate);
           } else {
             console.warn('⚠️ [CPIGauge] CPI 변화율 데이터가 없습니다');
             setError('CPI 변화율 데이터가 없습니다');
           }
           
-          // 마지막 업데이트 시간 설정 (최신 DB date 값 사용)
-          console.log('🔍 [CPIGauge] date 필드 확인:', cpiData.date);
+          // 마지막 업데이트 시간 설정 (API에서 받은 날짜 필드 사용)
+          console.log('🔍 [CPIGauge] 받은 데이터 전체:', cpiData);
+          console.log('🔍 [CPIGauge] 사용 가능한 모든 필드:', Object.keys(cpiData));
           
-          if (cpiData.date) {
-            // 백엔드에서 받은 date 필드 사용 (YYYYMM 형식)
-            const dateStr = cpiData.date.toString();
-            const year = parseInt(dateStr.substring(0, 4));
-            const month = parseInt(dateStr.substring(4, 6)) - 1; // 월은 0부터 시작
-            const dateObj = new Date(year, month, 1);
-            setLastUpdated(dateObj.toISOString());
-            console.log('✅ [CPIGauge] API date 사용:', cpiData.date, '→', dateObj);
-          } else {
-            console.log('⚠️ [CPIGauge] date 필드가 없습니다. 백엔드 재시작이 필요할 수 있습니다.');
-            
-            // 임시 fallback: 현재 날짜에서 한 달 전으로 설정 (2024년 1월로 가정)
-            const tempDate = new Date(2024, 0, 1); // 2024년 1월
-            setLastUpdated(tempDate.toISOString());
-            console.log('🔄 [CPIGauge] 임시 날짜 사용 (2024년 1월)');
+          // 다양한 날짜 필드명을 시도해봄
+          const possibleDateFields = ['date', 'lastUpdated', 'updatedAt', 'reportDate', 'baseDate', 'dataDate'];
+          let dateFound = false;
+          
+          for (const fieldName of possibleDateFields) {
+            if (cpiData[fieldName]) {
+              console.log(`🔍 [CPIGauge] ${fieldName} 필드 발견:`, cpiData[fieldName]);
+              const dateStr = cpiData[fieldName].toString();
+              
+              if (dateStr.length === 6) {
+                // YYYYMM 형식
+                const year = parseInt(dateStr.substring(0, 4));
+                const month = parseInt(dateStr.substring(4, 6)) - 1;
+                const dateObj = new Date(year, month, 1);
+                const formattedDate = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+                setLastUpdated(formattedDate);
+                console.log(`✅ [CPIGauge] ${fieldName} 사용:`, dateStr, '→', formattedDate);
+                dateFound = true;
+                break;
+              } else if (dateStr.includes('-') || dateStr.includes('/')) {
+                // YYYY-MM-DD 또는 YYYY/MM/DD 형식
+                const dateObj = new Date(dateStr);
+                if (!isNaN(dateObj.getTime())) {
+                  const formattedDate = dateObj.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+                  setLastUpdated(formattedDate);
+                  console.log(`✅ [CPIGauge] ${fieldName} 사용:`, dateStr, '→', formattedDate);
+                  dateFound = true;
+                  break;
+                }
+              }
+            }
           }
+          
+          if (!dateFound) {
+            console.warn('⚠️ [CPIGauge] 어떤 날짜 필드도 찾을 수 없음');
+            // API에서 데이터를 성공적으로 받았다면 현재 날짜를 표시
+            const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+            setLastUpdated(currentDate);
+            console.log('📅 [CPIGauge] 현재 날짜로 설정:', currentDate);
+          }
+        } else {
+          console.warn('⚠️ [CPIGauge] API 응답이 성공하지 않았거나 데이터가 없음');
+          console.log('🔍 [CPIGauge] response.data?.success:', response.data?.success);
+          console.log('🔍 [CPIGauge] response.data?.data:', response.data?.data);
+          
+          // API 호출은 성공했지만 데이터가 올바르지 않은 경우에도 현재 날짜를 표시
+          const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+          setLastUpdated(currentDate);
+          console.log('📅 [CPIGauge] API 실패 시 현재 날짜로 설정:', currentDate);
+          
+          setError('CPI 데이터를 가져올 수 없습니다');
         }
       } catch (err) {
-        console.error('CPI 데이터 가져오기 실패:', err);
+        console.error('❌ [CPIGauge] CPI 데이터 가져오기 실패:', err);
+        console.error('🔍 [CPIGauge] 오류 상세:', err.message);
+        
+        // 오류가 발생한 경우에도 현재 날짜를 표시
+        const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });
+        setLastUpdated(currentDate);
+        console.log('📅 [CPIGauge] 오류 시 현재 날짜로 설정:', currentDate);
+        
         setError('CPI 데이터를 가져올 수 없습니다');
       } finally {
+        console.log('🏁 [CPIGauge] API 호출 완료, loading 해제');
         setLoading(false);
       }
     };
@@ -108,7 +193,9 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
 
   useEffect(() => {
     console.log('🔄 [CPIGauge] lastUpdated 상태 변경:', lastUpdated);
-  }, [lastUpdated]);
+    console.log('🔄 [CPIGauge] loading 상태:', loading);
+    console.log('🔄 [CPIGauge] error 상태:', error);
+  }, [lastUpdated, loading, error]);
 
   useEffect(() => {
     if (cpiRate >= -1 && cpiRate < 0) {
@@ -392,14 +479,18 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value }) => {
         
         {/* 마지막 업데이트 */}
         <ThemedText style={styles.lastUpdated}>
-          {lastUpdated ? (
-            `마지막 업데이트: ${new Date(lastUpdated).toLocaleDateString('ko-KR', {
-              year: 'numeric',
-              month: 'long'
-            })}`
-          ) : (
-            '마지막 업데이트: 데이터 로딩 중...'
-          )}
+          {(() => {
+            console.log('🎨 [CPIGauge] UI 렌더링 - lastUpdated:', lastUpdated);
+            console.log('🎨 [CPIGauge] UI 렌더링 - loading:', loading);
+            
+            if (loading) {
+              return '물가 데이터 로딩 중...';
+            } else if (lastUpdated && lastUpdated !== '초기화 중...' && lastUpdated !== '데이터 로딩중') {
+              return `마지막 업데이트: ${lastUpdated}`;
+            } else {
+              return lastUpdated || '데이터 확인 중...';
+            }
+          })()}
         </ThemedText>
       </View>
     </View>
