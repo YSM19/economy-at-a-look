@@ -137,9 +137,17 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
       console.log('환율 API 응답:', response);
       console.log('응답 데이터:', response.data);
       
+      // ApiResponse 래퍼 구조 확인
+      const exchangeRates = response.data.data || response.data;
+      console.log('실제 환율 데이터:', exchangeRates);
+      
+      if (Array.isArray(exchangeRates) && exchangeRates.length > 0) {
+        console.log('첫 번째 환율 데이터:', exchangeRates[0]);
+        console.log('첫 번째 데이터의 date 필드:', exchangeRates[0].date);
+      }
+      
       // 배열 형태의 환율 데이터 처리
-      if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-        const exchangeRates = response.data;
+      if (exchangeRates && Array.isArray(exchangeRates) && exchangeRates.length > 0) {
         
         console.log('처리할 환율 데이터:', exchangeRates);
         
@@ -196,7 +204,11 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
           });
           
           if (selectedCurrencyData && selectedCurrencyData.date) {
+            console.log('✅ [ExchangeRateGauge] 날짜 정보 설정:', selectedCurrencyData.date);
             setLastUpdated(selectedCurrencyData.date);
+          } else {
+            console.warn('⚠️ [ExchangeRateGauge] 날짜 정보가 없습니다. 현재 날짜 사용');
+            setLastUpdated(new Date().toISOString());
           }
           
           // 0.1초 후에 계기판 표시
@@ -206,9 +218,15 @@ const ExchangeRateGauge: React.FC<ExchangeRateGaugeProps> = ({ value, country = 
         } else {
           throw new Error(`선택된 국가(${country})의 환율 데이터를 찾을 수 없습니다.\n사용 가능한 통화: ${exchangeRates.map(r => r.curUnit).join(', ')}\n\n💡 관리자에게 환율 데이터 업데이트를 요청하세요.`);
         }
-      } else {
-        throw new Error('환율 데이터가 아직 로드되지 않았습니다.\n\n💡 서버 관리자에게 다음 명령을 실행하도록 요청하세요:\nPOST /api/exchange-rates/fetch');
-      }
+              } else {
+          // 데이터가 없으면 기본값으로 표시
+          console.warn('환율 데이터가 없습니다. 기본값으로 표시합니다.');
+          // 기본값으로 계기판 표시 (에러 메시지 없이)
+          setTimeout(() => {
+            setShowGauge(true);
+          }, 100);
+          return;
+        }
     } catch (err) {
       console.error('환율 데이터를 가져오는 중 오류 발생:', err);
       

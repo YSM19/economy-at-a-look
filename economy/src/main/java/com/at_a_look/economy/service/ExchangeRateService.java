@@ -421,8 +421,10 @@ public class ExchangeRateService {
      */
     @Transactional(readOnly = true)
     public List<ExchangeRateResponseDTO> getLatestExchangeRates() {
-        // 가장 최근 30개의 레코드 조회 (기존 방식 유지)
-        List<ExchangeRate> rates = exchangeRateRepository.findTop30ByOrderBySearchDateDesc();
+        // 오늘 데이터가 없으면 최근 데이터로 대체하는 로직 적용
+        LocalDate today = LocalDate.now();
+        List<ExchangeRate> rates = getLatestRatesOrFetch(today);
+        
         return ExchangeRateResponseDTO.fromEntities(rates);
     }
     
