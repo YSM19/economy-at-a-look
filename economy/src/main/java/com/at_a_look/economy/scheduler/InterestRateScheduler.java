@@ -16,10 +16,10 @@ public class InterestRateScheduler {
     private final InterestRateService interestRateService;
 
     /**
-     * 매일 정오 12시에 기준금리 데이터 업데이트
-     * 한국은행 발표 시간을 고려하여 정오 12시로 설정
+     * 매일 오전 11시 30분에 기준금리 데이터 업데이트
+     * 한국은행 발표 시간을 고려하여 오전 11시 30분으로 설정
      */
-    @Scheduled(cron = "0 0 12 * * *")
+    @Scheduled(cron = "0 30 11 * * *")
     public void updateInterestRateDaily() {
         log.info("🕛 [스케줄러] 매일 기준금리 데이터 업데이트 시작 - {}", LocalDateTime.now());
         

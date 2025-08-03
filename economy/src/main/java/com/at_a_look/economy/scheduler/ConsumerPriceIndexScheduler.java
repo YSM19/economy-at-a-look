@@ -16,12 +16,12 @@ public class ConsumerPriceIndexScheduler {
     private final ConsumerPriceIndexService consumerPriceIndexService;
 
     /**
-     * 매월 1일 오후 2시에 소비자물가지수 데이터 업데이트
-     * 통계청에서 보통 월말~월초에 전월 데이터를 발표하므로 월초에 업데이트
+     * 매일 오전 11시 30분에 소비자물가지수 데이터 업데이트
+     * 통계청에서 보통 월말~월초에 전월 데이터를 발표하므로 매일 체크하여 최신 데이터 확보
      */
-    @Scheduled(cron = "0 0 14 1 * *")
-    public void updateConsumerPriceIndexMonthly() {
-        log.info("📊 [CPI 스케줄러] 월별 소비자물가지수 데이터 업데이트 시작 - {}", LocalDateTime.now());
+    @Scheduled(cron = "0 30 11 * * *")
+    public void updateConsumerPriceIndexDaily() {
+        log.info("📊 [CPI 스케줄러] 일일 소비자물가지수 데이터 업데이트 시작 - {}", LocalDateTime.now());
         
         try {
             // 최근 2년간 데이터 업데이트
@@ -93,6 +93,6 @@ public class ConsumerPriceIndexScheduler {
      */
     public void runImmediately() {
         log.info("🚀 [CPI 스케줄러] 수동 실행 요청");
-        updateConsumerPriceIndexMonthly();
+        updateConsumerPriceIndexDaily();
     }
 } 
