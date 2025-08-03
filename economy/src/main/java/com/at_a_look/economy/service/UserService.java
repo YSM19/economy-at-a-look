@@ -543,4 +543,19 @@ public class UserService {
                 .createdAt(user.getCreatedAt())
                 .build();
     }
+
+    /**
+     * 관리자 권한 검증용 사용자 조회 (비활성화된 사용자도 포함)
+     */
+    public User findByEmailForAdmin(String email) {
+        log.debug("🔍 [UserService] 관리자 권한 검증용 사용자 조회: email={}", email);
+        
+        Optional<User> userOpt = userRepository.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            log.warn("❌ [UserService] 사용자를 찾을 수 없음: email={}", email);
+            throw new IllegalArgumentException("사용자를 찾을 수 없습니다.");
+        }
+        
+        return userOpt.get();
+    }
 } 

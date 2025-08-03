@@ -3,6 +3,7 @@ package com.at_a_look.economy.controller;
 import com.at_a_look.economy.dto.AdminDto;
 import com.at_a_look.economy.dto.UserSuspensionDto;
 import com.at_a_look.economy.dto.response.ApiResponse;
+import com.at_a_look.economy.entity.User;
 import com.at_a_look.economy.service.AdminService;
 import com.at_a_look.economy.service.UserService;
 import com.at_a_look.economy.util.JwtTokenUtil;
@@ -30,9 +31,38 @@ public class AdminController {
      */
     private void checkAdminPermission(HttpServletRequest request) {
         String userEmail = getUserEmailFromToken(request);
-        // TODO: 실제 관리자 권한 확인 로직 구현
-        // 현재는 임시로 모든 요청 허용
-        log.info("관리자 권한 확인 - 사용자: {}", userEmail);
+        
+        if (userEmail == null || userEmail.trim().isEmpty()) {
+            log.warn("관리자 권한 확인 실패: 사용자 이메일이 없음");
+            throw new SecurityException("인증이 필요합니다.");
+        }
+        
+        try {
+            User user = userService.findByEmailForAdmin(userEmail);
+            
+            if (user == null || !user.getIsActive()) {
+                log.warn("관리자 권한 확인 실패: 비활성화된 사용자 - {}", userEmail);
+                throw new SecurityException("비활성화된 사용자입니다.");
+            }
+            
+            if (user.getIsSuspended()) {
+                log.warn("관리자 권한 확인 실패: 정지된 사용자 - {}", userEmail);
+                throw new SecurityException("정지된 사용자입니다.");
+            }
+            
+            if (!User.Role.ADMIN.equals(user.getRole())) {
+                log.warn("관리자 권한 확인 실패: 권한 부족 - {} (역할: {})", userEmail, user.getRole());
+                throw new SecurityException("관리자 권한이 필요합니다.");
+            }
+            
+            log.info("관리자 권한 확인 성공 - 사용자: {}", userEmail);
+            
+        } catch (SecurityException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("관리자 권한 확인 중 오류 발생: {}", e.getMessage(), e);
+            throw new SecurityException("권한 확인 중 오류가 발생했습니다.");
+        }
     }
 
     /**

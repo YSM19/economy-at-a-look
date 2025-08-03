@@ -1,13 +1,17 @@
 package com.at_a_look.economy.config;
 
+import com.at_a_look.economy.security.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -16,7 +20,11 @@ import java.util.Arrays;
 
 @Configuration
 @EnableWebSecurity
+@EnableMethodSecurity(prePostEnabled = true)
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     /**
      * BCrypt 패스워드 인코더 빈 등록
@@ -46,7 +54,7 @@ public class SecurityConfig {
             // 인증 규칙 설정
             .authorizeHttpRequests(authz -> authz
                 // 공개 엔드포인트 허용
-                .requestMatchers("/api/auth/**").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/signup").permitAll()
                 .requestMatchers("/api/economic/**").permitAll()
                 .requestMatchers("/api/exchange-rates/**").permitAll()
                 .requestMatchers("/api/health/**").permitAll()
@@ -54,15 +62,21 @@ public class SecurityConfig {
                 // Swagger UI 및 API 문서 허용
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
                 
-                // 기타 모든 요청은 인증 필요 (현재는 모든 API를 공개로 설정)
-                .anyRequest().permitAll()
+                // 관리자 API는 ADMIN 권한 필요
+                .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                
+                // 기타 모든 요청은 인증 필요
+                .anyRequest().authenticated()
             )
             
             // 기본 로그인 폼 비활성화
             .formLogin(form -> form.disable())
             
             // HTTP Basic 인증 비활성화
-            .httpBasic(basic -> basic.disable());
+            .httpBasic(basic -> basic.disable())
+            
+            // JWT 필터 추가
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
