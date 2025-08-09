@@ -244,7 +244,7 @@ export default function ProfileManagementScreen() {
       
       {/* 헤더 */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+        <TouchableOpacity onPress={() => router.push('/(tabs)/profile')} style={styles.backButton}>
           <MaterialCommunityIcons name="arrow-left" size={24} color="#007AFF" />
         </TouchableOpacity>
         <ThemedText style={styles.headerTitle}>개인정보 관리</ThemedText>

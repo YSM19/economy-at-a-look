@@ -461,14 +461,22 @@ export default function IndicatorsScreen() {
                 </View>
 
                 {/* 환율의 의미 설명 */}
-                <View style={styles.infoContainer}>
-                  <ThemedText style={styles.infoTitle}>환율의 의미</ThemedText>
+                <TouchableOpacity 
+                  style={styles.infoContainer}
+                  onPress={() => router.push('/(tabs)/tools?tab=glossary')}
+                >
+                  <View style={styles.infoHeader}>
+                    <ThemedText style={styles.infoTitle}>환율이란?</ThemedText>
+                    <MaterialCommunityIcons name="arrow-right" size={16} color="#007AFF" />
+                  </View>
                   <ThemedText style={styles.infoContent}>
-                    환율은 두 나라 화폐 간의 교환 비율을 나타냅니다. 원/달러 환율이 상승하면 수입품 가격이 오르고 수출 경쟁력이 강화됩니다.
-                    한국은행의 콜금리 인상은 원/달러 환율 상승, 미국 연준의 연방자금금리 인상은 원/달러 환율 하락 경향을 보입니다.
-                    환율은 무역, 투자, 소비 등 경제 전반에 영향을 미치는 중요한 경제 지표입니다.
+                    • 정의: 두 나라 화폐 간 교환 비율입니다.{'\n'}
+                    • 영향: 원/달러 환율 상승 시 수입품 가격 상승, 수출 경쟁력 향상.{'\n'}
+                    • 정책요인: 한국은행 콜금리 인상 시 원/달러 환율 상승. 미국 연준 금리 인상 시 원/달러 환율 하락.{'\n'}
+                    • 중요성: 무역·투자·소비 등 경제 전반에 영향을 미칩니다.
                   </ThemedText>
-                </View>
+                  <ThemedText style={styles.clickHint}>탭하여 자세히 보기</ThemedText>
+                </TouchableOpacity>
 
                 {/* 환율 범위 기준 안내 */}
                 <View style={styles.noticeContainer}>
@@ -522,14 +530,21 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
                 
-                <View style={styles.infoContainer}>
-                  <ThemedText style={styles.infoTitle}>금리의 의미</ThemedText>
+                <TouchableOpacity 
+                  style={styles.infoContainer}
+                  onPress={() => router.push('/(tabs)/tools?tab=glossary')}
+                >
+                  <View style={styles.infoHeader}>
+                    <ThemedText style={styles.infoTitle}>기준금리란?</ThemedText>
+                    <MaterialCommunityIcons name="arrow-right" size={16} color="#007AFF" />
+                  </View>
                   <ThemedText style={styles.infoContent}>
-                    금리는 물가 조절의 스위치 역할을 합니다. 금리 상승은 예금 이자 상승과 대출 금리 상승으로 이어집니다.
-                    한국은행이 기준금리를 올리면 전반적인 시장금리도 상승하는 경향이 있으며, 이는 소비 진작보다는 저축을 
-                    유도하는 효과가 있습니다.
+                    • 역할: 물가 조절의 스위치입니다.{'\n'}
+                    • 파급효과: 금리 상승 시 예금 이자 상승, 대출 금리 상승.{'\n'}
+                    • 정책 전파: 기준금리 인상 시 전반적 시장금리 상승, 소비 억제·저축 유도.
                   </ThemedText>
-                </View>
+                  <ThemedText style={styles.clickHint}>탭하여 자세히 보기</ThemedText>
+                </TouchableOpacity>
               </>
             )}
           </View>
@@ -639,14 +654,21 @@ export default function IndicatorsScreen() {
                 </View>
 
                 {/* 소비자물가지수 설명 */}
-                <View style={styles.infoContainer}>
-                  <ThemedText style={styles.infoTitle}>소비자물가지수의 의미</ThemedText>
+                <TouchableOpacity 
+                  style={styles.infoContainer}
+                  onPress={() => router.push('/(tabs)/tools?tab=glossary')}
+                >
+                  <View style={styles.infoHeader}>
+                    <ThemedText style={styles.infoTitle}>소비자물가지수(CPI)란?</ThemedText>
+                    <MaterialCommunityIcons name="arrow-right" size={16} color="#007AFF" />
+                  </View>
                   <ThemedText style={styles.infoContent}>
-                    소비자물가지수(CPI)는 소비자가 구입하는 상품과 서비스의 가격 변동을 측정하는 지표입니다.
-                    CPI 상승은 인플레이션을 의미하며, 물가 안정이 중요한 경제 정책 목표 중 하나입니다.
-                    한국은행은 물가 안정을 위해 통화정책을 운용합니다.
+                    • 정의: 소비자가 구입하는 상품·서비스의 가격 변동 지표입니다.{'\n'}
+                    • 해석: CPI 상승 = 인플레이션 신호.{'\n'}
+                    • 정책: 물가 안정은 핵심 목표이며, 한국은행이 통화정책으로 대응합니다.
                   </ThemedText>
-                </View>
+                  <ThemedText style={styles.clickHint}>탭하여 자세히 보기</ThemedText>
+                </TouchableOpacity>
 
                 {/* 물가 범위 기준 안내 */}
                 <View style={styles.noticeContainer}>
@@ -969,16 +991,28 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+  infoHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
   infoTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 8,
     color: '#333',
   },
   infoContent: {
     fontSize: 14,
     color: '#666',
     lineHeight: 22,
+    marginBottom: 8,
+  },
+  clickHint: {
+    fontSize: 12,
+    color: '#007AFF',
+    fontStyle: 'italic',
+    textAlign: 'center',
   },
   levelsContainer: {
     backgroundColor: '#FBFCFF',

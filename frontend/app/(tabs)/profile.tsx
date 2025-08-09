@@ -14,7 +14,6 @@ import { ConfirmationModal } from '../../components/ConfirmationModal';
 interface UserInfo {
   username: string;
   email: string;
-  joinDate: string;
   lastLogin: string;
 }
 
@@ -93,7 +92,6 @@ export default function ProfileScreen() {
         setUserInfo({
           username: user.username,
           email: user.email,
-          joinDate: user.joinDate || '2024.01.01',
           lastLogin: user.lastLogin || '2024.01.15'
         });
         setUserRole(user.role || 'USER');
@@ -302,9 +300,6 @@ export default function ProfileScreen() {
             <View style={styles.userDetails}>
               <ThemedText style={styles.username}>{userInfo?.username}</ThemedText>
               <ThemedText style={styles.userEmail}>{userInfo?.email}</ThemedText>
-              <ThemedText style={styles.userDate}>
-                가입일: {userInfo?.joinDate}
-              </ThemedText>
             </View>
           </View>
           <TouchableOpacity

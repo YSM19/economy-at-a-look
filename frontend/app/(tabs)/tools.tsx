@@ -74,7 +74,13 @@ export default function ToolsScreen() {
   // params.tab이 변경되면 activeTab도 업데이트
   useEffect(() => {
     if (params.tab && typeof params.tab === 'string') {
-      setActiveTab(params.tab);
+      const nextTab = params.tab as string;
+      const allowedTabs = ['calculator', 'exchange-history', 'recommendations', 'news', 'glossary'];
+      if (allowedTabs.includes(nextTab)) {
+        setActiveTab(nextTab);
+      } else {
+        setActiveTab('calculator');
+      }
     }
   }, [params.tab]);
 
@@ -716,12 +722,12 @@ export default function ToolsScreen() {
       onPress: () => setActiveTab('exchange-history')
     },
     {
-      id: 'recommendations',
-      title: '투자 추천',
-      description: '현재 경제 상황 기반 투자 조언',
-      icon: 'trending-up',
-      color: '#4ECDC4',
-      onPress: () => setActiveTab('recommendations')
+      id: 'glossary',
+      title: '경제 용어',
+      description: '경제 용어 사전',
+      icon: 'book-open',
+      color: '#FFEAA7',
+      onPress: () => setActiveTab('glossary')
     },
     {
       id: 'news',
@@ -732,29 +738,15 @@ export default function ToolsScreen() {
       onPress: () => setActiveTab('news')
     },
     {
-      id: 'notifications',
-      title: '알림 설정',
-      description: '환율 변동 알림 관리',
-      icon: 'bell',
-      color: '#96CEB4',
-      onPress: () => setActiveTab('notifications')
+      id: 'recommendations',
+      title: '투자 추천',
+      description: '현재 경제 상황 기반 투자 조언',
+      icon: 'trending-up',
+      color: '#4ECDC4',
+      onPress: () => setActiveTab('recommendations')
     },
-    {
-      id: 'glossary',
-      title: '경제 용어',
-      description: '경제 용어 사전',
-      icon: 'book-open',
-      color: '#FFEAA7',
-      onPress: () => setActiveTab('glossary')
-    },
-    {
-      id: 'settings',
-      title: '설정',
-      description: '앱 설정 및 개인화',
-      icon: 'cog',
-      color: '#DDA0DD',
-      onPress: () => setActiveTab('settings')
-    },
+    // 알림 설정 항목은 마이페이지로 이동되었으므로 도구 탭에서 숨김
+    // 설정 항목은 마이페이지로 이동되었으므로 도구 탭에서 숨김
   ];
 
   const renderTabContent = () => {
@@ -1089,49 +1081,7 @@ export default function ToolsScreen() {
           </View>
         );
       
-      case 'notifications':
-        return (
-          <View style={styles.tabContent}>
-            <ThemedView style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>알림 설정</ThemedText>
-              <View style={styles.settingContainer}>
-                <View style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <ThemedText style={styles.settingTitle}>환율 변동 알림</ThemedText>
-                    <ThemedText style={styles.settingDescription}>
-                      환율이 설정한 범위를 벗어날 때 알림
-                    </ThemedText>
-                  </View>
-                  <TouchableOpacity style={styles.toggleButton}>
-                    <MaterialCommunityIcons name="toggle-switch" size={24} color="#007AFF" />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <ThemedText style={styles.settingTitle}>금리 변동 알림</ThemedText>
-                    <ThemedText style={styles.settingDescription}>
-                      기준금리 변경 시 알림
-                    </ThemedText>
-                  </View>
-                  <TouchableOpacity style={styles.toggleButton}>
-                    <MaterialCommunityIcons name="toggle-switch-off" size={24} color="#8E8E93" />
-                  </TouchableOpacity>
-                </View>
-                <View style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <ThemedText style={styles.settingTitle}>경제 뉴스 알림</ThemedText>
-                    <ThemedText style={styles.settingDescription}>
-                      주요 경제 뉴스 업데이트 알림
-                    </ThemedText>
-                  </View>
-                  <TouchableOpacity style={styles.toggleButton}>
-                    <MaterialCommunityIcons name="toggle-switch" size={24} color="#007AFF" />
-                  </TouchableOpacity>
-                </View>
-              </View>
-            </ThemedView>
-          </View>
-        );
+      // notifications 탭은 마이페이지에서 제공되므로 제거
       
       case 'glossary':
         return (
@@ -1140,21 +1090,57 @@ export default function ToolsScreen() {
               <ThemedText style={styles.sectionTitle}>경제 용어 사전</ThemedText>
               <View style={styles.glossaryContainer}>
                 <View style={styles.glossaryItem}>
+                  <ThemedText style={styles.glossaryTerm}>환율</ThemedText>
+                  <View style={styles.glossaryDefinition}>
+                    <ThemedText style={styles.glossaryText}>
+                      <ThemedText style={styles.glossaryLabel}>• 정의: </ThemedText>두 나라 화폐 간 교환 비율입니다.
+                    </ThemedText>
+                    <View style={styles.glossaryRow}>
+                      <ThemedText style={styles.glossaryLabel}>• 영향: </ThemedText>
+                      <ThemedText style={styles.glossaryText}>원/달러 환율 상승 시 수입품 가격 </ThemedText>
+                      <MaterialCommunityIcons name="arrow-up" size={14} color="#FF5722" />
+                      <ThemedText style={styles.glossaryText}>, 수출 경쟁력 </ThemedText>
+                      <MaterialCommunityIcons name="arrow-up" size={14} color="#4CAF50" />
+                      <ThemedText style={styles.glossaryText}>.</ThemedText>
+                    </View>
+                    <View style={styles.glossaryRow}>
+                      <ThemedText style={styles.glossaryLabel}>• 정책요인: </ThemedText>
+                      <ThemedText style={styles.glossaryText}>한국은행 콜금리 인상 시 원/달러 환율 </ThemedText>
+                      <MaterialCommunityIcons name="arrow-up" size={14} color="#FF5722" />
+                      <ThemedText style={styles.glossaryText}>. 미국 연준 금리 인상 시 원/달러 환율 </ThemedText>
+                      <MaterialCommunityIcons name="arrow-down" size={14} color="#4CAF50" />
+                      <ThemedText style={styles.glossaryText}>.</ThemedText>
+                    </View>
+                    <ThemedText style={styles.glossaryText}>
+                      <ThemedText style={styles.glossaryLabel}>• 중요성: </ThemedText>무역·투자·소비 등 경제 전반에 영향을 미칩니다.
+                    </ThemedText>
+                  </View>
+                </View>
+                <View style={styles.glossaryItem}>
                   <ThemedText style={styles.glossaryTerm}>기준금리</ThemedText>
-                  <ThemedText style={styles.glossaryDefinition}>
-                    한국은행이 금융기관에 자금을 대출할 때 적용하는 금리로, 시중 금리의 기준이 된다.
-                  </ThemedText>
+                  <View style={styles.glossaryDefinition}>
+                    <ThemedText style={styles.glossaryText}>
+                      <ThemedText style={styles.glossaryLabel}>• 역할: </ThemedText>물가 조절의 스위치입니다.
+                    </ThemedText>
+                    <View style={styles.glossaryRow}>
+                      <ThemedText style={styles.glossaryLabel}>• 파급효과: </ThemedText>
+                      <ThemedText style={styles.glossaryText}>금리 상승 시 예금 이자 </ThemedText>
+                      <MaterialCommunityIcons name="arrow-up" size={14} color="#FF5722" />
+                      <ThemedText style={styles.glossaryText}>, 대출 금리 </ThemedText>
+                      <MaterialCommunityIcons name="arrow-up" size={14} color="#FF5722" />
+                      <ThemedText style={styles.glossaryText}>.</ThemedText>
+                    </View>
+                    <ThemedText style={styles.glossaryText}>
+                      <ThemedText style={styles.glossaryLabel}>• 정책 전파: </ThemedText>기준금리 인상 시 전반적 시장금리 상승, 소비 억제·저축 유도.
+                    </ThemedText>
+                  </View>
                 </View>
                 <View style={styles.glossaryItem}>
                   <ThemedText style={styles.glossaryTerm}>소비자물가지수(CPI)</ThemedText>
                   <ThemedText style={styles.glossaryDefinition}>
-                    소비자가 일상생활에서 구매하는 상품과 서비스의 가격 변동을 측정하는 지표다.
-                  </ThemedText>
-                </View>
-                <View style={styles.glossaryItem}>
-                  <ThemedText style={styles.glossaryTerm}>환율</ThemedText>
-                  <ThemedText style={styles.glossaryDefinition}>
-                    한 나라의 통화를 다른 나라의 통화로 교환할 때의 비율을 말한다.
+                    <ThemedText style={styles.glossaryLabel}>• 정의: </ThemedText>소비자가 구입하는 상품·서비스의 가격 변동 지표입니다.{"\n"}
+                    <ThemedText style={styles.glossaryLabel}>• 해석: </ThemedText>CPI 상승 = 인플레이션 신호.{"\n"}
+                    <ThemedText style={styles.glossaryLabel}>• 정책: </ThemedText>물가 안정은 핵심 목표이며, 한국은행이 통화정책으로 대응합니다.
                   </ThemedText>
                 </View>
               </View>
@@ -1162,43 +1148,7 @@ export default function ToolsScreen() {
           </View>
         );
       
-      case 'settings':
-        return (
-          <View style={styles.tabContent}>
-            <ThemedView style={styles.section}>
-              <ThemedText style={styles.sectionTitle}>설정</ThemedText>
-              <View style={styles.settingContainer}>
-                <TouchableOpacity style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <ThemedText style={styles.settingTitle}>개인정보 관리</ThemedText>
-                    <ThemedText style={styles.settingDescription}>
-                      계정 정보 및 개인정보 설정
-                    </ThemedText>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={24} color="#8E8E93" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <ThemedText style={styles.settingTitle}>테마 설정</ThemedText>
-                    <ThemedText style={styles.settingDescription}>
-                      다크모드 및 테마 변경
-                    </ThemedText>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={24} color="#8E8E93" />
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.settingItem}>
-                  <View style={styles.settingInfo}>
-                    <ThemedText style={styles.settingTitle}>언어 설정</ThemedText>
-                    <ThemedText style={styles.settingDescription}>
-                      앱 언어 변경
-                    </ThemedText>
-                  </View>
-                  <MaterialCommunityIcons name="chevron-right" size={24} color="#8E8E93" />
-                </TouchableOpacity>
-              </View>
-            </ThemedView>
-          </View>
-        );
+      // settings 탭은 마이페이지에서 제공되므로 제거
       
       default:
         return null;
@@ -1211,9 +1161,7 @@ export default function ToolsScreen() {
       case 'exchange-history': return '환율 기록';
       case 'recommendations': return '투자 추천';
       case 'news': return '경제 뉴스';
-      case 'notifications': return '알림 설정';
       case 'glossary': return '경제 용어';
-      case 'settings': return '설정';
       default: return '도구';
     }
   };
@@ -1646,7 +1594,7 @@ const styles = StyleSheet.create({
   },
   glossaryItem: {
     padding: 12,
-    backgroundColor: '#F8F9FA',
+    backgroundColor: '#F0F8FF',
     borderRadius: 8,
   },
   glossaryTerm: {
@@ -1656,9 +1604,24 @@ const styles = StyleSheet.create({
     color: '#007AFF',
   },
   glossaryDefinition: {
-    fontSize: 14,
-    color: '#6C757D',
-    lineHeight: 20,
+    gap: 8,
+  },
+  glossaryText: {
+    fontSize: 15,
+    color: '#2C3E50',
+    lineHeight: 22,
+    fontWeight: '500',
+  },
+  glossaryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    marginBottom: 4,
+  },
+  glossaryLabel: {
+    fontSize: 15,
+    color: '#111827',
+    fontWeight: '700',
   },
   calculatorPlaceholder: {
     alignItems: 'center',
