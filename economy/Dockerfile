@@ -31,6 +31,10 @@ WORKDIR /app
 # 빌드된 JAR 파일 복사
 COPY --from=build /app/build/libs/*.jar app.jar
 
+## 보안: 비루트 사용자 생성 및 사용
+RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+USER appuser:appgroup
+
 # 애플리케이션 포트 노출
 EXPOSE 8080
 

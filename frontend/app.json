@@ -14,19 +14,11 @@
       "buildNumber": "1",
       "infoPlist": {
         "NSAppTransportSecurity": {
-          "NSAllowsArbitraryLoads": true,
+          "NSAllowsArbitraryLoads": false,
           "NSExceptionDomains": {
-            "atalook.kro.kr": {
-              "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSExceptionMinimumTLSVersion": "1.0"
-            },
-            "192.168.0.2": {
-              "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSExceptionMinimumTLSVersion": "1.0"
-            },
             "localhost": {
               "NSExceptionAllowsInsecureHTTPLoads": true,
-              "NSExceptionMinimumTLSVersion": "1.0"
+              "NSExceptionMinimumTLSVersion": "1.2"
             }
           }
         },
@@ -79,15 +71,7 @@
             "buildToolsVersion": "35.0.0",
             "enableProguardInReleaseBuilds": false,
             "enableSeparateBuildPerCPUArchitecture": false,
-            "usesCleartextTraffic": true,
-            "networkSecurityConfig": {
-              "domainConfig": [
-                {
-                  "domains": ["atalook.kro.kr", "192.168.0.2", "localhost"],
-                  "cleartextTrafficPermitted": true
-                }
-              ]
-            }
+            "usesCleartextTraffic": false
           }
         }
       ]

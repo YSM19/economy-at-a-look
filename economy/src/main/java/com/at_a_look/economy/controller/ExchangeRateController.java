@@ -6,7 +6,6 @@ import com.at_a_look.economy.service.ExchangeRateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -17,7 +16,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/exchange-rates")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ExchangeRateController {
 
     private final ExchangeRateService exchangeRateService;

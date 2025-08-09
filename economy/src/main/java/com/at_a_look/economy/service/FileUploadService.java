@@ -68,9 +68,9 @@ public class FileUploadService {
 
         String fileUrl = String.format("%s/%s/%s", uploadUrl, subfolder, filename);
 
-        log.info("파일 업로드 완료: {} -> {}", originalFilename, fileUrl);
-        log.info("파일 저장 경로: {}", filePath.toAbsolutePath());
-        log.info("파일 존재 여부: {}", Files.exists(filePath));
+        log.info("파일 업로드 완료: {}", originalFilename);
+        // 내부 경로/서버 IP 노출 방지
+        log.debug("파일 저장 완료");
 
         return FileUploadDto.UploadResponse.builder()
                 .fileUrl(fileUrl)
@@ -127,7 +127,7 @@ public class FileUploadService {
             
             if (Files.exists(filePath)) {
                 Files.delete(filePath);
-                log.info("파일 삭제 완료: {}", filePath);
+                log.info("파일 삭제 완료");
                 return true;
             } else {
                 log.warn("삭제할 파일이 존재하지 않습니다: {}", filePath);

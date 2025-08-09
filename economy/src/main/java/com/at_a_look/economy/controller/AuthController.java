@@ -30,7 +30,6 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Validated
 @Tag(name = "Auth", description = "인증 API")
-@CrossOrigin(origins = "*")
 public class AuthController {
 
     private final UserService userService;
@@ -161,8 +160,7 @@ public class AuthController {
             // 토큰에서 사용자 정보 추출
             String email = jwtTokenUtil.getEmailFromToken(token);
             Long userId = jwtTokenUtil.getUserIdFromToken(token);
-            String username = jwtTokenUtil.getUsernameFromToken(token);
-            String role = jwtTokenUtil.getRoleFromToken(token);
+            // username, role은 갱신 시 사용하지 않으므로 조회 생략
             
             if (email == null || userId == null) {
                 log.warn("❌ [AuthController] 토큰 갱신 실패: 토큰에서 사용자 정보를 추출할 수 없음");

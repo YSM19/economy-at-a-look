@@ -1,6 +1,7 @@
 import axios, { AxiosResponse } from 'axios';
 import Config, { isDevelopment, useMockData } from '../constants/Config';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { safeGetItem, safeRemoveItem, safeSetItem } from '../utils/safeStorage';
 import { router } from 'expo-router';
 
 // 토스트 메시지를 표시하는 함수 (전역에서 사용 가능하도록)
@@ -13,9 +14,9 @@ export const setToastFunction = (toastFn: (message: string, type?: 'success' | '
 // 토큰 만료 처리 함수
 const handleTokenExpiration = async () => {
   try {
-    await AsyncStorage.removeItem('userToken');
+    await safeRemoveItem('userToken');
     await AsyncStorage.removeItem('userInfo');
-    await AsyncStorage.removeItem('adminToken');
+    await safeRemoveItem('adminToken');
     
     // 토스트 메시지 표시
     if (showToastFunction) {
@@ -60,7 +61,7 @@ api.interceptors.request.use(
       try {
         const isPublic = config.url?.startsWith('/api/auth/') || config.url?.startsWith('/api/health');
         if (!isPublic) {
-          const token = await AsyncStorage.getItem('userToken');
+          const token = await safeGetItem('userToken');
           if (token) {
             config.headers = config.headers || {};
             (config.headers as any)['Authorization'] = `Bearer ${token}`;
@@ -148,7 +149,7 @@ api.interceptors.response.use(
       
       try {
         // 현재 토큰 가져오기
-        const currentToken = await AsyncStorage.getItem('userToken');
+        const currentToken = await safeGetItem('userToken');
         
         if (currentToken && !error.config.url?.includes('/api/auth/refresh')) {
           // 토큰 갱신 시도
@@ -160,7 +161,7 @@ api.interceptors.response.use(
           
           if (refreshResponse.data.success && refreshResponse.data.data.token) {
             // 새로운 토큰 저장
-            await AsyncStorage.setItem('userToken', refreshResponse.data.data.token);
+            await safeSetItem('userToken', refreshResponse.data.data.token);
             console.log('✅ 토큰 갱신 성공');
             
             // 원래 요청 재시도

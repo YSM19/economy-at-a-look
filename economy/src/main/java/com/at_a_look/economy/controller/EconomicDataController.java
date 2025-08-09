@@ -29,7 +29,6 @@ import java.util.List;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/economic")
-@CrossOrigin(origins = "*")
 @Tag(name = "경제 지표 API", description = "환율, 금리, 물가지수, 경제 심리 지수 정보를 제공하는 API")
 public class EconomicDataController {
 
