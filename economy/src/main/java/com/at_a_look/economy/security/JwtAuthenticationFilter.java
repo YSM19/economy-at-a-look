@@ -36,6 +36,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         
         if (token != null && jwtTokenUtil.validateToken(token)) {
             try {
+                // 리프레시 토큰이 Authorization 헤더로 들어오는 오남용 차단
+                String tokenType = jwtTokenUtil.getTokenType(token);
+                if (tokenType == null || !"access".equals(tokenType)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
                 String email = jwtTokenUtil.getEmailFromToken(token);
                 
                 if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {

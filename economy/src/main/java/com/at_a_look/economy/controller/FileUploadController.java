@@ -12,6 +12,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
+import java.util.Map;
+import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/files")
@@ -32,6 +34,16 @@ public class FileUploadController {
             HttpServletRequest request) {
         try {
             String username = getUsernameFromToken(request);
+
+            // 카테고리 화이트리스트 검증
+            if (!isValidCategory(category)) {
+                return ResponseEntity.badRequest().body(
+                    ApiResponse.<FileUploadDto.UploadResponse>builder()
+                        .success(false)
+                        .message("지원하지 않는 카테고리입니다.")
+                        .build()
+                );
+            }
             
             // 파일 검증
             if (file.isEmpty()) {
@@ -55,16 +67,7 @@ public class FileUploadController {
             }
             
             // 파일 형식 검증
-            String contentType = file.getContentType();
-            if (contentType == null || !FileUploadDto.UploadLimits.ALLOWED_IMAGE_TYPES.contains(contentType)) {
-                return ResponseEntity.badRequest().body(
-                    ApiResponse.<FileUploadDto.UploadResponse>builder()
-                        .success(false)
-                        .message("지원하지 않는 파일 형식입니다. " + 
-                               FileUploadDto.UploadLimits.ALLOWED_IMAGE_TYPES + " 형식만 업로드 가능합니다.")
-                        .build()
-                );
-            }
+            // 클라이언트 제공 MIME은 신뢰하지 말고, 서버단에서 시그니처로 최종 검증
             
             FileUploadDto.UploadResponse response = fileUploadService.uploadFile(file, category, username);
             
@@ -96,6 +99,16 @@ public class FileUploadController {
             HttpServletRequest request) {
         try {
             String username = getUsernameFromToken(request);
+
+            // 카테고리 화이트리스트 검증
+            if (!isValidCategory(category)) {
+                return ResponseEntity.badRequest().body(
+                    ApiResponse.<FileUploadDto.MultipleUploadResponse>builder()
+                        .success(false)
+                        .message("지원하지 않는 카테고리입니다.")
+                        .build()
+                );
+            }
             
             // 파일 개수 검증
             if (files.isEmpty()) {
@@ -128,15 +141,7 @@ public class FileUploadController {
                     );
                 }
                 
-                String contentType = file.getContentType();
-                if (contentType == null || !FileUploadDto.UploadLimits.ALLOWED_IMAGE_TYPES.contains(contentType)) {
-                    return ResponseEntity.badRequest().body(
-                        ApiResponse.<FileUploadDto.MultipleUploadResponse>builder()
-                            .success(false)
-                            .message("파일 '" + file.getOriginalFilename() + "'은 지원하지 않는 형식입니다.")
-                            .build()
-                    );
-                }
+                // 클라이언트 MIME 미신뢰: 서버단 시그니처 검사에 위임
             }
             
             FileUploadDto.MultipleUploadResponse response = fileUploadService.uploadMultipleFiles(files, category, username);
@@ -168,7 +173,16 @@ public class FileUploadController {
             HttpServletRequest request) {
         try {
             String username = getUsernameFromToken(request);
-            
+            // 파일 삭제는 서버가 관리하는 업로드 URL/경로만 허용되도록 검증
+            if (!isSafeFileIdentifier(fileId)) {
+                return ResponseEntity.badRequest().body(
+                    ApiResponse.<Void>builder()
+                        .success(false)
+                        .message("유효하지 않은 파일 식별자입니다.")
+                        .build()
+                );
+            }
+
             fileUploadService.deleteFile(fileId, username);
             
             return ResponseEntity.ok(
@@ -194,13 +208,12 @@ public class FileUploadController {
     @GetMapping("/limits")
     public ResponseEntity<ApiResponse<Object>> getUploadLimits() {
         try {
-            Object limits = new Object() {
-                public final long maxFileSize = FileUploadDto.UploadLimits.MAX_FILE_SIZE;
-                public final int maxFilesPerPost = FileUploadDto.UploadLimits.MAX_FILES_PER_POST;
-                public final List<String> allowedImageTypes = FileUploadDto.UploadLimits.ALLOWED_IMAGE_TYPES;
-                public final List<String> allowedDocumentTypes = FileUploadDto.UploadLimits.ALLOWED_DOCUMENT_TYPES;
-            };
-            
+            Map<String, Object> limits = new HashMap<>();
+            limits.put("maxFileSize", FileUploadDto.UploadLimits.MAX_FILE_SIZE);
+            limits.put("maxFilesPerPost", FileUploadDto.UploadLimits.MAX_FILES_PER_POST);
+            limits.put("allowedImageTypes", FileUploadDto.UploadLimits.ALLOWED_IMAGE_TYPES);
+            limits.put("allowedDocumentTypes", FileUploadDto.UploadLimits.ALLOWED_DOCUMENT_TYPES);
+
             return ResponseEntity.ok(ApiResponse.success(limits));
         } catch (Exception e) {
             log.error("업로드 제한 정보 조회 실패", e);
@@ -225,11 +238,7 @@ public class FileUploadController {
                     .body(ApiResponse.error("업로드할 파일을 선택해주세요."));
             }
             
-            String contentType = file.getContentType();
-            if (contentType == null || !FileUploadDto.UploadLimits.ALLOWED_IMAGE_TYPES.contains(contentType)) {
-                return ResponseEntity.badRequest()
-                    .body(ApiResponse.error("지원되지 않는 파일 형식입니다."));
-            }
+            // 클라이언트 MIME 미신뢰: 서버단 시그니처 검사에 위임
             
             String tempUrl = fileUploadService.generateTempImageUrl(file, username);
             
@@ -244,5 +253,24 @@ public class FileUploadController {
     private String getUsernameFromToken(HttpServletRequest request) {
         String token = jwtTokenUtil.getTokenFromRequest(request);
         return jwtTokenUtil.getUsernameFromToken(token);
+    }
+
+    private boolean isValidCategory(String category) {
+        // 업로드 허용 카테고리 화이트리스트
+        return switch (category) {
+            case "general", "profile", "post", "temp" -> true;
+            default -> false;
+        };
+    }
+
+    private boolean isSafeFileIdentifier(String fileId) {
+        // 경로 조작 방지: 상위 디렉터리 이동, 절대 경로, 프로토콜 포함 금지
+        if (fileId == null || fileId.isBlank()) return false;
+        String lowered = fileId.toLowerCase();
+        if (lowered.contains("..") || lowered.startsWith("/") || lowered.startsWith("\\") ||
+            lowered.startsWith("http://") || lowered.startsWith("https://") || lowered.contains("://")) {
+            return false;
+        }
+        return true;
     }
 } 

@@ -2,6 +2,7 @@ package com.at_a_look.economy.config;
 
 import com.at_a_look.economy.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
@@ -26,6 +27,12 @@ public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
+    @Value("${cors.allowed-origin-patterns:}")
+    private String allowedOriginPatternsProp;
+
+    @Value("${cors.allow-credentials:false}")
+    private boolean allowCredentials;
+
     /**
      * BCrypt 패스워드 인코더 빈 등록
      * 비밀번호 해싱에 사용됩니다.
@@ -45,7 +52,7 @@ public class SecurityConfig {
             // CSRF 비활성화 (API 서버이므로)
             .csrf(csrf -> csrf.disable())
             
-            // CORS 설정 적용
+            // CORS 설정 적용 (운영은 화이트리스트 기반으로 제한 권장)
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             
             // 세션 관리 설정 (무상태)
@@ -58,6 +65,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/economic/**").permitAll()
                 .requestMatchers("/api/exchange-rates/**").permitAll()
                 .requestMatchers("/api/health/**").permitAll()
+                // 커뮤니티 공개 조회 허용 (GET 전용)
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/posts/**").permitAll()
+                .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/comments/**").permitAll()
                 
                 // Swagger UI 및 API 문서 허용
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/swagger-resources/**").permitAll()
@@ -89,8 +99,23 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         
-        // 허용할 오리진 설정
-        configuration.setAllowedOriginPatterns(Arrays.asList("*"));
+        // 허용할 오리진 설정 (프로퍼티 우선)
+        if (allowedOriginPatternsProp != null && !allowedOriginPatternsProp.isBlank()) {
+            configuration.setAllowedOriginPatterns(Arrays.asList(allowedOriginPatternsProp.split(",")));
+        } else {
+            // 운영 환경에서는 반드시 명시적으로 설정되어야 함
+            // 운영에서 미설정 시 애플리케이션 기동 실패를 유도하여 과도한 허용을 방지
+            String activeProfile = System.getProperty("spring.profiles.active", "dev");
+            if ("prod".equals(activeProfile)) {
+                throw new IllegalStateException("prod 프로파일에서 cors.allowed-origin-patterns 프로퍼티가 설정되어야 합니다.");
+            }
+            // 개발 기본값: 로컬/내부망 허용
+            configuration.setAllowedOriginPatterns(Arrays.asList(
+                "http://localhost:*",
+                "http://127.0.0.1:*",
+                "http://192.168.*:*"
+            ));
+        }
         
         // 허용할 HTTP 메서드
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
@@ -98,12 +123,21 @@ public class SecurityConfig {
         // 허용할 헤더
         configuration.setAllowedHeaders(Arrays.asList("*"));
         
-        // 인증 정보 포함 허용
-        configuration.setAllowCredentials(true);
+        // 인증 정보 포함 허용 (프로퍼티로 제어)
+        configuration.setAllowCredentials(allowCredentials);
+
+        // allowCredentials=true 인 경우 와일드카드/광범위 패턴 사용 방지(브라우저 제약 + 보안상)
+        if (allowCredentials) {
+            for (String pattern : configuration.getAllowedOriginPatterns()) {
+                if ("*".equals(pattern) || pattern.endsWith("*")) {
+                    throw new IllegalStateException("allowCredentials=true 인 경우 와일드카드 오리진 패턴은 허용되지 않습니다.");
+                }
+            }
+        }
         
-        // 모든 경로에 CORS 설정 적용
+        // API 경로에만 CORS 설정 적용
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
+        source.registerCorsConfiguration("/api/**", configuration);
         
         return source;
     }

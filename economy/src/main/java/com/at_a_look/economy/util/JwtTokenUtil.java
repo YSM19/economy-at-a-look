@@ -18,8 +18,8 @@ import java.util.function.Function;
 @Component
 public class JwtTokenUtil {
 
-    // JWT 시크릿 키 (실제 운영환경에서는 환경변수나 설정파일로 관리)
-    @Value("${jwt.secret:mySecretKeyForEconomyAtALookApplicationThatShouldBeAtLeast256BitsLong}")
+    // JWT 시크릿 키 (운영/개발 프로파일에서 반드시 주입)
+    @Value("${jwt.secret}")
     private String secret;
 
     // 토큰 만료 시간 (24시간)
@@ -159,6 +159,8 @@ public class JwtTokenUtil {
             claims.put("userId", userId);
             claims.put("username", username);
             claims.put("role", role);
+            // 액세스 토큰임을 명시하여 리프레시 토큰 오남용 방지
+            claims.put("tokenType", "access");
             
             return createToken(claims, email, expiration);
         } catch (IllegalArgumentException e) {
@@ -179,6 +181,18 @@ public class JwtTokenUtil {
         claims.put("tokenType", "refresh");
         
         return createToken(claims, email, refreshExpiration);
+    }
+
+    /**
+     * 토큰 타입(access 또는 refresh) 조회
+     */
+    public String getTokenType(String token) {
+        try {
+            return getClaimFromToken(token, claims -> claims.get("tokenType", String.class));
+        } catch (JwtException e) {
+            log.warn("JWT 토큰 타입 조회 실패: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**

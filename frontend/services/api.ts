@@ -44,22 +44,48 @@ const api = axios.create({
   }
 });
 
+// 개발/운영 로그 레벨 제어
+if (!Config.debug) {
+  // 프로덕션에서는 콘솔 노이즈 최소화
+  const noop = () => {};
+  // 필요 시 아래 라인 주석 해제해 전역 콘솔 축소
+  // console.log = noop; console.debug = noop; console.info = noop;
+}
+
 // 요청 인터셉터 설정
 api.interceptors.request.use(
   config => {
-    // 디버그 모드일 때 요청 정보 로깅
-    if (Config.debug) {
-      console.log(`🌐 API 요청: ${config.method?.toUpperCase()} ${config.url}`);
-      console.log(`📡 Base URL: ${Config.apiUrl}`);
-      console.log(`🔧 Full URL: ${config.baseURL}${config.url}`);
-      if (config.params) {
-        console.log('📝 요청 파라미터:', config.params);
+    // Authorization 헤더 자동 주입 (공개 엔드포인트는 제외)
+    const injectAuth = async () => {
+      try {
+        const isPublic = config.url?.startsWith('/api/auth/') || config.url?.startsWith('/api/health');
+        if (!isPublic) {
+          const token = await AsyncStorage.getItem('userToken');
+          if (token) {
+            config.headers = config.headers || {};
+            (config.headers as any)['Authorization'] = `Bearer ${token}`;
+          }
+        }
+      } catch (e) {
+        if (Config.debug) console.warn('Authorization 주입 실패:', e);
       }
-      if (config.data) {
-        console.log('📋 요청 데이터:', config.data);
+      return config;
+    };
+
+    // 디버그 로깅과 병행
+    const afterLog = (cfg: any) => {
+      if (Config.debug) {
+        console.log(`🌐 API 요청: ${cfg.method?.toUpperCase()} ${cfg.url}`);
+        console.log(`📡 Base URL: ${Config.apiUrl}`);
+        console.log(`🔧 Full URL: ${cfg.baseURL}${cfg.url}`);
+        if (cfg.params) console.log('📝 요청 파라미터:', cfg.params);
+        if (cfg.data) console.log('📋 요청 데이터:', cfg.data);
       }
-    }
-    return config;
+      return cfg;
+    };
+
+    // 비동기 토큰 주입을 지원하기 위해 Promise를 반환
+    return injectAuth().then(afterLog);
   },
   error => {
     if (Config.debug) {

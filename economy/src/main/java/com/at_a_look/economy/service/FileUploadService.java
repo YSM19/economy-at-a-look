@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -35,6 +36,18 @@ public class FileUploadService {
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
     );
 
+    private enum DetectedImageType {
+        JPEG("image/jpeg", ".jpg"),
+        PNG("image/png", ".png"),
+        GIF("image/gif", ".gif"),
+        WEBP("image/webp", ".webp"),
+        UNKNOWN(null, null);
+
+        final String mime;
+        final String extension;
+        DetectedImageType(String mime, String extension) { this.mime = mime; this.extension = extension; }
+    }
+
     /**
      * 단일 파일 업로드
      */
@@ -42,8 +55,11 @@ public class FileUploadService {
         validateFile(file, fileUploadConfig.getMaxFileSizeBytes());
 
         String originalFilename = StringUtils.cleanPath(file.getOriginalFilename());
-        String fileExtension = getFileExtension(originalFilename);
-        String filename = generateFilename(fileExtension);
+        DetectedImageType detected = detectImageType(file);
+        if (detected == DetectedImageType.UNKNOWN || !ALLOWED_IMAGE_TYPES.contains(detected.mime)) {
+            throw new IllegalArgumentException("지원하지 않는 파일 형식입니다.");
+        }
+        String filename = generateFilename(detected.extension);
         
         Path uploadPath = createUploadPath(subfolder);
         Path filePath = uploadPath.resolve(filename);
@@ -59,7 +75,7 @@ public class FileUploadService {
         return FileUploadDto.UploadResponse.builder()
                 .fileUrl(fileUrl)
                 .originalFilename(originalFilename)
-                .contentType(file.getContentType())
+                .contentType(detected.mime)
                 .fileSize(file.getSize())
                 .uploadId(UUID.randomUUID().toString())
                 .build();
@@ -100,8 +116,14 @@ public class FileUploadService {
      */
     public boolean deleteFile(String fileUrl) {
         try {
+            // 업로드 도메인 기준으로만 처리하고, 경로 정규화로 상위 이동 차단
             String relativePath = fileUrl.replace(uploadUrl, "");
-            Path filePath = Paths.get(fileUploadConfig.getDir() + relativePath);
+            Path baseDir = Paths.get(fileUploadConfig.getDir()).toAbsolutePath().normalize();
+            Path filePath = baseDir.resolve(relativePath).normalize();
+            if (!filePath.startsWith(baseDir)) {
+                log.warn("보안 경고: 업로드 디렉터리 밖의 파일 삭제 시도: {}", filePath);
+                return false;
+            }
             
             if (Files.exists(filePath)) {
                 Files.delete(filePath);
@@ -126,17 +148,12 @@ public class FileUploadService {
             throw new IllegalArgumentException("파일 크기가 너무 큽니다. (최대 " + (maxFileSizeBytes / (1024 * 1024)) + "MB)");
         }
 
-        if (!ALLOWED_IMAGE_TYPES.contains(file.getContentType())) {
+        DetectedImageType detected = detectImageType(file);
+        if (detected == DetectedImageType.UNKNOWN) {
             throw new IllegalArgumentException("지원하지 않는 파일 형식입니다.");
         }
     }
 
-    private String getFileExtension(String filename) {
-        if (filename == null || !filename.contains(".")) {
-            return "";
-        }
-        return filename.substring(filename.lastIndexOf("."));
-    }
 
     private String generateFilename(String extension) {
         String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
@@ -147,7 +164,12 @@ public class FileUploadService {
 
 
     private Path createUploadPath(String subfolder) throws IOException {
-        Path uploadPath = Paths.get(fileUploadConfig.getDir(), subfolder);
+        // 서브폴더 정규화 및 베이스 디렉터리 이탈 방지
+        Path baseDir = Paths.get(fileUploadConfig.getDir()).toAbsolutePath().normalize();
+        Path uploadPath = baseDir.resolve(subfolder).normalize();
+        if (!uploadPath.startsWith(baseDir)) {
+            throw new IOException("유효하지 않은 업로드 경로입니다.");
+        }
         if (!Files.exists(uploadPath)) {
             Files.createDirectories(uploadPath);
         }
@@ -187,7 +209,11 @@ public class FileUploadService {
     public String generateTempImageUrl(MultipartFile file, String username) {
         try {
             // 임시 파일로 저장
-            String tempFilename = "temp_" + UUID.randomUUID().toString() + "_" + file.getOriginalFilename();
+            DetectedImageType detected = detectImageType(file);
+            if (detected == DetectedImageType.UNKNOWN) {
+                throw new IllegalArgumentException("지원하지 않는 파일 형식입니다.");
+            }
+            String tempFilename = "temp_" + UUID.randomUUID().toString() + detected.extension;
             Path tempPath = createUploadPath("temp").resolve(tempFilename);
             
             Files.copy(file.getInputStream(), tempPath, StandardCopyOption.REPLACE_EXISTING);
@@ -199,6 +225,26 @@ public class FileUploadService {
         } catch (IOException e) {
             log.error("임시 이미지 URL 생성 실패", e);
             throw new RuntimeException("임시 이미지 URL 생성에 실패했습니다.", e);
+        }
+    }
+
+    private DetectedImageType detectImageType(MultipartFile file) throws IOException {
+        // 별도의 스트림에서 헤더만 읽고 즉시 닫아, 이후 파일 저장용 스트림에 영향이 없도록 함
+        try (InputStream in = file.getInputStream()) {
+            byte[] header = in.readNBytes(64);
+            if (header.length >= 3 && header[0] == (byte)0xFF && header[1] == (byte)0xD8 && header[2] == (byte)0xFF) {
+                return DetectedImageType.JPEG;
+            }
+            if (header.length >= 8 && header[0] == (byte)0x89 && header[1] == (byte)0x50 && header[2] == (byte)0x4E && header[3] == (byte)0x47 && header[4] == (byte)0x0D && header[5] == (byte)0x0A && header[6] == (byte)0x1A && header[7] == (byte)0x0A) {
+                return DetectedImageType.PNG;
+            }
+            if (header.length >= 6 && header[0] == 'G' && header[1] == 'I' && header[2] == 'F' && header[3] == '8' && (header[4] == '7' || header[4] == '9') && header[5] == 'a') {
+                return DetectedImageType.GIF;
+            }
+            if (header.length >= 12 && header[0] == 'R' && header[1] == 'I' && header[2] == 'F' && header[3] == 'F' && header[8] == 'W' && header[9] == 'E' && header[10] == 'B' && header[11] == 'P') {
+                return DetectedImageType.WEBP;
+            }
+            return DetectedImageType.UNKNOWN;
         }
     }
 } 
