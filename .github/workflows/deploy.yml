@@ -89,10 +89,12 @@ jobs:
                -e SPRING_DATASOURCE_URL=jdbc:mysql://${{ secrets.DB_HOST }}:3306/economy \
                -e SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }} \
                -e SPRING_DATASOURCE_PASSWORD=${{ secrets.DB_PASSWORD }} \
-               -e SPRING_DATASOURCE_DRIVER-CLASS-NAME=com.mysql.cj.jdbc.Driver \
+               -e SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver \
                -e KOREAEXIM_API_AUTHKEY=${{ secrets.KOREAEXIM_API_AUTHKEY }} \
                -e ECOS_API_KEY=${{ secrets.ECOS_API_KEY }} \
-               -e ALLOWED_ORIGINS=${{ secrets.ALLOWED_ORIGINS }} \
+               -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+               -e CORS_ALLOWED_ORIGIN_PATTERNS=${{ secrets.CORS_ALLOWED_ORIGIN_PATTERNS }} \
+               -e CORS_ALLOW_CREDENTIALS=${{ secrets.CORS_ALLOW_CREDENTIALS }} \
                -e ADMIN_ACCOUNT_EMAIL=${{ secrets.ADMIN_EMAIL }} \
                -e ADMIN_ACCOUNT_PASSWORD=${{ secrets.ADMIN_PASSWORD }} \
                ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
