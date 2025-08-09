@@ -30,8 +30,8 @@ public class SecurityConfig {
     @Value("${cors.allowed-origin-patterns:}")
     private String allowedOriginPatternsProp;
 
-    @Value("${cors.allow-credentials:false}")
-    private boolean allowCredentials;
+    @Value("${cors.allow-credentials:}")
+    private String allowCredentialsProp;
 
     /**
      * BCrypt 패스워드 인코더 빈 등록
@@ -123,11 +123,15 @@ public class SecurityConfig {
         // 허용할 헤더
         configuration.setAllowedHeaders(Arrays.asList("*"));
         
-        // 인증 정보 포함 허용 (프로퍼티로 제어)
-        configuration.setAllowCredentials(allowCredentials);
+        // 인증 정보 포함 허용 (프로퍼티로 제어; 빈 값은 false)
+        boolean allowCreds = false;
+        if (allowCredentialsProp != null && !allowCredentialsProp.isBlank()) {
+            allowCreds = Boolean.parseBoolean(allowCredentialsProp.trim());
+        }
+        configuration.setAllowCredentials(allowCreds);
 
         // allowCredentials=true 인 경우 와일드카드/광범위 패턴 사용 방지(브라우저 제약 + 보안상)
-        if (allowCredentials) {
+        if (allowCreds) {
             for (String pattern : configuration.getAllowedOriginPatterns()) {
                 if ("*".equals(pattern) || pattern.endsWith("*")) {
                     throw new IllegalStateException("allowCredentials=true 인 경우 와일드카드 오리진 패턴은 허용되지 않습니다.");
