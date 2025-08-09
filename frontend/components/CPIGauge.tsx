@@ -174,7 +174,9 @@ const CPIGauge: React.FC<CPIGaugeProps> = ({ value, dataDate }) => {
         }
       } catch (err) {
         console.error('❌ [CPIGauge] CPI 데이터 가져오기 실패:', err);
-        console.error('🔍 [CPIGauge] 오류 상세:', err.message);
+        if (err instanceof Error) {
+          console.error('🔍 [CPIGauge] 오류 상세:', err.message);
+        }
         
         // 오류가 발생한 경우에도 현재 날짜를 표시
         const currentDate = new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' });

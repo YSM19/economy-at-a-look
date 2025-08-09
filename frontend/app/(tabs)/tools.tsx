@@ -1914,7 +1914,8 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 20,
   },
-  historyCard: {
+  // 중복 정의 제거: 기존 historyCard 사용
+  /* historyCard: {
     backgroundColor: '#fff',
     borderRadius: 10,
     padding: 12,
@@ -1929,7 +1930,7 @@ const styles = StyleSheet.create({
     elevation: 2,
     borderWidth: 1,
     borderColor: '#f5f5f5',
-  },
+  }, */
   historyHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2030,11 +2031,12 @@ const styles = StyleSheet.create({
     color: '#333',
     marginLeft: 6,
   },
-  rateText: {
+  // 중복 정의 제거: 기존 rateText 사용
+  /* rateText: {
     fontSize: 15,
     fontWeight: '600',
     color: '#2196F3',
-  },
+  }, */
   rightSection: {
     alignItems: 'flex-end',
   },

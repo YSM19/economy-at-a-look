@@ -31,9 +31,9 @@ export default function LoginScreen() {
             console.log('✅ 이미 로그인된 상태입니다. 홈으로 이동합니다.');
             const user = authStatus.userInfo;
             if (user && user.role === 'ADMIN') {
-              router.replace('/(tabs)/profile');
+              router.replace('/profile');
             } else {
-              router.replace('/(tabs)/index');
+              router.replace('/');
             }
           }
         } catch (error) {
