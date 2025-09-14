@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataAccessException;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.scheduling.TaskScheduler;
 import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClientException;
 
@@ -18,10 +19,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class InterestRateScheduler {
 
     private final InterestRateService interestRateService;
+    private final TaskScheduler taskScheduler;
     
     // 재시도 관련 설정
     private static final int MAX_RETRY_ATTEMPTS = 3;
-    private static final long RETRY_DELAY_MS = 30000; // 30초
+    private static final long RETRY_DELAY_MS = 30000; // 30초 기본 대기
+    private static final long MAX_RETRY_DELAY_MS = 120000; // 최대 2분까지 백오프 캡
     private final AtomicInteger consecutiveFailures = new AtomicInteger(0);
 
     /**
@@ -226,17 +229,26 @@ public class InterestRateScheduler {
      * 재시도 스케줄링
      */
     private void scheduleRetry(String context) {
-        java.util.concurrent.CompletableFuture
-            .delayedExecutor(RETRY_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
-            .execute(() -> {
-                try {
-                    log.info("🔄 [이자율 스케줄러] 재시도 시작: {}", context);
-                    interestRateService.fetchAndSaveYearlyRates();
-                    log.info("✅ [이자율 스케줄러] 재시도 성공");
-                    consecutiveFailures.set(0);
-                } catch (Exception e) {
-                    log.error("❌ [이자율 스케줄러] 재시도 실패: {}", e.getMessage(), e);
-                }
-            });
+        int attempt = consecutiveFailures.get();
+        long delay = computeBackoffDelay(attempt);
+        java.time.Instant when = java.time.Instant.now().plusMillis(delay);
+
+        taskScheduler.schedule(() -> {
+            try {
+                log.info("🔄 [이자율 스케줄러] 재시도 시작(TaskScheduler, {}ms 지연): {}", delay, context);
+                interestRateService.fetchAndSaveYearlyRates();
+                log.info("✅ [이자율 스케줄러] 재시도 성공");
+                consecutiveFailures.set(0);
+            } catch (Exception e) {
+                log.error("❌ [이자율 스케줄러] 재시도 실패: {}", e.getMessage(), e);
+            }
+        }, when);
     }
-} 
+
+    private long computeBackoffDelay(int attempt) {
+        // 1회 실패: base, 2회: 2x, 3회: 4x ... (최대 캡 적용)
+        long factor = 1L << Math.max(0, attempt - 1);
+        long delay = RETRY_DELAY_MS * factor;
+        return Math.min(delay, MAX_RETRY_DELAY_MS);
+    }
+}
