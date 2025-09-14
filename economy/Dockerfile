@@ -33,6 +33,8 @@ COPY --from=build /app/build/libs/*.jar app.jar
 
 ## 보안: 비루트 사용자 생성 및 사용
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
+## 업로드 디렉토리 생성 및 권한 부여 (영속 볼륨 마운트 권장 경로)
+RUN mkdir -p /app/uploads && chown -R appuser:appgroup /app/uploads
 USER appuser:appgroup
 
 # 애플리케이션 포트 노출

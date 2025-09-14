@@ -57,7 +57,7 @@ public class ExchangeRateService {
      * 매일 오전 11npm 시 30분에 환율 데이터를 자동으로 가져옵니다.
      * 운영 환경에서만 실행됩니다.
      */
-    @Scheduled(cron = "0 30 11 * * ?")
+    @Scheduled(cron = "0 30 11 * * ?", zone = "Asia/Seoul")
     @Transactional
     @Profile("prod")
     public void fetchDailyExchangeRates() {

@@ -28,7 +28,7 @@ public class InterestRateScheduler {
      * 매일 오전 11시 30분에 기준금리 데이터 업데이트
      * 한국은행 발표 시간을 고려하여 오전 11시 30분으로 설정
      */
-    @Scheduled(cron = "0 30 11 * * *")
+    @Scheduled(cron = "0 30 11 * * *", zone = "Asia/Seoul")
     public void updateInterestRateDaily() {
         log.info("🕛 [이자율 스케줄러] 매일 기준금리 데이터 업데이트 시작 - {}", LocalDateTime.now());
         
@@ -97,7 +97,7 @@ public class InterestRateScheduler {
      * 매시간 정각에 데이터 상태 체크 (평일 9시-18시만)
      * 금융통화위원회 회의일 등 중요한 발표가 있을 수 있는 시간대
      */
-    @Scheduled(cron = "0 0 9-18 * * MON-FRI")
+    @Scheduled(cron = "0 0 9-18 * * MON-FRI", zone = "Asia/Seoul")
     public void checkDataStatusHourly() {
         log.debug("🔍 [이자율 스케줄러] 시간별 데이터 상태 체크 - {}", LocalDateTime.now());
         
@@ -226,17 +226,17 @@ public class InterestRateScheduler {
      * 재시도 스케줄링
      */
     private void scheduleRetry(String context) {
-        try {
-            Thread.sleep(RETRY_DELAY_MS);
-            log.info("🔄 [이자율 스케줄러] 재시도 시작: {}", context);
-            interestRateService.fetchAndSaveYearlyRates();
-            log.info("✅ [이자율 스케줄러] 재시도 성공");
-            consecutiveFailures.set(0);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("⚠️ [이자율 스케줄러] 재시도가 중단되었습니다: {}", e.getMessage());
-        } catch (Exception e) {
-            log.error("❌ [이자율 스케줄러] 재시도 실패: {}", e.getMessage());
-        }
+        java.util.concurrent.CompletableFuture
+            .delayedExecutor(RETRY_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .execute(() -> {
+                try {
+                    log.info("🔄 [이자율 스케줄러] 재시도 시작: {}", context);
+                    interestRateService.fetchAndSaveYearlyRates();
+                    log.info("✅ [이자율 스케줄러] 재시도 성공");
+                    consecutiveFailures.set(0);
+                } catch (Exception e) {
+                    log.error("❌ [이자율 스케줄러] 재시도 실패: {}", e.getMessage(), e);
+                }
+            });
     }
 } 

@@ -2,6 +2,7 @@ package com.at_a_look.economy.config;
 
 import com.at_a_look.economy.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
+import org.springframework.core.env.Environment;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -26,6 +27,7 @@ import java.util.Arrays;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final Environment environment;
 
     @Value("${cors.allowed-origin-patterns:}")
     private String allowedOriginPatternsProp;
@@ -105,8 +107,11 @@ public class SecurityConfig {
         } else {
             // 운영 환경에서는 반드시 명시적으로 설정되어야 함
             // 운영에서 미설정 시 애플리케이션 기동 실패를 유도하여 과도한 허용을 방지
-            String activeProfile = System.getProperty("spring.profiles.active", "dev");
-            if ("prod".equals(activeProfile)) {
+            boolean isProd = false;
+            if (environment != null) {
+                isProd = Arrays.asList(environment.getActiveProfiles()).contains("prod");
+            }
+            if (isProd) {
                 throw new IllegalStateException("prod 프로파일에서 cors.allowed-origin-patterns 프로퍼티가 설정되어야 합니다.");
             }
             // 개발 기본값: 로컬/내부망 허용

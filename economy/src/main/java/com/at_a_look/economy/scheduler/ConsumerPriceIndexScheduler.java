@@ -28,7 +28,7 @@ public class ConsumerPriceIndexScheduler {
      * 매일 오전 11시 30분에 소비자물가지수 데이터 업데이트
      * 통계청에서 보통 월말~월초에 전월 데이터를 발표하므로 매일 체크하여 최신 데이터 확보
      */
-    @Scheduled(cron = "0 30 11 * * *")
+    @Scheduled(cron = "0 30 11 * * *", zone = "Asia/Seoul")
     public void updateConsumerPriceIndexDaily() {
         log.info("📊 [CPI 스케줄러] 일일 소비자물가지수 데이터 업데이트 시작 - {}", LocalDateTime.now());
         
@@ -98,7 +98,7 @@ public class ConsumerPriceIndexScheduler {
      * 매주 월요일 오전 10시에 데이터 상태 체크
      * 소비자물가지수는 월별 데이터이므로 주간 단위로 체크
      */
-    @Scheduled(cron = "0 0 10 * * MON")
+    @Scheduled(cron = "0 0 10 * * MON", zone = "Asia/Seoul")
     public void checkDataStatusWeekly() {
         log.debug("🔍 [CPI 스케줄러] 주간 데이터 상태 체크 - {}", LocalDateTime.now());
         
@@ -230,17 +230,17 @@ public class ConsumerPriceIndexScheduler {
      * 재시도 스케줄링
      */
     private void scheduleRetry(String context) {
-        try {
-            Thread.sleep(RETRY_DELAY_MS);
-            log.info("🔄 [CPI 스케줄러] 재시도 시작: {}", context);
-            consumerPriceIndexService.fetchAndSaveLatestData();
-            log.info("✅ [CPI 스케줄러] 재시도 성공");
-            consecutiveFailures.set(0);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            log.warn("⚠️ [CPI 스케줄러] 재시도가 중단되었습니다: {}", e.getMessage());
-        } catch (Exception e) {
-            log.error("❌ [CPI 스케줄러] 재시도 실패: {}", e.getMessage());
-        }
+        java.util.concurrent.CompletableFuture
+            .delayedExecutor(RETRY_DELAY_MS, java.util.concurrent.TimeUnit.MILLISECONDS)
+            .execute(() -> {
+                try {
+                    log.info("🔄 [CPI 스케줄러] 재시도 시작: {}", context);
+                    consumerPriceIndexService.fetchAndSaveLatestData();
+                    log.info("✅ [CPI 스케줄러] 재시도 성공");
+                    consecutiveFailures.set(0);
+                } catch (Exception e) {
+                    log.error("❌ [CPI 스케줄러] 재시도 실패: {}", e.getMessage(), e);
+                }
+            });
     }
 } 
