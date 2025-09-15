@@ -1,6 +1,30 @@
 /.idea/
+/.vscode/
+.DS_Store
 
 # 문서 파일 (민감한 정보 포함 가능성)
 *.md
-# README.md는 예외적으로 허용
+# README.md는 예외적으로 허용 (모든 디렉토리)
 !README.md
+
+# 환경 변수/시크릿 파일 무시
+.env
+.env.*
+*.pem
+*.key
+*.p12
+*.jks
+*.keystore
+*.der
+*.crt
+*.cer
+id_rsa
+id_ed25519
+serviceAccount*.json
+*credentials*.json
+
+# 업로드/캐시/빌드 산출물 무시
+/uploads/
+/economy/build/
+/economy/bin/
+node_modules/
