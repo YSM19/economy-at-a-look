@@ -76,6 +76,13 @@ jobs:
             
             # 2. 최신 이미지 pull (needs context를 사용하여 이전 잡의 output을 가져옴)
             docker pull ${{ needs.build-and-push-to-ecr.outputs.image_uri }}
+
+            # 2-1. 업로드 볼륨 디렉토리 준비 및 권한 설정
+            # 컨테이너 내부 사용자(appuser)의 UID/GID를 확인해 호스트 디렉토리 권한을 맞춤
+            APP_UID=$(docker run --rm ${{ needs.build-and-push-to-ecr.outputs.image_uri }} id -u appuser)
+            APP_GID=$(docker run --rm ${{ needs.build-and-push-to-ecr.outputs.image_uri }} id -g appuser)
+            sudo mkdir -p /data/uploads
+            sudo chown -R $APP_UID:$APP_GID /data/uploads
             
             # 3. 기존 컨테이너가 있으면 중지하고 삭제
             if [ $(docker ps -a -q -f name=backend) ]; then
@@ -85,6 +92,7 @@ jobs:
             
             # 4. 새로운 컨테이너 실행 (환경변수 포함)
              docker run -d --name backend -p 8080:8080 \
+               -v /data/uploads:/app/uploads \
                -e SPRING_PROFILES_ACTIVE=prod \
                -e SPRING_DATASOURCE_URL=jdbc:mysql://${{ secrets.DB_HOST }}:3306/economy \
                -e SPRING_DATASOURCE_USERNAME=${{ secrets.DB_USERNAME }} \
@@ -93,6 +101,7 @@ jobs:
                -e KOREAEXIM_API_AUTHKEY=${{ secrets.KOREAEXIM_API_AUTHKEY }} \
                -e ECOS_API_KEY=${{ secrets.ECOS_API_KEY }} \
                -e JWT_SECRET=${{ secrets.JWT_SECRET }} \
+               -e APP_UPLOAD_URL=${{ secrets.APP_UPLOAD_URL }} \
                -e CORS_ALLOWED_ORIGIN_PATTERNS=${{ secrets.CORS_ALLOWED_ORIGIN_PATTERNS }} \
                -e CORS_ALLOW_CREDENTIALS=${{ secrets.CORS_ALLOW_CREDENTIALS }} \
                -e ADMIN_ACCOUNT_EMAIL=${{ secrets.ADMIN_EMAIL }} \

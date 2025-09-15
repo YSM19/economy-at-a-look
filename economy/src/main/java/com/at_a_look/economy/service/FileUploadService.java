@@ -8,6 +8,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.context.request.RequestContextHolder;
+import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -29,8 +31,8 @@ public class FileUploadService {
 
     private final FileUploadConfig fileUploadConfig;
 
-    @Value("${app.upload.url:http://192.168.0.2:8080/uploads}")
-    private String uploadUrl;
+    @Value("${app.upload.url:http://localhost:8080/uploads}")
+    private String configuredUploadUrl;
 
     private static final List<String> ALLOWED_IMAGE_TYPES = Arrays.asList(
             "image/jpeg", "image/jpg", "image/png", "image/gif", "image/webp"
@@ -66,7 +68,8 @@ public class FileUploadService {
 
         Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        String fileUrl = String.format("%s/%s/%s", uploadUrl, subfolder, filename);
+        String baseUrl = resolveBaseUploadUrl();
+        String fileUrl = String.format("%s/%s/%s", baseUrl, subfolder, filename);
 
         log.info("파일 업로드 완료: {}", originalFilename);
         // 내부 경로/서버 IP 노출 방지
@@ -117,7 +120,13 @@ public class FileUploadService {
     public boolean deleteFile(String fileUrl) {
         try {
             // 업로드 도메인 기준으로만 처리하고, 경로 정규화로 상위 이동 차단
-            String relativePath = fileUrl.replace(uploadUrl, "");
+            String relativePath = fileUrl;
+            String baseUrl = resolveBaseUploadUrl();
+            if (relativePath.startsWith(baseUrl)) {
+                relativePath = relativePath.substring(baseUrl.length());
+            } else if (StringUtils.hasText(configuredUploadUrl) && relativePath.startsWith(configuredUploadUrl)) {
+                relativePath = relativePath.substring(configuredUploadUrl.length());
+            }
             Path baseDir = Paths.get(fileUploadConfig.getDir()).toAbsolutePath().normalize();
             Path filePath = baseDir.resolve(relativePath).normalize();
             if (!filePath.startsWith(baseDir)) {
@@ -218,7 +227,7 @@ public class FileUploadService {
             
             Files.copy(file.getInputStream(), tempPath, StandardCopyOption.REPLACE_EXISTING);
             
-            String tempUrl = uploadUrl + "/temp/" + tempFilename;
+            String tempUrl = resolveBaseUploadUrl() + "/temp/" + tempFilename;
             log.info("임시 이미지 URL 생성: {}", tempUrl);
             
             return tempUrl;
@@ -226,6 +235,102 @@ public class FileUploadService {
             log.error("임시 이미지 URL 생성 실패", e);
             throw new RuntimeException("임시 이미지 URL 생성에 실패했습니다.", e);
         }
+    }
+
+    /**
+     * 리버스 프록시(예: Nginx, ELB) 환경에서 요청 헤더를 바탕으로 업로드 베이스 URL을 동적으로 결정합니다.
+     * 우선순위: Forwarded/X-Forwarded-* 헤더 → HttpServletRequest → 프로퍼티(app.upload.url)
+     */
+    private String resolveBaseUploadUrl() {
+        try {
+            ServletRequestAttributes attrs = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
+            if (attrs != null) {
+                jakarta.servlet.http.HttpServletRequest request = attrs.getRequest();
+                // RFC 7239 Forwarded 헤더 파싱 시도
+                String forwarded = request.getHeader("Forwarded");
+                if (StringUtils.hasText(forwarded)) {
+                    String proto = extractForwardedParam(forwarded, "proto");
+                    String host = extractForwardedParam(forwarded, "host");
+                    if (StringUtils.hasText(proto) && StringUtils.hasText(host) && isSafeHost(host)) {
+                        return buildBaseUrl(proto, host, null);
+                    }
+                }
+                // X-Forwarded-* 헤더 사용
+                String proto = headerOrNull(request, "X-Forwarded-Proto");
+                String host = headerOrNull(request, "X-Forwarded-Host");
+                String port = headerOrNull(request, "X-Forwarded-Port");
+                if (StringUtils.hasText(proto) && StringUtils.hasText(host) && isSafeHost(host)) {
+                    return buildBaseUrl(proto, host, port);
+                }
+                // 프록시가 없다면 직접 호스트 사용
+                String scheme = request.getScheme();
+                String serverName = request.getServerName();
+                int serverPort = request.getServerPort();
+                if (StringUtils.hasText(scheme) && isSafeHost(serverName)) {
+                    String hostPort = serverName + normalizePortForScheme(serverPort, scheme);
+                    return buildBaseUrl(scheme, hostPort, null);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("업로드 베이스 URL 동적 해석 실패, 프로퍼티 사용: {}", e.getMessage());
+        }
+        // 최종 폴백: 설정값
+        return StringUtils.hasText(configuredUploadUrl) ? configuredUploadUrl : "http://localhost:8080/uploads";
+    }
+
+    private String headerOrNull(jakarta.servlet.http.HttpServletRequest req, String name) {
+        String v = req.getHeader(name);
+        return (v != null && !v.isBlank()) ? v.trim() : null;
+    }
+
+    private String extractForwardedParam(String forwarded, String key) {
+        // 예: Forwarded: proto=https;host=example.com;for=...  (쉼표로 분리된 첫 요소만 처리)
+        try {
+            String first = forwarded.split(",")[0];
+            for (String part : first.split(";")) {
+                String[] kv = part.trim().split("=", 2);
+                if (kv.length == 2 && key.equalsIgnoreCase(kv[0].trim())) {
+                    String value = kv[1].trim();
+                    // 쿼트 제거
+                    if (value.startsWith("\"") && value.endsWith("\"")) {
+                        value = value.substring(1, value.length() - 1);
+                    }
+                    return value;
+                }
+            }
+        } catch (Exception ignored) { }
+        return null;
+    }
+
+    private boolean isSafeHost(String host) {
+        // 간단한 화이트리스트 패턴: 도메인/IP:포트 허용
+        // IPv6 등 복잡한 케이스는 필요 시 확장
+        return host != null && host.matches("^[A-Za-z0-9\\.-]+(:[0-9]{1,5})?$");
+    }
+
+    private String buildBaseUrl(String proto, String host, String forwardedPort) {
+        String portPart = "";
+        if (forwardedPort != null && forwardedPort.matches("^[0-9]{1,5}$")) {
+            int p = Integer.parseInt(forwardedPort);
+            if (!isDefaultPortForScheme(p, proto)) {
+                portPart = ":" + p;
+            }
+            // host에 이미 포트가 있으면 host 우선
+            if (host.contains(":")) {
+                portPart = "";
+            }
+        }
+        return proto + "://" + host + portPart + "/uploads";
+    }
+
+    private boolean isDefaultPortForScheme(int port, String scheme) {
+        return ("http".equalsIgnoreCase(scheme) && port == 80) ||
+               ("https".equalsIgnoreCase(scheme) && port == 443);
+    }
+
+    private String normalizePortForScheme(int port, String scheme) {
+        if (isDefaultPortForScheme(port, scheme)) return "";
+        return ":" + port;
     }
 
     private DetectedImageType detectImageType(MultipartFile file) throws IOException {
