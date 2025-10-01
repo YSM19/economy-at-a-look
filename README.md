@@ -1,6 +1,11 @@
 # Economy at a Look
 
-간단한 경제 지표/환율/물가 데이터를 확인하고 커뮤니티 기능을 제공하는 서비스입니다.
+간단한 경제 지표(환율, 금리, 소비자물가지수) 데이터를 확인하고 커뮤니티 기능을 제공하는 서비스입니다.
+- 제작 기간: 2025.05.01 - 2025.09.10
+- 구글 플레이스토어에 출시했습니다.
+-  https://play.google.com/store/apps/details?id=com.ysm19.atalook&pcampaignid=web_share
+
+## 기술 스택
 - Backend: Spring Boot 
 - Frontend: React Native (Expo, expo-router)
 - 배포: GitHub Actions → AWS (EC2)
