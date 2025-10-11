@@ -250,9 +250,19 @@ export const exchangeRateApi = {
     undefined,
     1 // 재시도 1회만
   ),
-  getRatesByCurrency: (currency: string) => 
+  getRatesByCurrency: (
+    currency: string,
+    options?: { year?: number; page?: number; size?: number; sort?: string }
+  ) =>
     withRetry(
-      () => api.get(`/api/exchange-rates/currency/${currency}`),
+      () => {
+        const params: Record<string, number | string> = {};
+        if (options?.year !== undefined) params.year = options.year;
+        if (options?.page !== undefined) params.page = options.page;
+        if (options?.size !== undefined) params.size = options.size;
+        if (options?.sort) params.sort = options.sort;
+        return api.get(`/api/exchange-rates/currency/${encodeURIComponent(currency)}`, { params });
+      },
       undefined,
       1 // 재시도 1회만
     ),

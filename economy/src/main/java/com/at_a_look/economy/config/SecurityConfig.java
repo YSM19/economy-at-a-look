@@ -3,6 +3,8 @@ package com.at_a_look.economy.config;
 import com.at_a_look.economy.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.env.Environment;
+import org.springframework.core.annotation.Order;
+import org.springframework.boot.actuate.autoconfigure.security.servlet.EndpointRequest;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,6 +36,17 @@ public class SecurityConfig {
 
     @Value("${cors.allow-credentials:}")
     private String allowCredentialsProp;
+
+    @Bean
+    @Order(0)
+    public SecurityFilterChain actuatorSecurityFilterChain(HttpSecurity http) throws Exception {
+        http
+            .securityMatcher(EndpointRequest.toAnyEndpoint())
+            .csrf(csrf -> csrf.disable())
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+            .authorizeHttpRequests(authz -> authz.anyRequest().permitAll());
+        return http.build();
+    }
 
     /**
      * BCrypt 패스워드 인코더 빈 등록
@@ -67,6 +80,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/economic/**").permitAll()
                 .requestMatchers("/api/exchange-rates/**").permitAll()
                 .requestMatchers("/api/health/**").permitAll()
+                .requestMatchers("/actuator/**").permitAll()
                 // 커뮤니티 공개 조회 허용 (GET 전용)
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/posts/**").permitAll()
                 .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/comments/**").permitAll()
@@ -151,3 +165,4 @@ public class SecurityConfig {
         return source;
     }
 } 
+

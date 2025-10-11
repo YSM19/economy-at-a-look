@@ -1,5 +1,6 @@
 package com.at_a_look.economy.config;
 
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
@@ -25,10 +26,10 @@ public class RestTemplateConfig {
             @Override
             protected void prepareConnection(HttpURLConnection connection, String httpMethod) throws IOException {
                 super.prepareConnection(connection, httpMethod);
-                
+
                 // 리디렉션 자동 처리 활성화 (한국수출입은행 API에서 필요할 수 있음)
                 connection.setInstanceFollowRedirects(true);
-                
+
                 // 브라우저와 유사한 헤더 설정
                 connection.setRequestProperty("Accept", "application/json, text/plain, */*");
                 connection.setRequestProperty("Accept-Language", "ko-KR,ko;q=0.9,en;q=0.8");
@@ -40,10 +41,10 @@ public class RestTemplateConfig {
                 connection.setRequestProperty("Pragma", "no-cache");
             }
         };
-        
+
         factory.setConnectTimeout(15000); // 15초 연결 타임아웃
         factory.setReadTimeout(30000);    // 30초 읽기 타임아웃
-        
+
         return factory;
     }
 
@@ -54,24 +55,9 @@ public class RestTemplateConfig {
     @Bean
     @Profile("dev")
     public RestTemplate restTemplateForDev() {
-        RestTemplate restTemplate = new RestTemplate(createCustomRequestFactory());
-        
-        // 헤더 추가를 위한 인터셉터 등록
-        restTemplate.setInterceptors(
-            Collections.singletonList(new ClientHttpRequestInterceptor() {
-                @Override
-                public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-                    // 추가 헤더만 설정 (기본 헤더는 이미 prepareConnection에서 설정됨)
-                    request.getHeaders().set("Host", "oapi.koreaexim.go.kr");
-                    
-                    return execution.execute(request, body);
-                }
-            })
-        );
-        
-        return restTemplate;
+        return createRestTemplate();
     }
-    
+
     /**
      * 운영 환경용 RestTemplate
      * 리디렉션 문제 해결을 위한 강화된 설정
@@ -79,46 +65,33 @@ public class RestTemplateConfig {
     @Bean
     @Profile("prod")
     public RestTemplate restTemplateForProd() {
-        RestTemplate restTemplate = new RestTemplate(createCustomRequestFactory());
-        
-        // 헤더 추가를 위한 인터셉터 등록
-        restTemplate.setInterceptors(
-            Collections.singletonList(new ClientHttpRequestInterceptor() {
-                @Override
-                public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-                    // 추가 헤더만 설정 (기본 헤더는 이미 prepareConnection에서 설정됨)
-                    request.getHeaders().set("Host", "oapi.koreaexim.go.kr");
-                    
-                    return execution.execute(request, body);
-                }
-            })
-        );
-        
-        return restTemplate;
+        return createRestTemplate();
     }
-    
+
     /**
      * 기본 RestTemplate
      * 특정 프로필이 활성화되지 않은 경우 사용
      */
     @Bean
-    @Profile("default")
+    @Profile({"default", "monitoring"})
+    @ConditionalOnMissingBean(RestTemplate.class)
     public RestTemplate defaultRestTemplate() {
+        return createRestTemplate();
+    }
+
+    private RestTemplate createRestTemplate() {
         RestTemplate restTemplate = new RestTemplate(createCustomRequestFactory());
-        
-        // 기본 인터셉터 등록
+
         restTemplate.setInterceptors(
             Collections.singletonList(new ClientHttpRequestInterceptor() {
                 @Override
                 public ClientHttpResponse intercept(HttpRequest request, byte[] body, ClientHttpRequestExecution execution) throws IOException {
-                    // 호스트 헤더만 추가 설정
                     request.getHeaders().set("Host", "oapi.koreaexim.go.kr");
-                    
                     return execution.execute(request, body);
                 }
             })
         );
-        
+
         return restTemplate;
     }
-} 
+}

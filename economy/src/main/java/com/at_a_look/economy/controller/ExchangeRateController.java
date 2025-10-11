@@ -6,6 +6,10 @@ import com.at_a_look.economy.service.ExchangeRateService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -88,17 +92,20 @@ public class ExchangeRateController {
     }
 
     /**
-     * 특정 통화 코드의 환율 데이터를 조회합니다.
+     * 특정 통화 코드의 환율 데이터를 연도별로 페이지네이션하여 조회합니다.
      */
     @GetMapping("/currency/{curUnit}")
-    public ResponseEntity<ApiResponse<List<ExchangeRateResponseDTO>>> getExchangeRatesByCurrency(
-            @PathVariable String curUnit) {
+    public ResponseEntity<ApiResponse<Page<ExchangeRateResponseDTO>>> getExchangeRatesByCurrency(
+            @PathVariable String curUnit,
+            @RequestParam(required = false) Integer year,
+            @PageableDefault(size = 100, sort = "searchDate", direction = Sort.Direction.DESC) Pageable pageable) {
         try {
             if (curUnit == null || curUnit.trim().isEmpty()) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("통화 코드를 입력해주세요."));
             }
-            
-            List<ExchangeRateResponseDTO> rates = exchangeRateService.getExchangeRatesByCurrency(curUnit);
+
+            int targetYear = (year != null) ? year : LocalDate.now().getYear();
+            Page<ExchangeRateResponseDTO> rates = exchangeRateService.getExchangeRatesByCurrency(curUnit, targetYear, pageable);
             return ResponseEntity.ok(ApiResponse.success(rates));
         } catch (IllegalArgumentException e) {
             log.warn("❌ [ExchangeRateController] 통화별 환율 데이터 조회 실패 - 잘못된 파라미터: {}", e.getMessage());
@@ -141,3 +148,4 @@ public class ExchangeRateController {
         }
     }
 } 
+

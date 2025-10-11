@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { ThemedText } from '../../components/ThemedText';
@@ -74,11 +74,18 @@ export default function IndicatorsScreen() {
   const [cpiData, setCpiData] = useState<CPIData | null>(null);
   const [weeklyData, setWeeklyData] = useState<PeriodData[]>([]);
   const [monthlyData, setMonthlyData] = useState<PeriodData[]>([]);
+  const [yearlyData, setYearlyData] = useState<PeriodData[]>([]);
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [yearlyLoading, setYearlyLoading] = useState(false);
   const [interestRateHistoryData, setInterestRateHistoryData] = useState<InterestRatePeriodData[]>([]);
   const [cpiHistoryData, setCpiHistoryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
+
+  const currentYear = new Date().getFullYear();
+  const MIN_YEAR = 1990;
+  const yearlyDataCacheRef = useRef<Record<number, PeriodData[]>>({});
 
   // 알림 초기화 (Expo Go 환경에서는 제한적)
   useEffect(() => {
@@ -110,6 +117,106 @@ export default function IndicatorsScreen() {
   const getToday = (): string => {
     return new Date().toISOString().split('T')[0];
   };
+
+  const handleYearChange = (offset: number) => {
+    setSelectedYear(prevYear => {
+      let nextYear = prevYear + offset;
+      if (nextYear > currentYear) {
+        nextYear = currentYear;
+      }
+      if (nextYear < MIN_YEAR) {
+        nextYear = MIN_YEAR;
+      }
+      return nextYear;
+    });
+  };
+
+  const normalizeDateValue = (value: any): string | null => {
+    if (!value) {
+      return null;
+    }
+    if (typeof value === 'string') {
+      return value;
+    }
+    if (Array.isArray(value) && value.length >= 3) {
+      const [year, month, day] = value;
+      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    }
+    if (typeof value === 'object') {
+      const source: any = value.date ?? value;
+      const year = source?.year ?? source?.y ?? source?.Y;
+      const month = source?.monthValue ?? source?.month ?? source?.M;
+      const day = source?.dayOfMonth ?? source?.day ?? source?.d;
+      if (year !== undefined && month !== undefined && day !== undefined) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+    }
+    return null;
+  };
+
+  const parseRateValue = (value: any): number | null => {
+    if (typeof value === 'number') {
+      return Number.isFinite(value) ? value : null;
+    }
+    if (typeof value === 'string') {
+      const cleaned = value.replace(/[\\s,]/g, '');
+      const parsed = Number(cleaned);
+      return Number.isFinite(parsed) ? parsed : null;
+    }
+    return null;
+  };
+
+  const mapYearlyPeriodEntries = (entries: any[]): PeriodData[] => {
+    const mapped = entries
+      .map((item: any) => {
+        const date = normalizeDateValue(item?.date ?? item?.searchDate);
+        if (!date) {
+          return null;
+        }
+
+        const usdRate = parseRateValue(item?.usdRate ?? item?.usd_rate ?? item?.usd);
+        const eurRate = parseRateValue(item?.eurRate ?? item?.eur_rate ?? item?.eur);
+        const jpyRate = parseRateValue(item?.jpyRate ?? item?.jpy_rate ?? item?.jpy);
+        const cnyRate = parseRateValue(item?.cnyRate ?? item?.cny_rate ?? item?.cny);
+
+        if (usdRate === null && eurRate === null && jpyRate === null && cnyRate === null) {
+          return null;
+        }
+
+        return {
+          date,
+          usdRate: usdRate ?? 0,
+          eurRate: eurRate ?? 0,
+          jpyRate: jpyRate ?? 0,
+          cnyRate: cnyRate ?? 0,
+        };
+      })
+      .filter((item): item is PeriodData => item !== null);
+
+    return mapped.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  };
+
+  const fetchYearlyContent = useCallback(async (year: number): Promise<PeriodData[]> => {
+    const cached = yearlyDataCacheRef.current[year];
+    if (cached) {
+      return cached;
+    }
+
+    const startDate = `${year}-01-01`;
+    const endDate = `${year}-12-31`;
+
+    const response = await economicIndexApi.getExchangeRateByPeriod(startDate, endDate);
+    const apiResponse = response.data;
+
+    if (!apiResponse?.success || !Array.isArray(apiResponse.data)) {
+      yearlyDataCacheRef.current[year] = [];
+      return [];
+    }
+
+    const mapped = mapYearlyPeriodEntries(apiResponse.data);
+    yearlyDataCacheRef.current[year] = mapped;
+    return mapped;
+  }, []);
 
   // 환율 차트 데이터 가져오기
   const fetchExchangeRateChartData = async () => {
@@ -348,6 +455,39 @@ export default function IndicatorsScreen() {
     }
   }, [activeCountry]);
 
+  useEffect(() => {
+    if (activeTab !== 'exchange') {
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadYearlyData = async () => {
+      setYearlyLoading(true);
+      try {
+        const mapped = await fetchYearlyContent(selectedYear);
+        if (!cancelled) {
+          setYearlyData(mapped);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error('연도별 환율 데이터 로딩 실패:', error);
+          setYearlyData([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setYearlyLoading(false);
+        }
+      }
+    };
+
+    loadYearlyData();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeTab, selectedYear, fetchYearlyContent]);
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'exchange':
@@ -409,6 +549,64 @@ export default function IndicatorsScreen() {
                     <View style={styles.chartPlaceholder}>
                       <MaterialCommunityIcons name="chart-line" size={48} color="#8E8E93" />
                       <ThemedText style={styles.chartPlaceholderText}>30일 데이터가 없습니다.</ThemedText>
+                    </View>
+                  )}
+                </View>
+
+
+                {/* 연도별 환율 변동 추이 */}
+                <View style={styles.chartContainer}>
+                  <View style={styles.yearHeader}>
+                    <ThemedText style={styles.chartTitle}>연도별 환율 변동 추이</ThemedText>
+                    <View style={styles.yearControls}>
+                      <TouchableOpacity
+                        style={[
+                          styles.yearButton,
+                          selectedYear <= MIN_YEAR ? styles.yearButtonDisabled : null,
+                        ]}
+                        onPress={() => handleYearChange(-1)}
+                        disabled={selectedYear <= MIN_YEAR}
+                      >
+                        <MaterialCommunityIcons
+                          name="chevron-left"
+                          size={24}
+                          color={selectedYear <= MIN_YEAR ? '#A0AEC0' : '#007AFF'}
+                        />
+                      </TouchableOpacity>
+                      <ThemedText style={styles.yearText}>{selectedYear}년</ThemedText>
+                      <TouchableOpacity
+                        style={[
+                          styles.yearButton,
+                          selectedYear >= currentYear ? styles.yearButtonDisabled : null,
+                        ]}
+                        onPress={() => handleYearChange(1)}
+                        disabled={selectedYear >= currentYear}
+                      >
+                        <MaterialCommunityIcons
+                          name="chevron-right"
+                          size={24}
+                          color={selectedYear >= currentYear ? '#A0AEC0' : '#007AFF'}
+                        />
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                  <ThemedText style={styles.chartSubtitle}>연간 일별 환율 흐름</ThemedText>
+                  {yearlyLoading ? (
+                    <View style={styles.chartPlaceholder}>
+                      <MaterialCommunityIcons name="chart-line" size={48} color="#8E8E93" />
+                      <ThemedText style={styles.chartPlaceholderText}>연도별 데이터를 불러오는 중...</ThemedText>
+                    </View>
+                  ) : yearlyData.length > 0 ? (
+                    <ExchangeRateChart
+                      data={yearlyData}
+                      country={activeCountry}
+                      height={220}
+                      showOnlyDay={true}
+                    />
+                  ) : (
+                    <View style={styles.chartPlaceholder}>
+                      <MaterialCommunityIcons name="chart-line" size={48} color="#8E8E93" />
+                      <ThemedText style={styles.chartPlaceholderText}>선택한 연도에 대한 데이터가 없습니다.</ThemedText>
                     </View>
                   )}
                 </View>
@@ -968,6 +1166,29 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 16,
   },
+  yearHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  yearControls: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  yearButton: {
+    padding: 6,
+    borderRadius: 8,
+  },
+  yearButtonDisabled: {
+    opacity: 0.4,
+  },
+  yearText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginHorizontal: 12,
+  },
   chartPlaceholder: {
     alignItems: 'center',
     padding: 40,
@@ -1089,3 +1310,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 }); 
+
+
+
+

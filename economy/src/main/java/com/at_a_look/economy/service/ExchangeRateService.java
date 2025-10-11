@@ -12,6 +12,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.HttpClientErrorException;
@@ -429,15 +433,40 @@ public class ExchangeRateService {
     }
     
     /**
-     * 특정 통화 코드의 환율 데이터를 조회합니다.
-     * 
+     * 특정 통화 코드의 연도별 환율 데이터를 페이지네이션과 함께 조회합니다.
+     *
      * @param curUnit 통화 코드 (예: USD, JPY, EUR)
-     * @return 해당 통화의 환율 데이터 목록
+     * @param year    조회할 연도
+     * @param pageable 페이지 정보
+     * @return 연도별 환율 데이터 페이지
      */
     @Transactional(readOnly = true)
-    public List<ExchangeRateResponseDTO> getExchangeRatesByCurrency(String curUnit) {
-        List<ExchangeRate> rates = exchangeRateRepository.findByCurUnitOrderBySearchDateDesc(curUnit);
-        return ExchangeRateResponseDTO.fromEntities(rates);
+    public Page<ExchangeRateResponseDTO> getExchangeRatesByCurrency(String curUnit, int year, Pageable pageable) {
+        if (curUnit == null || curUnit.trim().isEmpty()) {
+            throw new IllegalArgumentException("통화 코드를 입력해주세요.");
+        }
+        if (pageable == null) {
+            throw new IllegalArgumentException("페이지 정보가 필요합니다.");
+        }
+
+        LocalDate startDate = LocalDate.of(year, 1, 1);
+        LocalDate endDate = LocalDate.of(year, 12, 31);
+
+        int safePage = Math.max(pageable.getPageNumber(), 0);
+        int safeSize = Math.min(Math.max(pageable.getPageSize(), 1), 500);
+        Sort sort = pageable.getSort().isSorted()
+                ? pageable.getSort()
+                : Sort.by(Sort.Direction.DESC, "searchDate");
+        Pageable adjusted = PageRequest.of(safePage, safeSize, sort);
+
+        Page<ExchangeRate> rates = exchangeRateRepository
+                .findByCurUnitAndSearchDateBetween(curUnit, startDate, endDate, adjusted);
+
+        log.debug("📑 통화별 환율 조회 - curUnit={}, year={}, page={}, size={}, totalElements={}, totalPages={}",
+                curUnit, year, adjusted.getPageNumber(), adjusted.getPageSize(),
+                rates.getTotalElements(), rates.getTotalPages());
+
+        return rates.map(ExchangeRateResponseDTO::fromEntity);
     }
     
     /**
@@ -784,3 +813,5 @@ public class ExchangeRateService {
         return totalCount;
     }
 } 
+
+

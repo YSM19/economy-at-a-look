@@ -1,6 +1,8 @@
 package com.at_a_look.economy.repository;
 
 import com.at_a_look.economy.entity.ExchangeRate;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
@@ -22,6 +24,8 @@ public interface ExchangeRateRepository extends JpaRepository<ExchangeRate, Long
     
     List<ExchangeRate> findByCurUnitOrderBySearchDateDesc(String curUnit);
     
+    Page<ExchangeRate> findByCurUnitAndSearchDateBetween(String curUnit, LocalDate startDate, LocalDate endDate, Pageable pageable);
+
     /**
      * 지정된 날짜 범위 내의 모든 환율 데이터를 조회합니다.
      * 
