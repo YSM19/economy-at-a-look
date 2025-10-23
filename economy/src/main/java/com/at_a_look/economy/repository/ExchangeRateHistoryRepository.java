@@ -2,6 +2,8 @@ package com.at_a_look.economy.repository;
 
 import com.at_a_look.economy.entity.ExchangeRateHistory;
 import com.at_a_look.economy.entity.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -14,6 +16,9 @@ public interface ExchangeRateHistoryRepository extends JpaRepository<ExchangeRat
     
     // 특정 사용자의 환율 저장 기록을 최신순으로 조회
     List<ExchangeRateHistory> findByUserOrderByCreatedAtDesc(User user);
+
+    // 특정 사용자의 환율 저장 기록을 최신순으로 페이지 조회
+    Page<ExchangeRateHistory> findByUserOrderByCreatedAtDesc(User user, Pageable pageable);
     
     // 특정 사용자의 환율 저장 기록 조회 (순서 무관)
     List<ExchangeRateHistory> findByUser(User user);

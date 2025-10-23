@@ -10,11 +10,12 @@ import com.at_a_look.economy.repository.ExchangeRateHistoryRepository;
 import com.at_a_look.economy.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -55,15 +56,13 @@ public class ExchangeRateHistoryService {
      * 특정 사용자의 환율 저장 기록 조회
      */
     @Transactional(readOnly = true)
-    public List<ExchangeRateHistoryResponse> getUserExchangeRateHistory(String userEmail) {
+    public Page<ExchangeRateHistoryResponse> getUserExchangeRateHistory(String userEmail, Pageable pageable) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        List<ExchangeRateHistory> histories = exchangeRateHistoryRepository.findByUserOrderByCreatedAtDesc(user);
-        
-        return histories.stream()
-                .map(this::convertToResponse)
-                .collect(Collectors.toList());
+        Page<ExchangeRateHistory> histories = exchangeRateHistoryRepository.findByUserOrderByCreatedAtDesc(user, pageable);
+
+        return histories.map(this::convertToResponse);
     }
 
     /**

@@ -14,7 +14,12 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "exchange_rate_history")
+@Table(
+    name = "exchange_rate_history",
+    indexes = {
+            @Index(name = "idx_exchange_rate_history_user_created", columnList = "user_id, created_at")
+    }
+)
 public class ExchangeRateHistory {
 
     @Id

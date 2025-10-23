@@ -5,6 +5,7 @@ import com.at_a_look.economy.dto.ExchangeRateHistoryResponse;
 import com.at_a_look.economy.dto.UpdateMemoRequest;
 import com.at_a_look.economy.dto.UpdateExchangeRateRequest;
 import com.at_a_look.economy.dto.response.ApiResponse;
+import com.at_a_look.economy.dto.response.PagedResponse;
 import com.at_a_look.economy.service.ExchangeRateHistoryService;
 import com.at_a_look.economy.service.UserService;
 import lombok.RequiredArgsConstructor;
@@ -12,7 +13,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 @RestController
 @RequestMapping("/api/exchange-rate-history")
@@ -46,13 +50,20 @@ public class ExchangeRateHistoryController {
      * 사용자의 환율 저장 기록 조회
      */
     @GetMapping("/my-history")
-    public ResponseEntity<ApiResponse<List<ExchangeRateHistoryResponse>>> getMyExchangeRateHistory(
-            @RequestHeader("Authorization") String token) {
+    public ResponseEntity<ApiResponse<PagedResponse<ExchangeRateHistoryResponse>>> getMyExchangeRateHistory(
+            @RequestHeader("Authorization") String token,
+            @RequestParam(name = "page", defaultValue = "0") int page,
+            @RequestParam(name = "size", defaultValue = "50") int size) {
         try {
             String userEmail = userService.getUserEmailFromToken(token);
-            List<ExchangeRateHistoryResponse> histories = exchangeRateHistoryService.getUserExchangeRateHistory(userEmail);
-            
-            return ResponseEntity.ok(ApiResponse.success("환율 저장 기록을 조회했습니다.", histories));
+            int sanitizedPage = Math.max(page, 0);
+            int sanitizedSize = Math.max(1, Math.min(size, 200));
+            Pageable pageable = PageRequest.of(sanitizedPage, sanitizedSize, Sort.by("createdAt").descending());
+
+            Page<ExchangeRateHistoryResponse> histories = exchangeRateHistoryService.getUserExchangeRateHistory(userEmail, pageable);
+            PagedResponse<ExchangeRateHistoryResponse> response = PagedResponse.from(histories);
+
+            return ResponseEntity.ok(ApiResponse.success("환율 저장 기록을 조회했습니다.", response));
         } catch (Exception e) {
             log.error("환율 기록 조회 실패", e);
             return ResponseEntity.badRequest()
