@@ -28,3 +28,4 @@ serviceAccount*.json
 /economy/build/
 /economy/bin/
 node_modules/
+frontend/android/local.properties

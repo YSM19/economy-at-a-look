@@ -1,188 +1,233 @@
-import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, Dimensions, ActivityIndicator } from 'react-native';
+import React, { useEffect, useMemo, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { ThemedText } from './ThemedText';
-import Svg, { Path, Circle, G, Line, Text as SvgText } from 'react-native-svg';
 import { economicIndexApi } from '../services/api';
 
 type InterestRateGaugeProps = {
   value?: number;
 };
 
-// 숫자와 단위를 붙여서 표시하는 함수
-const formatNumberWithUnit = (value: number | string, unit: string): string => {
-  return `${value}${unit}`;
+type InterestRateHistoryItem = {
+  date?: string;
+  rates?: Record<string, number | string | null>;
+};
+
+type InterestRatePayload = {
+  korea?: {
+    rate?: number | string;
+    lastUpdated?: string;
+    previousRate?: number | string | null;
+    countryCode?: string;
+  };
+  history?: InterestRateHistoryItem[];
+  lastUpdated?: string;
+};
+
+type ChangeInfo = {
+  amount: number;
+  percent: number | null;
+};
+
+type RateStanceInfo = {
+  label: string;
+  description: string;
+  backgroundColor: string;
+  textColor: string;
+};
+
+const formatNumber = (value: number | string | null | undefined, fractionDigits = 2) => {
+  const numeric = typeof value === 'string' ? parseFloat(value) : value;
+  if (numeric === null || numeric === undefined || Number.isNaN(numeric)) {
+    return null;
+  }
+
+  const formatter = new Intl.NumberFormat('ko-KR', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: fractionDigits,
+  });
+
+  return formatter.format(numeric);
+};
+
+const formatSignedNumber = (value: number, fractionDigits = 2) => {
+  const sign = value > 0 ? '+' : value < 0 ? '-' : '';
+  const formatted = formatNumber(Math.abs(value), fractionDigits);
+  if (!formatted) {
+    return `${sign}-`;
+  }
+
+  return `${sign}${formatted}`;
+};
+
+const getRateStanceInfo = (changeAmount: number): RateStanceInfo => {
+  if (changeAmount <= -1.5) {
+    return {
+      label: '매우 완화적',
+      description: '',
+      backgroundColor: '#E3F2FD',
+      textColor: '#1565C0',
+    };
+  }
+  if (changeAmount < 0) {
+    return {
+      label: '완화적',
+      description: '',
+      backgroundColor: '#E8F5E9',
+      textColor: '#2E7D32',
+    };
+  }
+  if (changeAmount <= 1) {
+    return {
+      label: '중립적',
+      description: '',
+      backgroundColor: '#FFF9C4',
+      textColor: '#F9A825',
+    };
+  }
+  if (changeAmount <= 3) {
+    return {
+      label: '긴축적',
+      description: '',
+      backgroundColor: '#FFE0B2',
+      textColor: '#EF6C00',
+    };
+  }
+  return {
+    label: '매우 긴축적',
+    description: '',
+    backgroundColor: '#FFEBEE',
+    textColor: '#C62828',
+  };
+};
+
+const normalizeDateString = (date?: string | null) => {
+  if (!date) return null;
+  if (date.includes('T')) return date;
+  return `${date}T00:00:00`;
 };
 
 const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
-  const [rate, setRate] = useState(value || 0);
-  const [rateText, setRateText] = useState('');
-  const [rateColor, setRateColor] = useState('#4CAF50');
-  const [activeSection, setActiveSection] = useState(1);
-  const [loading, setLoading] = useState(true);
+  const [rate, setRate] = useState<number | null>(value ?? null);
+  const [previousRate, setPreviousRate] = useState<number | null>(null);
+  const [changeInfo, setChangeInfo] = useState<ChangeInfo | null>(null);
+  const [lastUpdated, setLastUpdated] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bankName, setBankName] = useState('한국은행 기준금리');
-  const [lastUpdated, setLastUpdated] = useState('');
-  
-  // API에서 금리 데이터 가져오기
+
   useEffect(() => {
-    const fetchInterestRate = async () => {
-      if (value !== undefined) {
-        setRate(value);
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await economicIndexApi.getInterestRate();
-        
-        console.log('🔍 [InterestRateGauge] API 응답:', response.data);
-        
-        if (response.data?.success && response.data.data) {
-          const interestData = response.data.data;
-          
-          console.log('🔍 [InterestRateGauge] 금리 데이터:', interestData);
-          
-          // 한국 기준금리만 사용
-          if (interestData.korea && interestData.korea.rate !== undefined) {
-            const koreaRate = parseFloat(interestData.korea.rate.toString());
-            console.log('✅ [InterestRateGauge] 한국 금리 설정:', koreaRate);
-            setRate(koreaRate);
-            setBankName('한국은행 기준금리');
-          } else {
-            console.warn('⚠️ [InterestRateGauge] 한국 금리 데이터가 없습니다');
-            setError('한국 금리 데이터가 없습니다');
-          }
-          
-          // 마지막 업데이트 시간 설정 (발표일 기준)
-          if (interestData.korea && interestData.korea.lastUpdated) {
-            // 백엔드에서 받은 발표일 데이터 사용
-            const announcementDate = new Date(interestData.korea.lastUpdated);
-            setLastUpdated(announcementDate.toLocaleDateString('ko-KR', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            }));
-          } else if (interestData.lastUpdated) {
-            // fallback: 전체 lastUpdated 사용
-            const fallbackDate = new Date(interestData.lastUpdated);
-            setLastUpdated(fallbackDate.toLocaleDateString('ko-KR', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric'
-            }));
-          }
-        }
-      } catch (err) {
-        console.error('금리 데이터 가져오기 실패:', err);
-        setError('금리 데이터를 가져올 수 없습니다');
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchInterestRate();
+  }, []);
+
+  useEffect(() => {
+    if (value !== undefined && value !== null) {
+      setRate(value);
+    }
   }, [value]);
 
-  useEffect(() => {
-    if (rate < 2.0) {
-      setRateText('저금리');
-      setRateColor('#4CAF50');
-      setActiveSection(0);
-    } else if (rate <= 3.0) {
-      setRateText('보통');
-      setRateColor('#FFC107');
-      setActiveSection(1);
-    } else {
-      setRateText('고금리');
-      setRateColor('#F44336');
-      setActiveSection(2);
-    }
-  }, [rate]);
+const fetchInterestRate = async () => {
+    setLoading(true);
+    setError(null);
 
-  const screenWidth = Dimensions.get('window').width;
-  const size = screenWidth - 32;
-  const center = size / 2;
-  const radius = size * 0.45;
-  
-  // 각도 계산 - SVG 좌표계 기준으로 8시(약 150도)에서 4시(약 30도)까지
-  const startAngle = 150; // 8시 방향
-  const endAngle = 30;   // 4시 방향
-  const totalAngle = 240; // 시계 방향으로 이동하는 각도
-  
-  // 금리 범위는 0%~6%로 가정
-  const maxRate = 6;
-  
-  // 시계 방향으로 움직이도록 각도 계산
-  const angle = startAngle + (rate / maxRate) * totalAngle;
-  const needleRad = angle * Math.PI / 180;
-  
-  // 바늘 끝점 계산 - 적절한 길이로 조정
-  const needleLength = radius * 0.6;
-  const needleX = center + needleLength * Math.cos(needleRad);
-  const needleY = center + needleLength * Math.sin(needleRad);
-  
-  // 섹션 색상 및 범위
-  const sections = [
-    { name: '저금리', color: '#C8E6C9', textColor: '#4CAF50', start: 0, end: 2 },
-    { name: '보통', color: '#FFF9C4', textColor: '#FFC107', start: 2, end: 3 },
-    { name: '고금리', color: '#FFCDD2', textColor: '#F44336', start: 3, end: 6 }
-  ];
-  
-  // 섹션별 경로 생성
-  const createSectionPath = (startPercent: number, endPercent: number, sectionRadius: number) => {
-    const scaledStart = (startPercent / maxRate) * 100;
-    const scaledEnd = (endPercent / maxRate) * 100;
-    
-    const sectionStartAngle = startAngle + (scaledStart / 100) * totalAngle;
-    const sectionEndAngle = startAngle + (scaledEnd / 100) * totalAngle;
-    const startRad = sectionStartAngle * Math.PI / 180;
-    const endRad = sectionEndAngle * Math.PI / 180;
-    
-    const startX = center + sectionRadius * Math.cos(startRad);
-    const startY = center + sectionRadius * Math.sin(startRad);
-    const endX = center + sectionRadius * Math.cos(endRad);
-    const endY = center + sectionRadius * Math.sin(endRad);
-    
-    const largeArcFlag = (sectionEndAngle - sectionStartAngle) > 180 ? 1 : 0;
-    
-    return `M ${center} ${center} L ${startX} ${startY} A ${sectionRadius} ${sectionRadius} 0 ${largeArcFlag} 1 ${endX} ${endY} Z`;
+    try {
+      const response = await economicIndexApi.getInterestRate();
+      const payload: InterestRatePayload | undefined =
+        response.data?.data ?? response.data;
+
+      if (!payload) {
+        throw new Error('금리 데이터를 찾을 수 없습니다.');
+      }
+
+      const countryCode = payload.korea?.countryCode ?? 'KR';
+      const historyEntries = Array.isArray(payload.history) ? payload.history : [];
+
+      const sortedHistory = historyEntries
+        .map((entry) => {
+          const rawRate = entry?.rates ? entry.rates[countryCode] : null;
+          return {
+            date: entry?.date ?? null,
+            rate: parseRate(rawRate),
+          };
+        })
+        .filter((entry) => entry.date && entry.rate !== null)
+        .sort((a, b) => {
+          const dateA = new Date(a.date as string).getTime();
+          const dateB = new Date(b.date as string).getTime();
+          return dateB - dateA;
+        });
+
+      const historyLatest = sortedHistory[0] ?? null;
+      const historyPrevious = sortedHistory.length > 1 ? sortedHistory[1] : null;
+
+      let currentRate =
+        parseRate(value ?? null) ??
+        parseRate(payload.korea?.rate) ??
+        (historyLatest ? historyLatest.rate : null);
+
+      if (currentRate === null) {
+        throw new Error('한국 기준금리 데이터를 찾을 수 없습니다.');
+      }
+
+      setRate(currentRate);
+
+      const resolvedLastUpdated =
+        payload.korea?.lastUpdated ??
+        (historyLatest?.date ?? payload.lastUpdated ?? null);
+      setLastUpdated(resolvedLastUpdated);
+
+      const previousNumeric =
+        parseRate(payload.korea?.previousRate) ??
+        (historyPrevious ? historyPrevious.rate : null);
+
+      if (previousNumeric !== null) {
+        setPreviousRate(previousNumeric);
+        const amount = currentRate - previousNumeric;
+        const percent =
+          previousNumeric !== 0 ? (amount / previousNumeric) * 100 : null;
+        setChangeInfo({ amount, percent });
+      } else {
+        setPreviousRate(null);
+        setChangeInfo({ amount: 0, percent: null });
+      }
+    } catch (err) {
+      console.error('금리 데이터를 불러오는 중 오류 발생:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : '금리 데이터를 불러오는 중 문제가 발생했습니다.'
+      );
+    } finally {
+      setLoading(false);
+    }
   };
-  
-  // 눈금 위치 생성
-  const createTick = (rateValue: number, tickRadius: number, length: number) => {
-    const percent = (rateValue / maxRate) * 100;
-    const tickAngle = startAngle + (percent / 100) * totalAngle;
-    const tickRad = tickAngle * Math.PI / 180;
-    
-    const innerX = center + (tickRadius - length) * Math.cos(tickRad);
-    const innerY = center + (tickRadius - length) * Math.sin(tickRad);
-    const outerX = center + tickRadius * Math.cos(tickRad);
-    const outerY = center + tickRadius * Math.sin(tickRad);
-    
-    return { innerX, innerY, outerX, outerY };
-  };
-  
-  // 라벨 위치 생성
-  const createLabel = (rateValue: number, labelRadius: number, offset: number) => {
-    const percent = (rateValue / maxRate) * 100;
-    const labelAngle = startAngle + (percent / 100) * totalAngle;
-    const labelRad = labelAngle * Math.PI / 180;
-    
-    const x = center + (labelRadius + offset) * Math.cos(labelRad);
-    const y = center + (labelRadius + offset) * Math.sin(labelRad);
-    
-    return { x, y };
-  };
+
+  const formattedDate = useMemo(() => {
+    const normalized = normalizeDateString(lastUpdated);
+    if (!normalized) return null;
+
+    const date = new Date(normalized);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return date.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }, [lastUpdated]);
+
+  const stanceInfo = useMemo(() => {
+    if (!changeInfo) return null;
+    return getRateStanceInfo(changeInfo.amount);
+  }, [changeInfo]);
 
   if (loading) {
     return (
       <View style={styles.container}>
-        <ThemedText style={styles.title}>금리</ThemedText>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#007AFF" />
-          <ThemedText style={styles.loadingText}>금리 정보를 가져오는 중...</ThemedText>
+        <ThemedText style={styles.title}>한국은행 기준금리</ThemedText>
+        <View style={styles.centered}>
+          <ActivityIndicator size="small" color="#007AFF" />
+          <ThemedText style={styles.loadingText}>금리 정보를 불러오는 중입니다...</ThemedText>
         </View>
       </View>
     );
@@ -191,12 +236,9 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
   if (error) {
     return (
       <View style={styles.container}>
-        <ThemedText style={styles.title}>금리</ThemedText>
-        <View style={styles.errorContainer}>
+        <ThemedText style={styles.title}>한국은행 기준금리</ThemedText>
+        <View style={styles.centered}>
           <ThemedText style={styles.errorText}>{error}</ThemedText>
-          <ThemedText style={styles.description}>
-            네트워크 연결을 확인하고 다시 시도해주세요.
-          </ThemedText>
         </View>
       </View>
     );
@@ -204,139 +246,59 @@ const InterestRateGauge: React.FC<InterestRateGaugeProps> = ({ value }) => {
 
   return (
     <View style={styles.container}>
-      <ThemedText style={styles.title}>{bankName}</ThemedText>
-      <View style={styles.gaugeContainer}>
-        <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-          {/* 섹션 그리기 */}
-          {sections.map((section, idx) => {
-            const isActive = idx === activeSection;
-            return (
-              <Path
-                key={`section-${idx}`}
-                d={createSectionPath(section.start, section.end, radius)}
-                fill={isActive ? section.color : "#FAFAFA"}
-                stroke="#E0E0E0"
-                strokeWidth={1}
-              />
-            );
-          })}
-          
-          {/* 눈금 그리기 - 주요 눈금 */}
-          {[0, 1, 2, 3, 4, 5, 6].map((tick, idx) => {
-            const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 10);
-            const label = createLabel(tick, radius, -25);
-            
-            return (
-              <G key={`major-tick-${idx}`}>
-                <Line
-                  x1={innerX}
-                  y1={innerY}
-                  x2={outerX}
-                  y2={outerY}
-                  stroke="#666"
-                  strokeWidth={2}
-                />
-                <SvgText
-                  x={label.x}
-                  y={label.y}
-                  fontSize="13"
-                  fill="#666"
-                  textAnchor="middle"
-                  alignmentBaseline="middle"
-                >
-                  {formatNumberWithUnit(tick, '%')}
-                </SvgText>
-              </G>
-            );
-          })}
-          
-          {/* 눈금 그리기 - 작은 눈금 */}
-          {Array.from({ length: 12 }, (_, i) => i * 0.5).filter(tick => tick % 1 !== 0 && tick <= 6).map((tick, idx) => {
-            const { innerX, innerY, outerX, outerY } = createTick(tick, radius, 5);
-            return (
-              <Line
-                key={`minor-tick-${idx}`}
-                x1={innerX}
-                y1={innerY}
-                x2={outerX}
-                y2={outerY}
-                stroke="#AAA"
-                strokeWidth={1}
-              />
-            );
-          })}
-          
-          {/* 섹션 이름 표시 - 적절한 위치로 조정 */}
-          {sections.map((section, idx) => {
-            const midPoint = (section.start + section.end) / 2;
-            const label = createLabel(midPoint, radius * 0.7, 0);
-            
-            return (
-              <SvgText
-                key={`label-${idx}`}
-                x={label.x}
-                y={label.y}
-                fontSize="16"
-                fontWeight="bold"
-                fill={section.textColor}
-                textAnchor="middle"
-                alignmentBaseline="middle"
-              >
-                {section.name}
-              </SvgText>
-            );
-          })}
-          
-          {/* 바늘 */}
-          <Line
-            x1={center}
-            y1={center}
-            x2={needleX}
-            y2={needleY}
-            stroke={sections[activeSection]?.textColor || "#333"}
-            strokeWidth={6}
-            strokeLinecap="round"
-          />
-          
-          {/* 바늘 중심점 */}
-          <Circle cx={center} cy={center} r={6} fill={sections[activeSection]?.textColor || "#666"} />
-        </Svg>
-        {/* 현재 값 표시 */}
-        <View style={styles.valueContainer}>
-          <ThemedText style={[styles.valueText, { color: rateColor }]}>
-            {formatNumberWithUnit(rate, '%')}
-          </ThemedText>
-          <ThemedText style={[styles.labelText, { color: rateColor }]}>
-            {rateText}
-          </ThemedText>
-        </View>
-      </View>
-      <View style={styles.infoContainer}>
-        <ThemedText style={styles.description}>
-          현재 정책금리는 {formatNumberWithUnit(rate, '%')}입니다.
-          금리가 낮을수록 대출 비용이 낮아지고, 높을수록 물가 상승을 억제합니다.
+      <ThemedText style={styles.title}>한국은행 기준금리</ThemedText>
+
+      <View style={styles.valueBlock}>
+        <ThemedText style={styles.valueText}>
+          {rate !== null ? `${formatNumber(rate, 2)}%` : '-'}
         </ThemedText>
-        {lastUpdated && (
-          <ThemedText style={styles.lastUpdated}>
-            변경 발표일: {lastUpdated}
-          </ThemedText>
+        {stanceInfo && (
+          <View
+            style={[
+              styles.stanceBadge,
+              {
+                backgroundColor: stanceInfo.backgroundColor,
+              },
+            ]}
+          >
+            <ThemedText
+              style={[
+                styles.stanceLabel,
+                { color: stanceInfo.textColor },
+              ]}
+            >
+              {stanceInfo.label}
+            </ThemedText>
+          </View>
         )}
       </View>
+
+      {formattedDate && (
+        <ThemedText style={styles.lastUpdated}>
+          업데이트: {formattedDate}
+        </ThemedText>
+      )}
     </View>
   );
+};
+
+const parseRate = (value?: number | string | null) => {
+  if (value === null || value === undefined) return null;
+  const numeric = typeof value === 'string' ? parseFloat(value) : value;
+  return Number.isNaN(numeric) ? null : numeric;
 };
 
 const styles = StyleSheet.create({
   container: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 20,
-    marginVertical: 8,
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
+    paddingHorizontal: 20,
+    paddingTop: 24,
+    paddingBottom: 32,
+    marginTop: 12,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
@@ -344,125 +306,89 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 16,
     fontWeight: '700',
-    marginBottom: 8,
+    marginBottom: 12,
     textAlign: 'center',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 22,
   },
-  gaugeContainer: {
+  centered: {
     alignItems: 'center',
     justifyContent: 'center',
-    position: 'relative',
-  },
-  infoContainer: {
-    alignItems: 'center',
-  },
-  infoText: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#333',
-    marginBottom: 24,
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 26,
-  },
-  description: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    lineHeight: 18,
-  },
-  loadingContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
+    paddingVertical: 24,
   },
   loadingText: {
-    marginTop: 16,
+    marginTop: 12,
     fontSize: 14,
     color: '#666',
   },
-  errorContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 40,
-  },
   errorText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#F44336',
-    fontWeight: 'bold',
-    marginBottom: 8,
     textAlign: 'center',
+    lineHeight: 20,
   },
-  lastUpdated: {
-    fontSize: 10,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-  },
-  rateValue: {
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#333',
-    textAlign: 'center',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 28,
-  },
-  rateUnit: {
-    fontSize: 12,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 4,
-    fontWeight: '500',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 16,
-  },
-  labelText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginTop: 12,
-  },
-  updateText: {
-    fontSize: 10,
-    color: '#999',
-    textAlign: 'center',
-    marginTop: 8,
-    fontWeight: '500',
-    includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 14,
-  },
-  valueContainer: {
-    position: 'absolute',
+  valueBlock: {
     alignItems: 'center',
-    justifyContent: 'center',
-    top: '60%',
-    width: '100%',
-    paddingHorizontal: 20,
+    paddingTop: 12,
+    paddingBottom: 20,
   },
   valueText: {
-    fontSize: 26,
+    fontSize: 32,
     fontWeight: '700',
     color: '#333',
-    textAlign: 'center',
+    marginBottom: 8,
+    lineHeight: 38,
     includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 32,
   },
-  descriptionText: {
-    fontSize: 11,
+  changeText: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginTop: 4,
+    marginBottom: 10,
+    lineHeight: 22,
+    includeFontPadding: false,
+  },
+  positiveText: {
+    color: '#d84315',
+  },
+  negativeText: {
+    color: '#1b5e20',
+  },
+  neutralText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  previousText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 6,
+    lineHeight: 20,
+    includeFontPadding: false,
+  },
+  lastUpdated: {
+    marginTop: 8,
+    fontSize: 12,
     color: '#999',
     textAlign: 'center',
-    marginTop: -38,
-    fontWeight: '500',
+  },
+  stanceBadge: {
+    marginTop: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    alignItems: 'center',
+    gap: 4,
+  },
+  stanceLabel: {
+    fontSize: 14,
+    fontWeight: '700',
     includeFontPadding: false,
-    textAlignVertical: 'center',
-    lineHeight: 15,
+  },
+  stanceDescription: {
+    fontSize: 12,
+    color: '#555',
+    textAlign: 'center',
+    lineHeight: 18,
+    includeFontPadding: false,
   },
 });
 
-export default InterestRateGauge; 
+export default InterestRateGauge;

@@ -1,16 +1,40 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
+import com.android.build.api.attributes.AgpVersionAttr
+import org.gradle.api.attributes.AttributeCompatibilityRule
+import org.gradle.api.attributes.AttributeDisambiguationRule
+import org.gradle.api.attributes.CompatibilityCheckDetails
+import org.gradle.api.attributes.MultipleCandidatesDetails
+
 buildscript {
+  ext {
+    forcedAgpVersion = "8.8.2"
+    forcedKotlinGradlePluginVersion = "2.0.21"
+  }
   repositories {
     google()
     mavenCentral()
   }
   dependencies {
-    classpath('com.android.tools.build:gradle')
-    classpath('com.facebook.react:react-native-gradle-plugin')
-    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    classpath("com.android.tools.build:gradle:${forcedAgpVersion}")
+    classpath("com.facebook.react:react-native-gradle-plugin")
+    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:${forcedKotlinGradlePluginVersion}")
+  }
+  configurations.classpath {
+    resolutionStrategy.eachDependency { details ->
+      if (details.requested.group == "com.android.tools.build" && details.requested.name == "gradle") {
+        details.useVersion(forcedAgpVersion)
+      }
+      if (details.requested.group == "org.jetbrains.kotlin" && details.requested.name == "kotlin-gradle-plugin") {
+        details.useVersion(forcedKotlinGradlePluginVersion)
+      }
+    }
   }
 }
+
+ext.forcedAgpVersion = forcedAgpVersion
+ext.forcedKotlinGradlePluginVersion = forcedKotlinGradlePluginVersion
+ext.kotlinVersion = forcedKotlinGradlePluginVersion
 
 def reactNativeAndroidDir = new File(
   providers.exec {
@@ -35,3 +59,58 @@ allprojects {
 
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
+
+subprojects { subproject ->
+  subproject.buildscript.repositories {
+    google()
+    mavenCentral()
+  }
+
+  def classpathConfig = subproject.buildscript.configurations.findByName("classpath")
+  if (classpathConfig != null) {
+    classpathConfig.resolutionStrategy.eachDependency { details ->
+      if (details.requested.group == "com.android.tools.build" && details.requested.name == "gradle") {
+        details.useVersion(rootProject.ext.forcedAgpVersion)
+      }
+      if (details.requested.group == "org.jetbrains.kotlin" && details.requested.name == "kotlin-gradle-plugin") {
+        details.useVersion(rootProject.ext.forcedKotlinGradlePluginVersion)
+      }
+    }
+  }
+
+  subproject.plugins.withId("com.android.library") {
+    subproject.afterEvaluate {
+      def objects = subproject.objects
+      def agpAttr = AgpVersionAttr.ATTRIBUTE
+      def agpAttrValue = objects.named(AgpVersionAttr, rootProject.ext.forcedAgpVersion)
+      subproject.configurations.matching { it.canBeConsumed }.all { configuration ->
+        configuration.attributes.attribute(agpAttr, agpAttrValue)
+      }
+    }
+  }
+}
+
+dependencies {
+  attributesSchema {
+    attribute(AgpVersionAttr.ATTRIBUTE) {
+      compatibilityRules.add(LenientAgpCompatibilityRule)
+      disambiguationRules.add(LenientAgpDisambiguationRule)
+    }
+  }
+}
+
+class LenientAgpCompatibilityRule implements AttributeCompatibilityRule<AgpVersionAttr> {
+  @Override
+  void execute(CompatibilityCheckDetails<AgpVersionAttr> details) {
+    details.compatible()
+  }
+}
+
+class LenientAgpDisambiguationRule implements AttributeDisambiguationRule<AgpVersionAttr> {
+  @Override
+  void execute(MultipleCandidatesDetails<AgpVersionAttr> details) {
+    if (!details.candidateValues.isEmpty()) {
+      details.closestMatch(details.candidateValues.iterator().next())
+    }
+  }
+}

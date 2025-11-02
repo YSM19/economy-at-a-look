@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { View, ScrollView, StyleSheet, TouchableOpacity, Platform } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { ThemedText } from '../../components/ThemedText';
@@ -17,6 +17,7 @@ import InterestRateRecommendations from '../../components/InterestRateRecommenda
 import CPIRecommendations from '../../components/CPIRecommendations';
 import NotificationSettingsModal from '../../components/NotificationSettingsModal';
 import { economicIndexApi } from '../../services/api';
+import { LineChart } from 'react-native-gifted-charts';
 import { 
   initializeNotifications, 
   checkExchangeRateNotification, 
@@ -60,6 +61,23 @@ interface InterestRatePeriodData {
   announcementDate: string;
 }
 
+type CountryKey = 'usa' | 'japan' | 'china' | 'europe';
+const COUNTRY_KEYS: CountryKey[] = ['usa', 'japan', 'china', 'europe'];
+
+const getRateForCountryKey = (item: Partial<PeriodData>, country: CountryKey): number | null => {
+  switch (country) {
+    case 'usa':
+      return item.usdRate ?? null;
+    case 'japan':
+      return item.jpyRate ?? null;
+    case 'china':
+      return item.cnyRate ?? null;
+    case 'europe':
+      return item.eurRate ?? null;
+    default:
+      return null;
+  }
+};
 export default function IndicatorsScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -77,15 +95,229 @@ export default function IndicatorsScreen() {
   const [yearlyData, setYearlyData] = useState<PeriodData[]>([]);
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
   const [yearlyLoading, setYearlyLoading] = useState(false);
+  const [showYearlySection, setShowYearlySection] = useState(false);
   const [interestRateHistoryData, setInterestRateHistoryData] = useState<InterestRatePeriodData[]>([]);
   const [cpiHistoryData, setCpiHistoryData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [chartLoading, setChartLoading] = useState(false);
   const [notificationModalVisible, setNotificationModalVisible] = useState(false);
 
+  const formatCurrency = (value: number | null, fractionDigits = 2) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return '-';
+    }
+    return `${value.toLocaleString('ko-KR', {
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
+    })}원`;
+  };
+
+  const formatQuarterChange = (value: number | null) => {
+    if (value === null) {
+      return '기준 분기';
+    }
+    if (value === 0) {
+      return '변화 없음';
+    }
+    const formatted = Math.abs(value).toLocaleString('ko-KR', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+    return `${value > 0 ? '+' : '-'}${formatted}원`;
+  };
+
+  const buildAxis = useCallback((values: number[], desiredSections: number) => {
+    if (!values.length) {
+      return null;
+    }
+
+    let min = Math.min(...values);
+    let max = Math.max(...values);
+
+    if (min === max) {
+      const delta = Math.max(Math.abs(min) * 0.01, 1);
+      min -= delta;
+      max += delta;
+    }
+
+    const range = max - min;
+    const padding = Math.max(range * 0.1, 1);
+
+    min = Math.max(min - padding, 0);
+    max = max + padding;
+
+    min = parseFloat(min.toFixed(2));
+    max = parseFloat(max.toFixed(2));
+
+    const sections = Math.max(Math.min(desiredSections, 6), 2);
+    const stepRaw = (max - min) / sections;
+    const step = stepRaw > 0 ? parseFloat(stepRaw.toFixed(2)) : 1;
+
+    const labels = Array.from({ length: sections + 1 }, (_, idx) => {
+      const value = max - step * idx;
+      return value.toLocaleString('ko-KR', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      });
+    });
+
+    return {
+      min,
+      max,
+      step,
+      sections,
+      labels,
+    };
+  }, []);
+
+  const quarterlySummary = useMemo(() => {
+    if (!yearlyData || yearlyData.length === 0) {
+      return [];
+    }
+
+    const buckets: Record<number, { sum: number; count: number }> = {};
+
+    yearlyData.forEach(item => {
+      const parsedDate = new Date(item.date);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return;
+      }
+
+      const rate = getRateForCountryKey(item, activeCountry as CountryKey);
+      if (rate === null || rate === undefined) {
+        return;
+      }
+
+      const quarter = Math.floor(parsedDate.getMonth() / 3) + 1;
+      if (!buckets[quarter]) {
+        buckets[quarter] = { sum: 0, count: 0 };
+      }
+      buckets[quarter].sum += rate;
+      buckets[quarter].count += 1;
+    });
+
+    const summaries: {
+      quarter: number;
+      average: number;
+      change: number | null;
+    }[] = [];
+
+    let previousAverage: number | null = null;
+
+    for (let q = 1; q <= 4; q += 1) {
+      const bucket = buckets[q];
+      if (!bucket || bucket.count === 0) {
+        continue;
+      }
+      const average = Number((bucket.sum / bucket.count).toFixed(2));
+      const change = previousAverage !== null ? average - previousAverage : null;
+
+      summaries.push({
+        quarter: q,
+        average,
+        change,
+      });
+
+      previousAverage = average;
+    }
+
+    return summaries;
+  }, [yearlyData, activeCountry]);
+
+  const yearlyMonthlyAverageData = useMemo(() => {
+    if (!yearlyData.length) {
+      return [];
+    }
+
+    const buckets = new Map<number, { sums: Record<CountryKey, number>; counts: Record<CountryKey, number> }>();
+
+    yearlyData.forEach(item => {
+      const parsedDate = new Date(item.date);
+      if (Number.isNaN(parsedDate.getTime())) {
+        return;
+      }
+      const month = parsedDate.getMonth();
+      const bucket = buckets.get(month) ?? (() => {
+        const sums: Record<CountryKey, number> = { usa: 0, japan: 0, china: 0, europe: 0 };
+        const counts: Record<CountryKey, number> = { usa: 0, japan: 0, china: 0, europe: 0 };
+        const fresh = { sums, counts };
+        buckets.set(month, fresh);
+        return fresh;
+      })();
+
+      COUNTRY_KEYS.forEach(countryKey => {
+        const rate = getRateForCountryKey(item, countryKey);
+        if (rate !== null) {
+          bucket.sums[countryKey] += rate;
+          bucket.counts[countryKey] += 1;
+        }
+      });
+    });
+
+    return Array.from(buckets.entries())
+      .sort((a, b) => a[0] - b[0])
+      .map(([month, bucket]) => {
+        const date = `${selectedYear}-${String(month + 1).padStart(2, '0')}-01`;
+        const result: PeriodData = {
+          date,
+          usdRate: bucket.counts.usa ? Number((bucket.sums.usa / bucket.counts.usa).toFixed(2)) : 0,
+          eurRate: bucket.counts.europe ? Number((bucket.sums.europe / bucket.counts.europe).toFixed(2)) : 0,
+          jpyRate: bucket.counts.japan ? Number((bucket.sums.japan / bucket.counts.japan).toFixed(2)) : 0,
+          cnyRate: bucket.counts.china ? Number((bucket.sums.china / bucket.counts.china).toFixed(2)) : 0,
+        };
+        return result;
+      });
+  }, [yearlyData, selectedYear]);
+  const yearlyAxis = useMemo(() => {
+    const values = yearlyMonthlyAverageData
+      .map(item => getRateForCountryKey(item, activeCountry as CountryKey))
+      .filter((value): value is number => value !== null && value !== undefined && !Number.isNaN(value) && value > 0);
+
+    if (!values.length) {
+      return null;
+    }
+
+    return buildAxis(values, Math.min(values.length, 6));
+  }, [yearlyMonthlyAverageData, activeCountry, buildAxis]);
+
+
+
+  const quarterlyChartData = useMemo(() => {
+    return quarterlySummary.map(item => ({
+      value: Number(item.average.toFixed(2)),
+      label: `${item.quarter}Q`,
+      dataPointText: formatCurrency(item.average, 2),
+    }));
+  }, [quarterlySummary]);
+
+  const quarterlyAxis = useMemo(() => {
+    if (!quarterlySummary.length) {
+      return null;
+    }
+
+    const values = quarterlySummary
+      .map(item => item.average)
+      .filter(value => !Number.isNaN(value) && value > 0);
+
+    if (!values.length) {
+      return null;
+    }
+
+    return buildAxis(values, Math.min(values.length, 4));
+  }, [quarterlySummary, buildAxis]);
+
   const currentYear = new Date().getFullYear();
   const MIN_YEAR = 1990;
   const yearlyDataCacheRef = useRef<Record<number, PeriodData[]>>({});
+
+  const countryColors = useMemo(() => ({
+    usa: '#3b82f6',
+    japan: '#f97316',
+    china: '#22c55e',
+    europe: '#e11d48',
+  }), []);
+
+  const activeLineColor = countryColors[activeCountry as keyof typeof countryColors] ?? '#3b82f6';
 
   // 알림 초기화 (Expo Go 환경에서는 제한적)
   useEffect(() => {
@@ -323,18 +555,40 @@ export default function IndicatorsScreen() {
         
         // 현재 금리 데이터 설정
         const koreaData = currentRateResponse.data.data.korea;
+        const announcements = announcementsResponse.data.data || [];
+        
+        const toNumber = (input: any): number | null => {
+          if (input === null || input === undefined) return null;
+          const numeric = typeof input === 'number' ? input : parseFloat(input);
+          return Number.isNaN(numeric) ? null : numeric;
+        };
+
+        const sortedAnnouncements = announcements
+          .map((item: any) => ({
+            date: item.date,
+            rate: toNumber(item.interestRate),
+          }))
+          .filter((item: any) => item.rate !== null)
+          .sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const previousAnnouncement = sortedAnnouncements.length > 1 ? sortedAnnouncements[1] : null;
+        const currentRate = toNumber(koreaData.rate) ?? (sortedAnnouncements[0]?.rate ?? 0);
+        const previousRate = previousAnnouncement?.rate ?? currentRate;
+        const changeAmount = currentRate - previousRate;
+        const trend =
+          changeAmount > 0 ? '상승' : changeAmount < 0 ? '하락' : '보합';
+
         setInterestRateData({
-          currentRate: koreaData.rate,
-          prevRate: koreaData.rate,
-          changeRate: 0,
-          trend: '보합'
+          currentRate,
+          prevRate: previousRate,
+          changeRate: changeAmount,
+          trend,
         });
         
         // 발표일 데이터를 차트용으로 변환
-        const announcements = announcementsResponse.data.data || [];
         const historyData: InterestRatePeriodData[] = announcements.map((item: any) => ({
           date: item.date,
-          rate: item.interestRate,
+          rate: toNumber(item.interestRate) ?? 0,
           announcementDate: item.date
         }));
         
@@ -380,35 +634,76 @@ export default function IndicatorsScreen() {
         console.log('🔍 [indicators] CPI date 필드:', cpiData.date);
         console.log('🔍 [indicators] CPI 사용 가능한 필드:', Object.keys(cpiData));
         
-        // 전년동월대비 변화율 사용 (annualRate가 주 필드)
-        const currentCPI = cpiData.annualRate || cpiData.yearlyChange || 0;
-        
+        const toNumber = (input: any): number | null => {
+          if (input === null || input === undefined) return null;
+          const numeric = typeof input === 'number' ? input : parseFloat(input);
+          return Number.isNaN(numeric) ? null : numeric;
+        };
+
+        const toDateValue = (raw: string): number => {
+          if (raw.includes('-')) {
+            return new Date(raw).getTime();
+          }
+          if (raw.length === 6) {
+            const year = Number(raw.slice(0, 4));
+            const month = Number(raw.slice(4)) - 1;
+            return new Date(year, month, 1).getTime();
+          }
+          return new Date(raw).getTime();
+        };
+
+        const currentCPI = toNumber(cpiData.currentCPI ?? cpiData.cpiValue) ?? 0;
+
+        const historyEntries = Array.isArray(cpiData.history) ? [...cpiData.history] : [];
+        const sortedHistory = historyEntries
+          .map((item: any) => ({
+            date: item.date,
+            cpiValue: toNumber(item.cpiValue ?? item.cpi),
+            monthlyChange: toNumber(item.monthlyChange),
+            annualChange: toNumber(item.annualChange),
+          }))
+          .filter((item: any) => item.date && item.cpiValue !== null)
+          .sort((a: any, b: any) => toDateValue(b.date) - toDateValue(a.date));
+
+        const previousHistoryEntry = sortedHistory.length > 1 ? sortedHistory[1] : null;
+        const rawPrevMonthCPI = toNumber(cpiData.prevMonthCPI) ?? previousHistoryEntry?.cpiValue ?? null;
+        const prevMonthCPI = rawPrevMonthCPI ?? currentCPI;
+
+        const monthlyPercent =
+          toNumber(cpiData.changeRate) ?? previousHistoryEntry?.monthlyChange ?? null;
+        const annualPercent =
+          toNumber(cpiData.annualRate) ?? previousHistoryEntry?.annualChange ?? null;
+
+        const computedMonthlyPercent =
+          monthlyPercent !== null
+            ? monthlyPercent
+            : prevMonthCPI !== 0
+            ? ((currentCPI - prevMonthCPI) / prevMonthCPI) * 100
+            : null;
+
         console.log('📅 [indicators] CPI date 저장:', cpiData.date);
         
         setCpiData({
           currentCPI: currentCPI,
-          prevMonthCPI: currentCPI,
-          changeRate: 0,
-          annualRate: currentCPI,
+          prevMonthCPI: prevMonthCPI,
+          changeRate: computedMonthlyPercent ?? 0,
+          annualRate: annualPercent ?? 0,
           date: cpiData.date
         });
         
         console.log('✅ [indicators] CPI 데이터 설정 완료, date:', cpiData.date);
         
         // 히스토리 데이터 처리
-        if (cpiData.history && Array.isArray(cpiData.history)) {
-          const formattedHistory = cpiData.history.map((item: any) => ({
-            date: item.date,
-            cpi: item.cpiValue || item.cpi || 0,
-            monthlyChange: item.monthlyChange || 0,
-            annualChange: item.annualChange || 0
-          }));
-          // 데이터를 날짜 내림차순으로 정렬하여 최신 데이터가 앞에 오도록 함
-          const sortedHistory = formattedHistory.sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-          // 최근 6개월 데이터만 선택
+        if (sortedHistory.length > 0) {
           const recentHistory = sortedHistory.slice(0, 6);
-          // 차트에서는 시간 순서대로 보여줘야 하므로 다시 오름차순으로 정렬
-          const finalHistory = recentHistory.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
+          const finalHistory = [...recentHistory]
+            .sort((a: any, b: any) => toDateValue(a.date) - toDateValue(b.date))
+            .map((item: any) => ({
+              date: item.date,
+              cpi: item.cpiValue ?? 0,
+              monthlyChange: item.monthlyChange ?? 0,
+              annualChange: item.annualChange ?? 0
+            }));
           
           setCpiHistoryData(finalHistory);
         }
@@ -504,8 +799,6 @@ export default function IndicatorsScreen() {
                   country={activeCountry}
                 />
                 
-                <ExchangeRateRecommendations country={activeCountry} />
-                
                 {/* 7일 환율 변동 추이 */}
                 <View style={styles.chartContainer}>
                   <ThemedText style={styles.chartTitle}>최근 7일 환율 변동 추이</ThemedText>
@@ -529,6 +822,8 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
                 
+                <ExchangeRateRecommendations country={activeCountry} />
+
                 {/* 30일 환율 변동 추이 */}
                 <View style={styles.chartContainer}>
                   <ThemedText style={styles.chartTitle}>최근 30일 환율 변동 추이</ThemedText>
@@ -553,109 +848,143 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
 
-
-                {/* 연도별 환율 변동 추이 */}
-                <View style={styles.chartContainer}>
-                  <View style={styles.yearHeader}>
-                    <ThemedText style={styles.chartTitle}>연도별 환율 변동 추이</ThemedText>
-                    <View style={styles.yearControls}>
-                      <TouchableOpacity
-                        style={[
-                          styles.yearButton,
-                          selectedYear <= MIN_YEAR ? styles.yearButtonDisabled : null,
-                        ]}
-                        onPress={() => handleYearChange(-1)}
-                        disabled={selectedYear <= MIN_YEAR}
-                      >
-                        <MaterialCommunityIcons
-                          name="chevron-left"
-                          size={24}
-                          color={selectedYear <= MIN_YEAR ? '#A0AEC0' : '#007AFF'}
-                        />
-                      </TouchableOpacity>
-                      <ThemedText style={styles.yearText}>{selectedYear}년</ThemedText>
-                      <TouchableOpacity
-                        style={[
-                          styles.yearButton,
-                          selectedYear >= currentYear ? styles.yearButtonDisabled : null,
-                        ]}
-                        onPress={() => handleYearChange(1)}
-                        disabled={selectedYear >= currentYear}
-                      >
-                        <MaterialCommunityIcons
-                          name="chevron-right"
-                          size={24}
-                          color={selectedYear >= currentYear ? '#A0AEC0' : '#007AFF'}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                  <ThemedText style={styles.chartSubtitle}>연간 일별 환율 흐름</ThemedText>
-                  {yearlyLoading ? (
-                    <View style={styles.chartPlaceholder}>
-                      <MaterialCommunityIcons name="chart-line" size={48} color="#8E8E93" />
-                      <ThemedText style={styles.chartPlaceholderText}>연도별 데이터를 불러오는 중...</ThemedText>
-                    </View>
-                  ) : yearlyData.length > 0 ? (
-                    <ExchangeRateChart
-                      data={yearlyData}
-                      country={activeCountry}
-                      height={220}
-                      showOnlyDay={true}
+                <View style={[styles.chartContainer, styles.yearToggleCard]}>
+                  <TouchableOpacity
+                    activeOpacity={0.85}
+                    style={styles.yearToggleHeader}
+                    onPress={() => setShowYearlySection(prev => !prev)}
+                  >
+                    <ThemedText style={styles.yearToggleTitle}>연도별 환율 변동 추이</ThemedText>
+                    <MaterialCommunityIcons
+                      name={showYearlySection ? 'chevron-up' : 'chevron-down'}
+                      size={24}
+                      color="#007AFF"
                     />
-                  ) : (
-                    <View style={styles.chartPlaceholder}>
-                      <MaterialCommunityIcons name="chart-line" size={48} color="#8E8E93" />
-                      <ThemedText style={styles.chartPlaceholderText}>선택한 연도에 대한 데이터가 없습니다.</ThemedText>
+                  </TouchableOpacity>
+
+                  {showYearlySection && (
+                    <View style={styles.yearToggleContent}>
+                      <View style={styles.yearControls}>
+                        <TouchableOpacity
+                          style={[
+                            styles.yearButton,
+                            selectedYear <= MIN_YEAR ? styles.yearButtonDisabled : null,
+                          ]}
+                          onPress={() => handleYearChange(-1)}
+                          disabled={selectedYear <= MIN_YEAR}
+                        >
+                          <MaterialCommunityIcons
+                            name="chevron-left"
+                            size={24}
+                            color={selectedYear <= MIN_YEAR ? '#A0AEC0' : '#007AFF'}
+                          />
+                        </TouchableOpacity>
+                        <ThemedText style={styles.yearText}>{selectedYear}년</ThemedText>
+                        <TouchableOpacity
+                          style={[
+                            styles.yearButton,
+                            selectedYear >= currentYear ? styles.yearButtonDisabled : null,
+                          ]}
+                          onPress={() => handleYearChange(1)}
+                          disabled={selectedYear >= currentYear}
+                        >
+                          <MaterialCommunityIcons
+                            name="chevron-right"
+                            size={24}
+                            color={selectedYear >= currentYear ? '#A0AEC0' : '#007AFF'}
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      <ThemedText style={styles.yearlySubtitle}>연간 일별 변동 추이</ThemedText>
+
+                      {yearlyLoading ? (
+                        <View style={styles.chartPlaceholder}>
+                          <MaterialCommunityIcons name="chart-line" size={48} color="#8E8E93" />
+                          <ThemedText style={styles.chartPlaceholderText}>
+                            연도별 데이터를 불러오는 중...
+                          </ThemedText>
+                        </View>
+                      ) : yearlyMonthlyAverageData.length > 0 ? (
+                        <ExchangeRateChart
+                          data={yearlyMonthlyAverageData}
+                          country={activeCountry}
+                          height={220}
+                          showOnlyDay={true}
+                          customYAxis={yearlyAxis ?? undefined}
+                        />
+                      ) : (
+                        <View style={styles.chartPlaceholder}>
+                          <MaterialCommunityIcons name="chart-line" size={48} color="#8E8E93" />
+                          <ThemedText style={styles.chartPlaceholderText}>
+                            선택한 연도에 대한 데이터가 없습니다.
+                          </ThemedText>
+                        </View>
+                      )}
+
+                      {quarterlySummary.length > 0 && (
+                        <View style={styles.quarterSection}>
+                          <ThemedText style={styles.quarterTitle}>분기별 환율 변동 추이</ThemedText>
+
+                          {quarterlyChartData.length > 0 && quarterlyAxis && (
+                            <View style={styles.quarterChartWrapper}>
+                              <LineChart
+                                data={quarterlyChartData}
+                                height={170}
+                                color={activeLineColor}
+                                dataPointsColor={activeLineColor}
+                                dataPointsRadius={5}
+                                thickness={3}
+                                initialSpacing={20}
+                                spacing={60}
+                                focusEnabled={false}
+                                hideRules
+                                yAxisThickness={0}
+                                xAxisThickness={0}
+                                xAxisLabelTextStyle={styles.quarterAxisLabel}
+                                xAxisLabelShift={10}
+                                yAxisMinValue={quarterlyAxis.min}
+                                yAxisMaxValue={quarterlyAxis.max}
+                                stepValue={quarterlyAxis.step}
+                                noOfSections={quarterlyAxis.sections}
+                                yAxisLabelTexts={quarterlyAxis.labels}
+                                yAxisLabelSuffix="원"
+                                yAxisLabelTextStyle={styles.quarterYAxisLabel}
+                                adjustToWidth
+                                isAnimated
+                                animationDuration={600}
+                              />
+                            </View>
+                          )}
+
+                          {quarterlySummary.map(item => {
+                            const changeStyle =
+                              item.change === null
+                                ? styles.quarterChangeNeutral
+                                : item.change > 0
+                                ? styles.quarterChangePositive
+                                : item.change < 0
+                                ? styles.quarterChangeNegative
+                                : styles.quarterChangeNeutral;
+
+                            return (
+                              <View key={`quarter-${item.quarter}`} style={styles.quarterRow}>
+                                <ThemedText style={styles.quarterLabel}>{item.quarter}분기</ThemedText>
+                                <View style={styles.quarterValues}>
+                                  <ThemedText style={styles.quarterValue}>
+                                    {formatCurrency(item.average)}
+                                  </ThemedText>
+                                  <ThemedText style={[styles.quarterChange, changeStyle]}>
+                                    {formatQuarterChange(item.change)}
+                                  </ThemedText>
+                                </View>
+                              </View>
+                            );
+                          })}
+                        </View>
+                      )}
                     </View>
                   )}
-                </View>
-
-                {/* 환율 수준별 기준 및 특징 */}
-                <View style={styles.levelsContainer}>
-                  <ThemedText style={styles.levelsTitle}>환율 수준별 기준 및 특징</ThemedText>
-                  
-                  <View style={styles.levelItem}>
-                    <View style={[styles.levelIndicator, { backgroundColor: '#4CAF50' }]} />
-                    <View style={styles.levelContent}>
-                      <ThemedText style={styles.levelName}>원화 강세 : 1,200원 이하</ThemedText>
-                      <ThemedText style={styles.levelStatus}>상태: 원화 가치가 상대적으로 높은 상태입니다.</ThemedText>
-                      <ThemedText style={styles.levelDescription}>
-                        • 수입품 가격 하락: 해외 상품을 더 싸게 구매할 수 있습니다.{'\n'}
-                        • 해외 여행 유리: 해외 여행 시 더 많은 구매력을 가집니다.{'\n'}
-                        • 수출 경쟁력 약화: 한국 제품의 해외 가격이 상대적으로 비싸집니다.{'\n'}
-                        • 해외 투자 유리: 해외 자산 투자 시 더 많은 구매력을 가집니다.
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.levelItem}>
-                    <View style={[styles.levelIndicator, { backgroundColor: '#FF9800' }]} />
-                    <View style={styles.levelContent}>
-                      <ThemedText style={styles.levelName}>적정 환율 : 1,200원~1,350원</ThemedText>
-                      <ThemedText style={styles.levelStatus}>상태: 수출입 균형이 맞는 적정 수준의 환율입니다.</ThemedText>
-                      <ThemedText style={styles.levelDescription}>
-                        • 수출입 균형: 수출과 수입이 균형을 이루는 수준입니다.{'\n'}
-                        • 경제 안정: 환율 변동성이 낮아 경제 예측이 용이합니다.{'\n'}
-                        • 투자 환경 안정: 기업들의 해외 투자 계획 수립이 안정적입니다.{'\n'}
-                        • 소비자 혜택: 적절한 수준의 수입품 가격으로 소비자 선택권이 확보됩니다.
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.levelItem}>
-                    <View style={[styles.levelIndicator, { backgroundColor: '#F44336' }]} />
-                    <View style={styles.levelContent}>
-                      <ThemedText style={styles.levelName}>원화 약세 : 1,350원 이상</ThemedText>
-                      <ThemedText style={styles.levelStatus}>상태: 원화 가치가 상대적으로 낮은 상태입니다.</ThemedText>
-                      <ThemedText style={styles.levelDescription}>
-                        • 수출 경쟁력 강화: 한국 제품의 해외 가격이 상대적으로 저렴해집니다.{'\n'}
-                        • 수입품 가격 상승: 해외 상품을 구매할 때 더 많은 비용이 발생합니다.{'\n'}
-                        • 해외 여행 부담: 해외 여행 시 구매력이 감소합니다.{'\n'}
-                        • 물가 상승 압력: 수입 원재료 가격 상승으로 국내 물가에 영향을 미칩니다.
-                      </ThemedText>
-                    </View>
-                  </View>
                 </View>
 
                 {/* 환율의 의미 설명 */}
@@ -676,16 +1005,9 @@ export default function IndicatorsScreen() {
                   <ThemedText style={styles.clickHint}>탭하여 자세히 보기</ThemedText>
                 </TouchableOpacity>
 
-                {/* 환율 범위 기준 안내 */}
-                <View style={styles.noticeContainer}>
-                  <ThemedText style={styles.noticeTitle}>📋 환율 범위 기준 안내</ThemedText>
-                  <ThemedText style={styles.noticeText}>
-                    • 환율 구간은 한국 경제의 수출입 균형을 고려하여 설정되었습니다.{'\n'}
-                    • 적정 환율 범위(1,200원~1,350원)는 한국 경제의 안정적 성장을 위한 수준입니다.{'\n'}
-                    • 원화 강세(1,200원 이하)와 원화 약세(1,350원 이상) 구간도 이에 맞춰 조정되었습니다.{'\n'}
-                    • 실제 투자 결정 시에는 다양한 경제 지표를 종합적으로 고려하시기 바랍니다.
-                  </ThemedText>
-                </View>
+                <ThemedText style={styles.adviceText}>
+                  투자나 정책 판단 시에는 환율 외 다른 지표와 전문가 의견을 종합적으로 살펴보세요.
+                </ThemedText>
               </>
             ) : (
               <ThemedText>환율 데이터를 불러올 수 없습니다.</ThemedText>
@@ -707,7 +1029,7 @@ export default function IndicatorsScreen() {
                 />
                 
                 <InterestRateRecommendations />
-                
+
                 {/* 금리 변동 추이 */}
                 <View style={styles.chartContainer}>
                   <ThemedText style={styles.chartTitle}>정책금리 동향</ThemedText>
@@ -727,7 +1049,66 @@ export default function IndicatorsScreen() {
                     </View>
                   )}
                 </View>
-                
+
+                <View style={styles.levelsContainer}>
+                  <ThemedText style={styles.levelsTitle}>금리 스탠스 분류 기준 및 특징</ThemedText>
+
+                  <View style={styles.levelItem}>
+                    <View style={[styles.levelIndicator, { backgroundColor: '#1565C0' }]} />
+                    <View style={styles.levelContent}>
+                      <ThemedText style={styles.levelName}>매우 완화적 (≤ -1.5%p)</ThemedText>
+                      <ThemedText style={styles.levelDescription}>
+                        • 급격한 금리 인하로 경기 부양에 총력전.{'\n'}
+                        • 유동성 공급 확대와 대규모 재정 정책과 함께 등장하는 경우가 많습니다.
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.levelItem}>
+                    <View style={[styles.levelIndicator, { backgroundColor: '#2E7D32' }]} />
+                    <View style={styles.levelContent}>
+                      <ThemedText style={styles.levelName}>완화적 (-1.5%p ~ 0%p)</ThemedText>
+                      <ThemedText style={styles.levelDescription}>
+                        • 완만한 금리 인하로 경기 회복에 우선순위를 둡니다.{'\n'}
+                        • 통화 완화 효과를 유지하며 향후 추가 대응을 탐색하는 국면입니다.
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.levelItem}>
+                    <View style={[styles.levelIndicator, { backgroundColor: '#F9A825' }]} />
+                    <View style={styles.levelContent}>
+                      <ThemedText style={styles.levelName}>중립적 (0%p ~ +1%p)</ThemedText>
+                      <ThemedText style={styles.levelDescription}>
+                        • 기준금리를 동결하거나 소폭 조정하며 상황을 관망합니다.{'\n'}
+                        • 경기·물가 지표를 주시하며 향후 방향성을 결정하는 중립 구간입니다.
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.levelItem}>
+                    <View style={[styles.levelIndicator, { backgroundColor: '#EF6C00' }]} />
+                    <View style={styles.levelContent}>
+                      <ThemedText style={styles.levelName}>긴축적 (+1%p ~ +3%p)</ThemedText>
+                      <ThemedText style={styles.levelDescription}>
+                        • 물가 압력을 낮추기 위해 금리를 적극 인상합니다.{'\n'}
+                        • 대출 이자 상승과 소비 둔화가 나타나기 시작하는 단계입니다.
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  <View style={styles.levelItem}>
+                    <View style={[styles.levelIndicator, { backgroundColor: '#C62828' }]} />
+                    <View style={styles.levelContent}>
+                      <ThemedText style={styles.levelName}>매우 긴축적 (> +3%p)</ThemedText>
+                      <ThemedText style={styles.levelDescription}>
+                        • 급격한 물가 안정 조치로 강도 높은 금리 인상을 단행합니다.{'\n'}
+                        • 경기 둔화 위험이 커지므로 정책 당국은 부작용을 면밀히 관리합니다.
+                      </ThemedText>
+                    </View>
+                  </View>
+                </View>
+
                 <TouchableOpacity 
                   style={styles.infoContainer}
                   onPress={() => router.push('/(tabs)/tools?tab=glossary')}
@@ -1155,11 +1536,35 @@ const styles = StyleSheet.create({
     shadowRadius: 3.84,
     elevation: 5,
   },
+  yearToggleCard: {
+    paddingBottom: 12,
+  },
+  yearToggleHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  yearToggleTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  yearToggleContent: {
+    marginTop: 12,
+  },
   chartTitle: {
     fontSize: 16,
     fontWeight: 'bold',
     marginBottom: 4,
     color: '#333',
+  },
+  yearlySubtitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1D4ED8',
+    marginBottom: 12,
+    marginTop: 4,
+    letterSpacing: 0.3,
   },
   chartSubtitle: {
     fontSize: 12,
@@ -1175,6 +1580,71 @@ const styles = StyleSheet.create({
   yearControls: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  quarterSection: {
+    marginTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    paddingTop: 12,
+    gap: 12,
+  },
+  quarterChartWrapper: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 12,
+  },
+  quarterAxisLabel: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  quarterYAxisLabel: {
+    color: '#64748B',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+  quarterTitle: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  quarterRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 12,
+  },
+  quarterLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  quarterValues: {
+    alignItems: 'flex-end',
+  },
+  quarterValue: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  quarterChange: {
+    marginTop: 4,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  quarterChangePositive: {
+    color: '#EF4444',
+  },
+  quarterChangeNegative: {
+    color: '#10B981',
+  },
+  quarterChangeNeutral: {
+    color: '#475569',
   },
   yearButton: {
     padding: 6,
@@ -1309,7 +1779,24 @@ const styles = StyleSheet.create({
     color: '#555',
     lineHeight: 20,
   },
+  adviceText: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
+    marginTop: 16,
+  },
 }); 
+
+
+
+
+
+
+
+
+
+
+
 
 
 

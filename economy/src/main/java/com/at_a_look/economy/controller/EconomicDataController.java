@@ -75,8 +75,8 @@ public class EconomicDataController {
     @GetMapping("/exchange-rate/period")
     @Operation(summary = "특정 기간 환율 정보 조회", description = "지정된 기간 동안의 환율 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<List<ExchangeRateDto>>> getExchangeRateByPeriod(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+            @RequestParam("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         try {
             if (startDate == null || endDate == null) {
                 return ResponseEntity.badRequest().body(ApiResponse.error("시작일과 종료일을 모두 입력해주세요."));
@@ -140,8 +140,8 @@ public class EconomicDataController {
     @GetMapping("/interest-rate/period")
     @Operation(summary = "특정 기간 금리 정보 조회", description = "지정된 기간 동안의 금리 정보를 조회합니다.")
     public ResponseEntity<ApiResponse<String>> getInterestRateByPeriod(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+            @RequestParam("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         // 새로운 구조에서는 기간별 조회가 다른 방식으로 구현됨
         return ResponseEntity.ok(ApiResponse.success("기간별 금리 조회 기능은 새로운 구조로 개선 중입니다."));
     }
@@ -158,7 +158,7 @@ public class EconomicDataController {
     @GetMapping("/interest-rate/announcements/{countryCode}")
     @Operation(summary = "특정 국가 금리 발표일 조회", description = "특정 국가의 금리 발표일(변경일)만 조회합니다.")
     public ResponseEntity<ApiResponse<List<InterestRateDto>>> getInterestRateAnnouncementsByCountry(
-            @PathVariable String countryCode) {
+            @PathVariable("countryCode") String countryCode) {
         List<InterestRateDto> announcements = interestRateService.getAnnouncementDatesByCountry(countryCode);
         return ResponseEntity.ok(ApiResponse.success(announcements));
     }
@@ -167,8 +167,8 @@ public class EconomicDataController {
     @GetMapping("/interest-rate/announcements/period")
     @Operation(summary = "특정 기간 금리 발표일 조회", description = "지정된 기간 동안의 금리 발표일(변경일)만 조회합니다.")
     public ResponseEntity<ApiResponse<List<InterestRateDto>>> getInterestRateAnnouncementsByPeriod(
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
-            @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
+            @RequestParam("startDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startDate,
+            @RequestParam("endDate") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endDate) {
         List<InterestRateDto> announcements = interestRateService.getAnnouncementDatesByPeriod(startDate, endDate);
         return ResponseEntity.ok(ApiResponse.success(announcements));
     }
@@ -200,7 +200,7 @@ public class EconomicDataController {
     // 어드민용: 커스텀 연도 금리 데이터 수동 호출
     @PostMapping("/admin/interest-rate/fetch/custom")
     @Operation(summary = "[어드민] 커스텀 연도 금리 데이터 수동 호출", description = "한국은행 API에서 지정된 연도만큼의 금리 데이터를 수동으로 가져옵니다.")
-    public ResponseEntity<ApiResponse<String>> fetchCustomYearsInterestRateData(@RequestParam int years) {
+    public ResponseEntity<ApiResponse<String>> fetchCustomYearsInterestRateData(@RequestParam("years") int years) {
         try {
             if (years < 1 || years > 10) {
                 return ResponseEntity.ok(ApiResponse.error("연도는 1년에서 10년 사이로 입력해주세요."));

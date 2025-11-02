@@ -141,8 +141,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiResponse<Void>> handleIllegalArgumentException(IllegalArgumentException ex) {
         log.error("⚠️ [GlobalExceptionHandler] 파라미터 검증 예외: {}", ex.getMessage());
         log.error("📋 [GlobalExceptionHandler] 파라미터 검증 오류 상세 정보:", ex);
-        
-        String userMessage = "잘못된 파라미터가 전달되었습니다. 요청 정보를 확인하고 다시 시도해주세요.";
+        String detail = ex.getMessage();
+        String userMessage = (detail != null && !detail.isBlank())
+                ? "잘못된 파라미터가 전달되었습니다: " + detail
+                : "잘못된 파라미터가 전달되었습니다. 요청 정보를 확인하고 다시 시도해주세요.";
         log.warn("💬 [GlobalExceptionHandler] 파라미터 검증 오류 - 사용자에게 전달되는 메시지: {}", userMessage);
         
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)

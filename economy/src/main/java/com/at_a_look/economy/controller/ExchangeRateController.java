@@ -29,7 +29,7 @@ public class ExchangeRateController {
      */
     @PostMapping("/fetch")
     public ResponseEntity<ApiResponse<String>> fetchExchangeRates(
-            @RequestParam(required = false) 
+            @RequestParam(value = "date", required = false)
             @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
         
         LocalDate targetDate = date != null ? date : LocalDate.now();
@@ -96,8 +96,8 @@ public class ExchangeRateController {
      */
     @GetMapping("/currency/{curUnit}")
     public ResponseEntity<ApiResponse<Page<ExchangeRateResponseDTO>>> getExchangeRatesByCurrency(
-            @PathVariable String curUnit,
-            @RequestParam(required = false) Integer year,
+            @PathVariable("curUnit") String curUnit,
+            @RequestParam(value = "year", required = false) Integer year,
             @PageableDefault(size = 100, sort = "searchDate", direction = Sort.Direction.DESC) Pageable pageable) {
         try {
             if (curUnit == null || curUnit.trim().isEmpty()) {
@@ -121,7 +121,7 @@ public class ExchangeRateController {
      */
     @PostMapping("/fetch-countries")
     public ResponseEntity<ApiResponse<String>> fetchExchangeRatesByCountries(
-            @RequestParam List<String> countries) {
+            @RequestParam("countries") List<String> countries) {
         
         log.info("🌍 [관리자 대시보드] 국가별 환율 데이터 수동 가져오기 요청: 국가 목록 = {}", countries);
         
