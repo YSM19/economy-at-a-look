@@ -985,8 +985,6 @@ export default function IndicatorsScreen() {
                 <InterestRateGauge 
                   value={interestRateData?.currentRate || 3.50}
                 />
-                
-                <InterestRateRecommendations />
 
                 {/* 금리 변동 추이 */}
                 <View style={styles.chartContainer}>
@@ -1007,6 +1005,8 @@ export default function IndicatorsScreen() {
                     </View>
                   )}
                 </View>
+
+                <InterestRateRecommendations />
 
                 <View style={styles.levelsContainer}>
                   <ThemedText style={styles.levelsTitle}>금리 스탠스 분류 기준 및 특징</ThemedText>
@@ -1097,9 +1097,7 @@ export default function IndicatorsScreen() {
             ) : cpiData ? (
               <>
                 <CPIGauge value={cpiData.currentCPI} dataDate={cpiData.date} />
-                
-                <CPIRecommendations />
-                
+
                 {/* CPI 차트 */}
                 <View style={styles.chartContainer}>
                   {chartLoading ? (
@@ -1117,6 +1115,8 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
 
+                <CPIRecommendations />
+                
                 {/* 물가 수준별 기준 및 특징 */}
                 <View style={styles.levelsContainer}>
                   <ThemedText style={styles.levelsTitle}>물가 수준별 기준 및 특징</ThemedText>

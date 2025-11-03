@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, Text } from 'react-native';
+import { View, StyleSheet, Dimensions, Text, LayoutChangeEvent } from 'react-native';
 import { ThemedText } from '../ThemedText';
 import { LineChart } from 'react-native-gifted-charts';
 
@@ -23,9 +23,22 @@ interface ChartDataType {
 }
 
 export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) => {
-  const screenWidth = Dimensions.get('window').width - 64; // 양쪽 패딩(16*2) + 컨테이너 패딩(16*2)
+  const defaultWidth = Dimensions.get('window').width - 64; // 양쪽 패딩(16*2) + 컨테이너 패딩(16*2)
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [timeoutId, setTimeoutId] = useState<number | null>(null);
+  const [measuredWidth, setMeasuredWidth] = useState<number | null>(null);
+
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { width } = event.nativeEvent.layout;
+      if (width > 0 && Math.abs(width - (measuredWidth ?? 0)) > 0.5) {
+        setMeasuredWidth(width);
+      }
+    },
+    [measuredWidth]
+  );
+
+  const chartWidth = Math.max(measuredWidth ?? defaultWidth, 160);
 
   const handleFocus = useCallback((item: ChartDataType['data'][0], index: number) => {
     if (timeoutId) {
@@ -94,12 +107,22 @@ export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) =>
 
   const chartData = getChartData();
 
+  const initialSpacing = 16;
+  const endSpacing = 4;
+  const pointCount = chartData.data.length;
+  const spacing = pointCount > 1
+    ? Math.max(
+        6,
+        (chartWidth - initialSpacing - endSpacing - 40) / (pointCount - 1)
+      )
+    : 0;
+
   return (
     <View style={styles.container}>
       {/* 차트 제목 */}
       <ThemedText style={styles.chartTitle}>{chartData.title}</ThemedText>
 
-            {/* 차트 */}
+      {/* 차트 */}
       {chartData.data.length === 0 ? (
         <View style={styles.noDataContainer}>
           <ThemedText style={styles.noDataText}>
@@ -107,54 +130,57 @@ export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) =>
           </ThemedText>
         </View>
       ) : (
-        <LineChart
-          data={chartData.data}
-          width={screenWidth}
-          height={220}
-          color="#3b82f6"
-          thickness={3}
-          dataPointsColor="#3b82f6"
-          dataPointsRadius={4}
-          focusEnabled
-          onFocus={handleFocus}
-          dataPointLabelComponent={(item: any, index: number) => {
-            if (focusedIndex === index) {
-              return (
-                <View style={styles.tooltipContainer}>
-                  <Text style={styles.tooltipText}>{item.dataPointText}</Text>
-                </View>
-              );
-            }
-            return null;
-          }}
-          dataPointLabelShiftY={-20}
-          showVerticalLines
-          verticalLinesColor="#d1d5db"
-          rulesColor="#d1d5db"
-          rulesType="solid"
-          initialSpacing={20}
-          endSpacing={0}
-          spacing={(screenWidth - 20 - 25) / (chartData.data.length > 1 ? chartData.data.length - 1 : 1)}
-          disableScroll
-          yAxisLabelWidth={25}
-          animateOnDataChange
-          animationDuration={1000}
-          yAxisColor="#374151"
-          xAxisColor="#374151"
-          yAxisThickness={1.5}
-          xAxisThickness={1.5}
-          yAxisTextStyle={{
-            color: '#1f2937',
-            fontSize: 14,
-            fontWeight: '600',
-          }}
-          xAxisLabelTextStyle={{
-            color: '#1f2937',
-            fontSize: 14,
-            fontWeight: '600',
-            textAlign: 'center',
-          }}
-        />
+        <View style={styles.chartWrapper} onLayout={handleLayout}>
+          <LineChart
+            data={chartData.data}
+            width={chartWidth}
+            parentWidth={chartWidth}
+            height={220}
+            color="#3b82f6"
+            thickness={3}
+            dataPointsColor="#3b82f6"
+            dataPointsRadius={4}
+            focusEnabled
+            onFocus={handleFocus}
+            dataPointLabelComponent={(item: any, index: number) => {
+              if (focusedIndex === index) {
+                return (
+                  <View style={styles.tooltipContainer}>
+                    <Text style={styles.tooltipText}>{item.dataPointText}</Text>
+                  </View>
+                );
+              }
+              return null;
+            }}
+            dataPointLabelShiftY={-20}
+            showVerticalLines
+            verticalLinesColor="#d1d5db"
+            rulesColor="#d1d5db"
+            rulesType="solid"
+            initialSpacing={initialSpacing}
+            endSpacing={endSpacing}
+            spacing={spacing}
+            disableScroll
+            yAxisLabelWidth={25}
+            animateOnDataChange
+            animationDuration={1000}
+            yAxisColor="#374151"
+            xAxisColor="#374151"
+            yAxisThickness={1.5}
+            xAxisThickness={1.5}
+            yAxisTextStyle={{
+              color: '#1f2937',
+              fontSize: 14,
+              fontWeight: '600',
+            }}
+            xAxisLabelTextStyle={{
+              color: '#1f2937',
+              fontSize: 14,
+              fontWeight: '600',
+              textAlign: 'center',
+            }}
+          />
+        </View>
       )}
     </View>
   );
@@ -200,4 +226,8 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
-}); 
+  chartWrapper: {
+    width: '100%',
+    overflow: 'hidden',
+  },
+});

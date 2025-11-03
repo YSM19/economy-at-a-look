@@ -1,5 +1,5 @@
-import React, { useState, useRef, useCallback } from 'react';
-import { View, StyleSheet, Dimensions, TouchableOpacity, TouchableWithoutFeedback, Text } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import { View, StyleSheet, TouchableOpacity, TouchableWithoutFeedback, Text, LayoutChangeEvent } from 'react-native';
 import { ThemedText } from '../ThemedText';
 import { LineChart } from 'react-native-gifted-charts';
 
@@ -16,9 +16,19 @@ interface CPIChartProps {
 
 export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
   const [chartMode, setChartMode] = useState<'cpi' | 'monthly' | 'annual'>('cpi');
-  const screenWidth = Dimensions.get('window').width - 32;
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [timeoutId, setTimeoutId] = useState<number | null>(null);
+  const [containerWidth, setContainerWidth] = useState<number>(0);
+
+  const handleLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { width } = event.nativeEvent.layout;
+      if (width > 0 && Math.abs(width - containerWidth) > 0.5) {
+        setContainerWidth(width);
+      }
+    },
+    [containerWidth]
+  );
 
   const handleFocus = useCallback((item: any, index: number) => {
     if (timeoutId) {
@@ -143,59 +153,67 @@ export const CPIChart: React.FC<CPIChartProps> = ({ data }) => {
       <ThemedText style={styles.chartTitle}>{chartData.title}</ThemedText>
 
       {/* 차트 */}
-      <View style={styles.chartContainer}>
-        <LineChart
-          {...{
-          data: chartData.data,
-          width: screenWidth,
-          height: 220,
-          color: "#3b82f6",
-          thickness: 3,
-          dataPointsColor: "#3b82f6",
-          dataPointsRadius: 4,
-          focusEnabled: true,
-          onFocus: handleFocus,
-          dataPointLabelComponent: (item: any, index: number) => {
-            if (focusedIndex === index) {
-              return (
-                <View style={styles.tooltipContainer}>
-                  <Text style={styles.tooltipText}>{item.dataPointText}</Text>
-                </View>
-              );
-            }
-            return null;
-          },
-          dataPointLabelShiftY: -20,
-          showVerticalLines: true,
-          verticalLinesColor: "#e2e8f0",
-          rulesColor: "#e2e8f0",
-          rulesType: "solid",
-          spacing: (screenWidth - 70) / (chartData.data.length > 1 ? chartData.data.length -1 : 1),
-          disableScroll: true,
-          initialSpacing: 20,
-          endSpacing: 0,
-          animateOnDataChange: true,
-          animationDuration: 1000,
-          yAxisColor: "#64748b",
-          xAxisColor: "#64748b",
-          yAxisThickness: 1,
-          xAxisThickness: 1,
-          yAxisTextStyle: {
-            color: '#1f2937',
-            fontSize: 11,
-            fontWeight: '600',
-          },
-          xAxisLabelTextStyle: {
-            color: '#1f2937',
-            fontSize: 14,
-            fontWeight: '600',
-            textAlign: 'center',
-          },
-          yAxisOffset: yAxisMin,
-          stepValue: yAxisStep,
-          noOfSections: 5,
-          }}
-        />
+      <View style={styles.chartContainer} onLayout={handleLayout}>
+        {containerWidth > 0 ? (
+          <LineChart
+            {...{
+            data: chartData.data,
+            width: containerWidth,
+            parentWidth: containerWidth,
+            height: 220,
+            color: "#3b82f6",
+            thickness: 3,
+            dataPointsColor: "#3b82f6",
+            dataPointsRadius: 4,
+            focusEnabled: true,
+            onFocus: handleFocus,
+            dataPointLabelComponent: (item: any, index: number) => {
+              if (focusedIndex === index) {
+                return (
+                  <View style={styles.tooltipContainer}>
+                    <Text style={styles.tooltipText}>{item.dataPointText}</Text>
+                  </View>
+                );
+              }
+              return null;
+            },
+            dataPointLabelShiftY: -20,
+            showVerticalLines: true,
+            verticalLinesColor: "#e2e8f0",
+            rulesColor: "#e2e8f0",
+            rulesType: "solid",
+            spacing: Math.max(
+              12,
+              (containerWidth - 70) / (chartData.data.length > 1 ? chartData.data.length -1 : 1)
+            ),
+            disableScroll: true,
+            initialSpacing: 20,
+            endSpacing: 20,
+            animateOnDataChange: true,
+            animationDuration: 1000,
+            yAxisColor: "#64748b",
+            xAxisColor: "#64748b",
+            yAxisThickness: 1,
+            xAxisThickness: 1,
+            yAxisTextStyle: {
+              color: '#1f2937',
+              fontSize: 11,
+              fontWeight: '600',
+            },
+            xAxisLabelTextStyle: {
+              color: '#1f2937',
+              fontSize: 14,
+              fontWeight: '600',
+              textAlign: 'center',
+            },
+            yAxisOffset: yAxisMin,
+            stepValue: yAxisStep,
+            noOfSections: 5,
+            }}
+          />
+        ) : (
+          <View style={styles.chartPlaceholder} />
+        )}
       </View>
       
       {/* 차트 모드 선택 버튼 */}
@@ -319,8 +337,10 @@ const styles = StyleSheet.create({
     lineHeight: 24,
   },
   chartContainer: {
+    width: '100%',
     marginVertical: 8,
     borderRadius: 16,
+    overflow: 'hidden',
   },
   headerText: {
     fontSize: 16,
@@ -379,4 +399,8 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
     lineHeight: 20,
   },
-}); 
+  chartPlaceholder: {
+    height: 220,
+    width: '100%',
+  },
+});

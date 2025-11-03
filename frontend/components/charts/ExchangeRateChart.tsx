@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import { View, StyleSheet, Dimensions, Text, ScrollView } from 'react-native';
+import { View, StyleSheet, Dimensions, Text, ScrollView, LayoutChangeEvent } from 'react-native';
 import { ThemedText } from '../ThemedText';
 import { LineChart } from 'react-native-gifted-charts';
 
@@ -371,6 +371,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
   spacingMultiplier,
 }) => {
   const screenWidth = Dimensions.get('window').width - 32;
+  const [containerWidth, setContainerWidth] = useState<number | null>(null);
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
   const [timeoutId, setTimeoutId] = useState<number | null>(null);
   const countryKey = useMemo(() => toCountryKey(country), [country]);
@@ -602,6 +603,18 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
     [effectiveData, chartValues, showOnlyDay, valueOffset, customLabels]
   );
 
+  const effectiveScreenWidth = containerWidth ?? screenWidth;
+
+  const handleContainerLayout = useCallback(
+    (event: LayoutChangeEvent) => {
+      const { width } = event.nativeEvent.layout;
+      if (width > 0 && Math.abs(width - (containerWidth ?? 0)) > 0.5) {
+        setContainerWidth(width);
+      }
+    },
+    [containerWidth]
+  );
+
   const chartConfig = useMemo(() => {
     const MAX_SPACING = 64;
     const MIN_SCROLLABLE_SPACING = 28;
@@ -615,7 +628,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
       const referencePoints = Math.max(Math.min(effectiveData.length, 10), 1);
       const baseSpacing = Math.max(
         MIN_SCROLLABLE_SPACING,
-        Math.min(MAX_SPACING, screenWidth / referencePoints)
+        Math.min(MAX_SPACING, effectiveScreenWidth / referencePoints)
       );
       const spacing = Math.max(
         MIN_SCROLLABLE_SPACING,
@@ -636,7 +649,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
 
     const referencePoints = Math.max(effectiveData.length - 1, 1);
     const FIT_MAX_SPACING = 44;
-    const baseSpacing = (screenWidth - 40) / referencePoints;
+    const baseSpacing = (effectiveScreenWidth - 40) / referencePoints;
     const effectiveMaxSpacing = FIT_MAX_SPACING * multiplier;
     const spacing = Math.max(
       MIN_FIT_SPACING,
@@ -658,20 +671,21 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
       initialSpacing,
       endSpacing,
     };
-  }, [showOnlyDay, screenWidth, effectiveData.length, spacingMultiplier]);
+  }, [showOnlyDay, effectiveScreenWidth, effectiveData.length, spacingMultiplier]);
   const chartWidth = showOnlyDay
     ? Math.max(
-        screenWidth,
+        effectiveScreenWidth,
         effectiveData.length * (chartConfig.spacing || 40) +
           (chartConfig.initialSpacing ?? 0) +
           (chartConfig.endSpacing ?? 0)
       )
-    : screenWidth;
+    : effectiveScreenWidth;
 
   const lineChartComponent = (
     <LineChart
       data={chartData}
       width={chartWidth}
+      parentWidth={chartWidth}
       height={height}
       color={currencyData.color}
       thickness={3}
@@ -731,7 +745,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
     <View style={styles.container}>
       <ThemedText style={styles.chartTitle}>{currencyData.label}</ThemedText>
       
-      <View style={styles.chartContainer}>
+      <View style={styles.chartContainer} onLayout={handleContainerLayout}>
         {showOnlyDay ? (
           <ScrollView horizontal showsHorizontalScrollIndicator persistentScrollbar={true}>
             {lineChartComponent}
