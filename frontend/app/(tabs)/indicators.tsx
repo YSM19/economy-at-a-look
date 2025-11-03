@@ -17,7 +17,6 @@ import InterestRateRecommendations from '../../components/InterestRateRecommenda
 import CPIRecommendations from '../../components/CPIRecommendations';
 import NotificationSettingsModal from '../../components/NotificationSettingsModal';
 import { economicIndexApi } from '../../services/api';
-import { LineChart } from 'react-native-gifted-charts';
 import { 
   initializeNotifications, 
   checkExchangeRateNotification, 
@@ -260,16 +259,6 @@ export default function IndicatorsScreen() {
     return buildAxis(values, Math.min(values.length, 6));
   }, [yearlyDailyData, activeCountry, buildAxis]);
 
-
-
-  const quarterlyChartData = useMemo(() => {
-    return quarterlySummary.map(item => ({
-      value: Number(item.average.toFixed(2)),
-      label: `${item.quarter}Q`,
-      dataPointText: formatCurrency(item.average, 2),
-    }));
-  }, [quarterlySummary]);
-
   const quarterlyAxis = useMemo(() => {
     if (!quarterlySummary.length) {
       return null;
@@ -286,18 +275,49 @@ export default function IndicatorsScreen() {
     return buildAxis(values, Math.min(values.length, 4));
   }, [quarterlySummary, buildAxis]);
 
+  const quarterlyChartData = useMemo<PeriodData[]>(() => {
+    if (!quarterlySummary.length) {
+      return [];
+    }
+
+    const countryKey = activeCountry as CountryKey;
+
+    return quarterlySummary.map(item => {
+      const quarterEndDate = new Date(selectedYear, item.quarter * 3, 0);
+      const isoDate = Number.isNaN(quarterEndDate.getTime())
+        ? `${selectedYear}-${String(item.quarter * 3).padStart(2, '0')}-01`
+        : quarterEndDate.toISOString().split('T')[0];
+
+      const average = Number(item.average.toFixed(2));
+      const point: PeriodData = { date: isoDate };
+
+      switch (countryKey) {
+        case 'japan':
+          point.jpyRate = average;
+          break;
+        case 'china':
+          point.cnyRate = average;
+          break;
+        case 'europe':
+          point.eurRate = average;
+          break;
+        case 'usa':
+        default:
+          point.usdRate = average;
+          break;
+      }
+
+      return point;
+    });
+  }, [quarterlySummary, selectedYear, activeCountry]);
+
+  const quarterlyLabels = useMemo(() => {
+    return quarterlySummary.map(item => `${item.quarter}분기`);
+  }, [quarterlySummary]);
+
   const currentYear = new Date().getFullYear();
   const MIN_YEAR = 1990;
   const yearlyDataCacheRef = useRef<Record<number, PeriodData[]>>({});
-
-  const countryColors = useMemo(() => ({
-    usa: '#3b82f6',
-    japan: '#f97316',
-    china: '#22c55e',
-    europe: '#e11d48',
-  }), []);
-
-  const activeLineColor = countryColors[activeCountry as keyof typeof countryColors] ?? '#3b82f6';
 
   // 알림 초기화 (Expo Go 환경에서는 제한적)
   useEffect(() => {
@@ -908,59 +928,17 @@ export default function IndicatorsScreen() {
 
                           {quarterlyChartData.length > 0 && quarterlyAxis && (
                             <View style={styles.quarterChartWrapper}>
-                              <LineChart
+                              <ExchangeRateChart
                                 data={quarterlyChartData}
+                                country={activeCountry}
                                 height={170}
-                                color={activeLineColor}
-                                dataPointsColor={activeLineColor}
-                                dataPointsRadius={5}
-                                thickness={3}
-                                initialSpacing={20}
-                                spacing={60}
-                                focusEnabled={false}
-                                hideRules
-                                yAxisThickness={0}
-                                xAxisThickness={0}
-                                xAxisLabelTextStyle={styles.quarterAxisLabel}
-                                xAxisLabelShift={10}
-                                yAxisMinValue={quarterlyAxis.min}
-                                yAxisMaxValue={quarterlyAxis.max}
-                                stepValue={quarterlyAxis.step}
-                                noOfSections={quarterlyAxis.sections}
-                                yAxisLabelTexts={quarterlyAxis.labels}
-                                yAxisLabelSuffix="원"
-                                yAxisLabelTextStyle={styles.quarterYAxisLabel}
-                                adjustToWidth
-                                isAnimated
-                                animationDuration={600}
+                                customYAxis={quarterlyAxis}
+                                spacingMultiplier={1.8}
+                                customLabels={quarterlyLabels}
                               />
                             </View>
                           )}
 
-                          {quarterlySummary.map(item => {
-                            const changeStyle =
-                              item.change === null
-                                ? styles.quarterChangeNeutral
-                                : item.change > 0
-                                ? styles.quarterChangePositive
-                                : item.change < 0
-                                ? styles.quarterChangeNegative
-                                : styles.quarterChangeNeutral;
-
-                            return (
-                              <View key={`quarter-${item.quarter}`} style={styles.quarterRow}>
-                                <ThemedText style={styles.quarterLabel}>{item.quarter}분기</ThemedText>
-                                <View style={styles.quarterValues}>
-                                  <ThemedText style={styles.quarterValue}>
-                                    {formatCurrency(item.average)}
-                                  </ThemedText>
-                                  <ThemedText style={[styles.quarterChange, changeStyle]}>
-                                    {formatQuarterChange(item.change)}
-                                  </ThemedText>
-                                </View>
-                              </View>
-                            );
-                          })}
                         </View>
                       )}
                     </View>
@@ -1574,16 +1552,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     paddingVertical: 12,
-  },
-  quarterAxisLabel: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  quarterYAxisLabel: {
-    color: '#64748B',
-    fontSize: 11,
-    fontWeight: '600',
   },
   quarterTitle: {
     fontSize: 15,

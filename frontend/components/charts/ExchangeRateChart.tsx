@@ -350,6 +350,7 @@ interface ExchangeRateChartProps {
   country?: string;
   height?: number;
   showOnlyDay?: boolean;
+  customLabels?: string[];
   customYAxis?: {
     min: number;
     max: number;
@@ -357,6 +358,7 @@ interface ExchangeRateChartProps {
     sections?: number;
     labels?: string[];
   };
+  spacingMultiplier?: number;
 }
 
 export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({ 
@@ -364,7 +366,9 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
   country = 'usa',
   height = 220,
   showOnlyDay,
+  customLabels,
   customYAxis,
+  spacingMultiplier,
 }) => {
   const screenWidth = Dimensions.get('window').width - 32;
   const [focusedIndex, setFocusedIndex] = useState<number | null>(null);
@@ -568,7 +572,9 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
 
         let label = '';
 
-        if (showOnlyDay) {
+        if (customLabels && customLabels[index]) {
+          label = customLabels[index];
+        } else if (showOnlyDay) {
           if (isFirstPoint) {
             label = `${FIRST_LABEL_PADDING}${month}.${day}`;
           } else {
@@ -593,21 +599,33 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
           dataPointText: absoluteValue.toLocaleString('ko-KR'),
         };
       }),
-    [effectiveData, chartValues, showOnlyDay, valueOffset]
+    [effectiveData, chartValues, showOnlyDay, valueOffset, customLabels]
   );
 
   const chartConfig = useMemo(() => {
     const MAX_SPACING = 64;
     const MIN_SCROLLABLE_SPACING = 28;
     const MIN_FIT_SPACING = 12;
+    const multiplier =
+      typeof spacingMultiplier === 'number' && spacingMultiplier > 0
+        ? spacingMultiplier
+        : 1;
 
     if (showOnlyDay) {
       const referencePoints = Math.max(Math.min(effectiveData.length, 10), 1);
-      const spacing = Math.max(
+      const baseSpacing = Math.max(
         MIN_SCROLLABLE_SPACING,
         Math.min(MAX_SPACING, screenWidth / referencePoints)
       );
-      const padding = Math.max(16, Math.min(Math.round(spacing / 2), 24));
+      const spacing = Math.max(
+        MIN_SCROLLABLE_SPACING,
+        Math.min(MAX_SPACING * multiplier, baseSpacing * multiplier)
+      );
+      const paddingCap = Math.max(24, Math.round(24 * multiplier));
+      const padding = Math.max(
+        16,
+        Math.min(Math.round(spacing / 2), paddingCap)
+      );
 
       return {
         spacing,
@@ -619,19 +637,28 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
     const referencePoints = Math.max(effectiveData.length - 1, 1);
     const FIT_MAX_SPACING = 44;
     const baseSpacing = (screenWidth - 40) / referencePoints;
+    const effectiveMaxSpacing = FIT_MAX_SPACING * multiplier;
     const spacing = Math.max(
       MIN_FIT_SPACING,
-      Math.min(FIT_MAX_SPACING, baseSpacing)
+      Math.min(effectiveMaxSpacing, baseSpacing * multiplier)
     );
-    const initialSpacing = Math.max(22, Math.min(Math.round(spacing), 30));
-    const endSpacing = Math.max(24, Math.min(Math.round(spacing * 1.08), 34));
+    const initialSpacingCap = Math.max(30, Math.round(30 * multiplier));
+    const initialSpacing = Math.max(
+      22,
+      Math.min(Math.round(spacing), initialSpacingCap)
+    );
+    const endSpacingCap = Math.max(34, Math.round(34 * multiplier));
+    const endSpacing = Math.max(
+      24,
+      Math.min(Math.round(spacing * 1.08), endSpacingCap)
+    );
 
     return {
       spacing,
       initialSpacing,
       endSpacing,
     };
-  }, [showOnlyDay, screenWidth, effectiveData.length]);
+  }, [showOnlyDay, screenWidth, effectiveData.length, spacingMultiplier]);
   const chartWidth = showOnlyDay
     ? Math.max(
         screenWidth,
