@@ -107,13 +107,13 @@ export const InterestRateChart: React.FC<InterestRateChartProps> = ({ data }) =>
 
   const chartData = getChartData();
 
-  const initialSpacing = 16;
-  const endSpacing = 4;
+  const initialSpacing = 26;
+  const endSpacing = 44;
   const pointCount = chartData.data.length;
   const spacing = pointCount > 1
     ? Math.max(
         6,
-        (chartWidth - initialSpacing - endSpacing - 40) / (pointCount - 1)
+        (chartWidth - initialSpacing - endSpacing - 6) / (pointCount - 1)
       )
     : 0;
 
