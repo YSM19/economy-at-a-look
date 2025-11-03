@@ -49,10 +49,10 @@ interface CPIData {
 
 interface PeriodData {
   date: string;
-  usdRate: number;
-  eurRate: number;
-  jpyRate: number;
-  cnyRate?: number;
+  usdRate?: number | null;
+  eurRate?: number | null;
+  jpyRate?: number | null;
+  cnyRate?: number | null;
 }
 
 interface InterestRatePeriodData {
@@ -188,11 +188,16 @@ export default function IndicatorsScreen() {
         return;
       }
 
+      const numericRate = Number(rate);
+      if (!Number.isFinite(numericRate) || numericRate <= 0) {
+        return;
+      }
+
       const quarter = Math.floor(parsedDate.getMonth() / 3) + 1;
       if (!buckets[quarter]) {
         buckets[quarter] = { sum: 0, count: 0 };
       }
-      buckets[quarter].sum += rate;
+      buckets[quarter].sum += numericRate;
       buckets[quarter].count += 1;
     });
 
@@ -224,52 +229,27 @@ export default function IndicatorsScreen() {
     return summaries;
   }, [yearlyData, activeCountry]);
 
-  const yearlyMonthlyAverageData = useMemo(() => {
+  const yearlyDailyData = useMemo(() => {
     if (!yearlyData.length) {
       return [];
     }
 
-    const buckets = new Map<number, { sums: Record<CountryKey, number>; counts: Record<CountryKey, number> }>();
-
-    yearlyData.forEach(item => {
-      const parsedDate = new Date(item.date);
-      if (Number.isNaN(parsedDate.getTime())) {
-        return;
+    const filtered = yearlyData.filter(item => {
+      if (!item?.date) {
+        return false;
       }
-      const month = parsedDate.getMonth();
-      const bucket = buckets.get(month) ?? (() => {
-        const sums: Record<CountryKey, number> = { usa: 0, japan: 0, china: 0, europe: 0 };
-        const counts: Record<CountryKey, number> = { usa: 0, japan: 0, china: 0, europe: 0 };
-        const fresh = { sums, counts };
-        buckets.set(month, fresh);
-        return fresh;
-      })();
-
-      COUNTRY_KEYS.forEach(countryKey => {
-        const rate = getRateForCountryKey(item, countryKey);
-        if (rate !== null) {
-          bucket.sums[countryKey] += rate;
-          bucket.counts[countryKey] += 1;
-        }
-      });
+      const time = new Date(item.date).getTime();
+      return Number.isFinite(time);
     });
 
-    return Array.from(buckets.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([month, bucket]) => {
-        const date = `${selectedYear}-${String(month + 1).padStart(2, '0')}-01`;
-        const result: PeriodData = {
-          date,
-          usdRate: bucket.counts.usa ? Number((bucket.sums.usa / bucket.counts.usa).toFixed(2)) : 0,
-          eurRate: bucket.counts.europe ? Number((bucket.sums.europe / bucket.counts.europe).toFixed(2)) : 0,
-          jpyRate: bucket.counts.japan ? Number((bucket.sums.japan / bucket.counts.japan).toFixed(2)) : 0,
-          cnyRate: bucket.counts.china ? Number((bucket.sums.china / bucket.counts.china).toFixed(2)) : 0,
-        };
-        return result;
-      });
-  }, [yearlyData, selectedYear]);
+    filtered.sort(
+      (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+    );
+
+    return filtered;
+  }, [yearlyData]);
   const yearlyAxis = useMemo(() => {
-    const values = yearlyMonthlyAverageData
+    const values = yearlyDailyData
       .map(item => getRateForCountryKey(item, activeCountry as CountryKey))
       .filter((value): value is number => value !== null && value !== undefined && !Number.isNaN(value) && value > 0);
 
@@ -278,7 +258,7 @@ export default function IndicatorsScreen() {
     }
 
     return buildAxis(values, Math.min(values.length, 6));
-  }, [yearlyMonthlyAverageData, activeCountry, buildAxis]);
+  }, [yearlyDailyData, activeCountry, buildAxis]);
 
 
 
@@ -417,10 +397,10 @@ export default function IndicatorsScreen() {
 
         return {
           date,
-          usdRate: usdRate ?? 0,
-          eurRate: eurRate ?? 0,
-          jpyRate: jpyRate ?? 0,
-          cnyRate: cnyRate ?? 0,
+          usdRate: usdRate ?? null,
+          eurRate: eurRate ?? null,
+          jpyRate: jpyRate ?? null,
+          cnyRate: cnyRate ?? null,
         };
       })
       .filter((item): item is PeriodData => item !== null);
@@ -905,9 +885,9 @@ export default function IndicatorsScreen() {
                             연도별 데이터를 불러오는 중...
                           </ThemedText>
                         </View>
-                      ) : yearlyMonthlyAverageData.length > 0 ? (
+                      ) : yearlyDailyData.length > 0 ? (
                         <ExchangeRateChart
-                          data={yearlyMonthlyAverageData}
+                          data={yearlyDailyData}
                           country={activeCountry}
                           height={220}
                           showOnlyDay={true}

@@ -555,7 +555,6 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
   const numberOfSections = activeAxis.sections;
   const yAxisStep = activeAxis.step;
   const yAxisMax = activeAxis.max;
-  const yAxisLabels = activeAxis.labels;
   const valueOffset = yAxisOffset;
   const valueRange = Math.max(yAxisMax - valueOffset, 1);
 
@@ -618,15 +617,19 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
     }
 
     const referencePoints = Math.max(effectiveData.length - 1, 1);
+    const FIT_MAX_SPACING = 44;
+    const baseSpacing = (screenWidth - 40) / referencePoints;
     const spacing = Math.max(
       MIN_FIT_SPACING,
-      Math.min(MAX_SPACING, (screenWidth - 32) / referencePoints)
+      Math.min(FIT_MAX_SPACING, baseSpacing)
     );
+    const initialSpacing = Math.max(22, Math.min(Math.round(spacing), 30));
+    const endSpacing = Math.max(24, Math.min(Math.round(spacing * 1.08), 34));
 
     return {
       spacing,
-      initialSpacing: 16,
-      endSpacing: 16,
+      initialSpacing,
+      endSpacing,
     };
   }, [showOnlyDay, screenWidth, effectiveData.length]);
   const chartWidth = showOnlyDay
@@ -636,7 +639,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
           (chartConfig.initialSpacing ?? 0) +
           (chartConfig.endSpacing ?? 0)
       )
-    : screenWidth + (chartConfig.initialSpacing ?? 0) + (chartConfig.endSpacing ?? 0);
+    : screenWidth;
 
   const lineChartComponent = (
     <LineChart
@@ -677,13 +680,14 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
       maxValue={valueRange}
       stepValue={yAxisStep}
       noOfSections={numberOfSections}
-      yAxisLabelTexts={yAxisLabels}
-      formatYLabel={(value: string) =>
-        parseFloat(value).toLocaleString('ko-KR', {
+      formatYLabel={(value: string) => {
+        const base = Number.parseFloat(value);
+        const resolved = Number.isFinite(base) ? base + valueOffset : valueOffset;
+        return resolved.toLocaleString('ko-KR', {
           minimumFractionDigits: customYAxis ? 2 : 0,
           maximumFractionDigits: customYAxis ? 2 : 0,
-        })
-      }
+        });
+      }}
       yAxisTextStyle={styles.defaultYAxisLabel}
       xAxisLabelTextStyle={{
         color: '#1f2937',
@@ -691,7 +695,7 @@ export const ExchangeRateChart: React.FC<ExchangeRateChartProps> = ({
         fontWeight: '600',
         textAlign: 'center',
       }}
-      xAxisLabelShift={showOnlyDay ? 14 : 10}
+      xAxisLabelShift={showOnlyDay ? 14 : 0}
       xAxisLabelOffset={12}
     />
   );
