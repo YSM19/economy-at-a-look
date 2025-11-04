@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, StyleSheet, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
+import { View, StyleSheet, TouchableOpacity, Modal } from 'react-native';
 import { ThemedText } from './ThemedText';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { economicIndexApi } from '../services/api';
@@ -9,12 +9,184 @@ interface RecommendationItem {
   status: 'recommended' | 'not-recommended' | 'neutral';
   description: string;
   icon: string;
+  trendNote?: string;
 }
+
+type RateLevel = 'low' | 'normal' | 'high';
+type RateTrend = 'rising' | 'falling' | 'stable';
+
+interface RateContext {
+  level: RateLevel;
+  trend: RateTrend;
+}
+
+type RecommendationTemplate = Omit<RecommendationItem, 'trendNote'>;
+
+const BASE_RECOMMENDATIONS: Record<RateLevel, RecommendationTemplate[]> = {
+  low: [
+    { category: '대출', status: 'recommended', description: '고정금리 대출 추천', icon: 'bank' },
+    { category: '투자', status: 'recommended', description: '주식/부동산 투자 추천', icon: 'chart-line' },
+    { category: '예적금', status: 'not-recommended', description: '예적금 비추천', icon: 'piggy-bank' },
+    { category: '원화 채권', status: 'not-recommended', description: '원화 채권 비추천', icon: 'file-chart' },
+    { category: '외화 예금', status: 'recommended', description: '외화 예금 추천', icon: 'currency-usd' },
+    { category: '리츠(REITs)', status: 'recommended', description: '부동산 리츠 추천', icon: 'home-city' },
+    { category: '배당주', status: 'recommended', description: '배당주 투자 추천', icon: 'trending-up' }
+  ],
+  normal: [
+    { category: '대출', status: 'neutral', description: '대출 신중 검토', icon: 'bank' },
+    { category: '투자', status: 'neutral', description: '분산 투자 고려', icon: 'chart-line' },
+    { category: '예적금', status: 'neutral', description: '예적금 부분 고려', icon: 'piggy-bank' },
+    { category: '원화 채권', status: 'neutral', description: '원화 채권 관망', icon: 'file-chart' },
+    { category: '외화 예금', status: 'neutral', description: '외화 예금 신중 검토', icon: 'currency-usd' },
+    { category: '리츠(REITs)', status: 'neutral', description: '부동산 리츠 관망', icon: 'home-city' },
+    { category: '배당주', status: 'neutral', description: '배당 수익률 검토', icon: 'trending-up' }
+  ],
+  high: [
+    { category: '대출', status: 'not-recommended', description: '대출 비추천', icon: 'bank' },
+    { category: '투자', status: 'not-recommended', description: '투자 비중 축소', icon: 'chart-line' },
+    { category: '예적금', status: 'recommended', description: '예적금 추천', icon: 'piggy-bank' },
+    { category: '원화 채권', status: 'recommended', description: '원화 채권 추천', icon: 'file-chart' },
+    { category: '외화 예금', status: 'not-recommended', description: '외화 예금 비추천', icon: 'currency-usd' },
+    { category: '리츠(REITs)', status: 'not-recommended', description: '부동산 리츠 비추천', icon: 'home-city' },
+    { category: '현금 보유', status: 'recommended', description: '현금 비중 확대', icon: 'cash-multiple' },
+    { category: '배당주', status: 'not-recommended', description: '배당주 투자 비추천', icon: 'trending-up' }
+  ]
+};
+
+type RecommendationOverrides = {
+  [trend in RateTrend]?: {
+    [level in RateLevel]?: {
+      [category: string]: Partial<RecommendationItem>;
+    };
+  };
+};
+
+const TREND_ADJUSTMENTS: RecommendationOverrides = {
+  rising: {
+    low: {
+      '대출': {
+        description: '저금리지만 금리가 오르는 추세이므로 향후 상환 부담을 고려하세요.',
+        trendNote: '금리 상승세에는 변동금리보다 고정금리 위주로 대응하는 편이 안전합니다.'
+      },
+      '투자': {
+        description: '저금리 환경이 유지되더라도 금리 상승 신호가 있어 리스크 관리가 필요합니다.',
+        trendNote: '금리가 오르면 성장주 변동성이 커질 수 있으니 손절 라인을 점검하세요.'
+      }
+    },
+    normal: {
+      '대출': {
+        status: 'not-recommended',
+        description: '금리가 상승 중이라 변동금리 대출이 빠르게 비싸질 수 있습니다.',
+        trendNote: '대출을 유지해야 한다면 고정금리 전환이나 조기 상환을 검토하세요.'
+      },
+      '투자': {
+        status: 'not-recommended',
+        description: '금리 상승기에 주식·부동산은 압력을 받을 수 있으니 방어적 포트폴리오가 유리합니다.',
+        trendNote: '성장주 대신 배당·가치주 중심으로 전환하면 충격을 완화할 수 있습니다.'
+      },
+      '예적금': {
+        status: 'recommended',
+        description: '금리 상승분을 반영한 예·적금 상품으로 안전한 수익을 확보할 수 있습니다.',
+        trendNote: '추가 인상 가능성을 고려해 단기·중기 상품을 혼합하는 전략이 유리합니다.'
+      },
+      '원화 채권': {
+        status: 'recommended',
+        description: '채권 금리가 올라가는 국면이므로 만기를 분산해 점진적으로 편입하세요.',
+        trendNote: '만기가 짧은 채권부터 교체하면 금리 상승 위험을 줄일 수 있습니다.'
+      },
+      '외화 예금': {
+        status: 'not-recommended',
+        description: '원화 금리 상승은 환차손을 유발할 수 있어 외화 예금 비중을 줄이는 편이 안전합니다.',
+        trendNote: '환율 변동성이 커질 수 있으니 외화 자산 비중을 점검하세요.'
+      },
+      '리츠(REITs)': {
+        status: 'not-recommended',
+        description: '금리 상승은 리츠 배당 매력을 약화시키므로 신규 진입을 미루는 편이 좋습니다.',
+        trendNote: '배당 수익률이 금리보다 충분히 높은지 확인한 뒤 투자하세요.'
+      },
+      '배당주': {
+        status: 'not-recommended',
+        description: '채권·예금 수익률이 올라 배당주의 상대 매력이 감소하니 비중을 줄이세요.',
+        trendNote: '배당 성장률이 높은 기업만 선별적으로 유지하는 것이 좋습니다.'
+      }
+    }
+  },
+  falling: {
+    high: {
+      '대출': {
+        status: 'neutral',
+        description: '금리는 높지만 하락 추세라 대출 상환 부담이 점차 완화될 가능성이 있습니다.',
+        trendNote: '대출 금리 인하가 반영되는지 주기적으로 확인해 갈아타기를 준비하세요.'
+      },
+      '투자': {
+        status: 'neutral',
+        description: '고금리 구간이지만 인하 흐름이 나타나 위험자산으로 천천히 재진입을 검토할 만합니다.',
+        trendNote: '금리 인하 전환 국면에서는 성장주·리츠 비중을 조금씩 늘릴 타이밍입니다.'
+      },
+      '외화 예금': {
+        status: 'neutral',
+        description: '고금리 속에서도 환율 변동을 활용할 수 있으나 금리 하락 시점에 주의하세요.',
+        trendNote: '환차익보다 금리 하락 폭이 커지면 수익이 축소될 수 있습니다.'
+      },
+      '리츠(REITs)': {
+        status: 'neutral',
+        description: '금리 인하 기대가 커져 자산가치 회복 여지가 있으니 분할 매수를 고려할 수 있습니다.',
+        trendNote: '분할 매수로 평균 매입가를 낮추되 공실률 등 펀더멘털을 꼭 확인하세요.'
+      },
+      '배당주': {
+        status: 'neutral',
+        description: '금리 하락은 배당 매력을 다시 높일 수 있어 우량 종목 중심의 관망이 필요합니다.',
+        trendNote: '금리 하락기에는 배당 성장주에 대한 프리미엄이 다시 붙을 수 있습니다.'
+      }
+    }
+  }
+};
+
+const TREND_DEFAULT_NOTES: Record<RateTrend, string> = {
+  rising: '금리 상승 추세에 맞춰 현금흐름과 금리 민감 자산을 다시 점검해보세요.',
+  falling: '금리 하락 흐름을 기회로 활용할 자산 재배치를 고민해보세요.',
+  stable: ''
+};
+
+const parseRate = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null;
+  if (typeof value === 'number') return Number.isNaN(value) ? null : value;
+  if (typeof value === 'string') {
+    const parsed = parseFloat(value);
+    return Number.isNaN(parsed) ? null : parsed;
+  }
+  return null;
+};
+
+const determineRateContext = (rate: number, previousRate: number | null): RateContext => {
+  let level: RateLevel = 'high';
+  if (rate < 2.0) {
+    level = 'low';
+  } else if (rate <= 3.25) {
+    level = 'normal';
+  }
+
+  let trend: RateTrend = 'stable';
+  if (previousRate !== null) {
+    const delta = rate - previousRate;
+    const threshold = 0.25;
+    if (delta >= threshold) {
+      trend = 'rising';
+    } else if (delta <= -threshold) {
+      trend = 'falling';
+    }
+  }
+
+  return { level, trend };
+};
 
 const InterestRateRecommendations: React.FC = () => {
   const [currentRate, setCurrentRate] = useState<number | null>(null);
+  const [previousRate, setPreviousRate] = useState<number | null>(null);
+  const [rateContext, setRateContext] = useState<RateContext | null>(null);
   const [recommendations, setRecommendations] = useState<RecommendationItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<RecommendationItem | null>(null);
 
@@ -24,28 +196,41 @@ const InterestRateRecommendations: React.FC = () => {
 
   const fetchInterestRateAndGenerateRecommendations = async () => {
     setLoading(true);
+    setError(null);
     
     try {
       const response = await economicIndexApi.getInterestRate();
       
-      if (response.data && response.data.success && response.data.data) {
-        const interestData = response.data.data;
-        console.log('🔍 [InterestRateRecommendations] 받은 금리 데이터:', interestData);
-        
-        const rate = interestData.korea?.rate || interestData.currentRate || getDefaultRate();
-        
-        console.log('📊 [InterestRateRecommendations] 파싱된 금리:', rate);
-        console.log('🎯 [InterestRateRecommendations] 생성될 추천:', generateRecommendations(rate));
-        
-        setCurrentRate(rate);
-        setRecommendations(generateRecommendations(rate));
+      if (response.data) {
+        const payload = response.data.data ?? response.data;
+        const koreaData = payload?.korea ?? {};
+
+        const parsedRate =
+          parseRate(koreaData.rate) ??
+          parseRate(payload?.currentRate) ??
+          getDefaultRate();
+
+        const parsedPrevious =
+          parseRate(koreaData.previousRate) ??
+          parseRate(payload?.previousRate) ??
+          null;
+
+        const context = determineRateContext(parsedRate, parsedPrevious);
+
+        setCurrentRate(parsedRate);
+        setPreviousRate(parsedPrevious);
+        setRateContext(context);
+        setRecommendations(generateRecommendations(parsedRate, context));
       }
     } catch (error) {
       console.error('금리 데이터 가져오기 실패:', error);
-      // 오류 시 기본값 사용
+      setError('금리 정보를 불러오지 못했습니다. 기본 시나리오를 기준으로 안내합니다.');
       const defaultRate = getDefaultRate();
+      const fallbackContext = determineRateContext(defaultRate, null);
       setCurrentRate(defaultRate);
-      setRecommendations(generateRecommendations(defaultRate));
+      setPreviousRate(null);
+      setRateContext(fallbackContext);
+      setRecommendations(generateRecommendations(defaultRate, fallbackContext));
     } finally {
       setLoading(false);
     }
@@ -55,38 +240,28 @@ const InterestRateRecommendations: React.FC = () => {
     return 3.25; // 현재 한국은행 기준금리 기본값
   };
 
-  const generateRecommendations = (rate: number): RecommendationItem[] => {
-    if (rate < 2.0) { // 저금리
-      return [
-        { category: '대출', status: 'recommended', description: '고정금리 대출 추천', icon: 'bank' },
-        { category: '투자', status: 'recommended', description: '주식/부동산 투자 추천', icon: 'chart-line' },
-        { category: '예적금', status: 'not-recommended', description: '예적금 비추천', icon: 'piggy-bank' },
-        { category: '원화 채권', status: 'not-recommended', description: '원화 채권 비추천', icon: 'file-chart' },
-        { category: '외화 예금', status: 'recommended', description: '외화 예금 추천', icon: 'currency-usd' },
-        { category: '리츠(REITs)', status: 'recommended', description: '부동산 리츠 추천', icon: 'home-city' },
-        { category: '배당주', status: 'recommended', description: '배당주 투자 추천', icon: 'trending-up' }
-      ];
-    } else if (rate <= 3.0) { // 보통
-      return [
-        { category: '대출', status: 'neutral', description: '대출 신중 검토', icon: 'bank' },
-        { category: '투자', status: 'neutral', description: '분산 투자 고려', icon: 'chart-line' },
-        { category: '예적금', status: 'neutral', description: '예적금 부분 고려', icon: 'piggy-bank' },
-        { category: '원화 채권', status: 'neutral', description: '원화 채권 관망', icon: 'file-chart' },
-        { category: '외화 예금', status: 'neutral', description: '외화 예금 신중 검토', icon: 'currency-usd' },
-        { category: '리츠(REITs)', status: 'neutral', description: '부동산 리츠 관망', icon: 'home-city' },
-        { category: '배당주', status: 'neutral', description: '배당 수익률 검토', icon: 'trending-up' }
-      ];
-    } else { // 고금리 (3.0% 초과)
-      return [
-        { category: '대출', status: 'not-recommended', description: '대출 비추천', icon: 'bank' },
-        { category: '투자', status: 'not-recommended', description: '투자 비중 축소', icon: 'chart-line' },
-        { category: '예적금', status: 'recommended', description: '예적금 추천', icon: 'piggy-bank' },
-        { category: '원화 채권', status: 'recommended', description: '원화 채권 추천', icon: 'file-chart' },
-        { category: '외화 예금', status: 'not-recommended', description: '외화 예금 비추천', icon: 'currency-usd' },
-        { category: '리츠(REITs)', status: 'not-recommended', description: '부동산 리츠 비추천', icon: 'home-city' },
-        { category: '현금 보유', status: 'recommended', description: '현금 비중 확대', icon: 'cash-multiple' }
-      ];
-    }
+  const generateRecommendations = (rate: number, context: RateContext): RecommendationItem[] => {
+    const baseItems = BASE_RECOMMENDATIONS[context.level] ?? [];
+    const adjustmentsForTrend = TREND_ADJUSTMENTS[context.trend]?.[context.level] ?? {};
+
+    return baseItems.map((template) => {
+      const override = adjustmentsForTrend[template.category] ?? {};
+      const hasOverride = Object.keys(override).length > 0;
+      const status = override.status ?? template.status;
+      const description = override.description ?? template.description;
+      const trendNote =
+        override.trendNote ??
+        (hasOverride && context.trend !== 'stable'
+          ? TREND_DEFAULT_NOTES[context.trend]
+          : undefined);
+
+      return {
+        ...template,
+        status,
+        description,
+        trendNote,
+      };
+    });
   };
 
   const getStatusColor = (status: string) => {
@@ -116,28 +291,33 @@ const InterestRateRecommendations: React.FC = () => {
     }
   };
 
-  const getDetailedExplanation = (item: RecommendationItem, rate: number): string => {
+  const getDetailedExplanation = (
+    item: RecommendationItem,
+    rate: number,
+    context: RateContext | null
+  ): string => {
     const category = item.category;
     const status = item.status;
-    
-    // 금리 상황 판단
-    let rateLevel = '';
-    if (rate < 2.0) rateLevel = 'low';
-    else if (rate <= 3.0) rateLevel = 'normal';
-    else rateLevel = 'high';
+
+    const derivedContext = context ?? determineRateContext(rate, null);
+    const rateLevel = derivedContext.level;
+    const trendNarrative =
+      derivedContext.trend !== 'stable' ? TREND_DEFAULT_NOTES[derivedContext.trend] : '';
 
     const explanations: { [key: string]: { [key: string]: { [key: string]: string } } } = {
       '대출': {
         low: {
           'recommended': '저금리 시기에는 대출 비용이 낮아 부동산이나 사업 투자를 위한 대출이 유리합니다. 특히 고정금리 대출을 통해 장기간 낮은 이자를 확보할 수 있습니다.'
-        },
-        normal: {
-          'neutral': '보통 금리에서는 대출 목적과 개인의 상환 능력을 신중히 검토해야 합니다. 투자 수익률과 대출 이자율을 비교하여 결정하세요.'
-        },
-        high: {
-          'not-recommended': '고금리 시기에는 대출 비용이 높아져 상환 부담이 큽니다. 긴급한 경우가 아니라면 대출을 연기하거나 기존 대출의 조기 상환을 고려하세요.'
-        }
       },
+      normal: {
+        'neutral': '보통 금리에서는 대출 목적과 개인의 상환 능력을 신중히 검토해야 합니다. 투자 수익률과 대출 이자율을 비교하여 결정하세요.',
+        'not-recommended': '보통 금리라도 상승 압력이 강하면 대출 이자 부담이 빠르게 늘어날 수 있습니다. 상환 계획을 재점검하고 대출 규모를 보수적으로 유지하세요.'
+      },
+      high: {
+        'not-recommended': '고금리 시기에는 대출 비용이 높아져 상환 부담이 큽니다. 긴급한 경우가 아니라면 대출을 연기하거나 기존 대출의 조기 상환을 고려하세요.',
+        'neutral': '금리가 여전히 높지만 인하 국면에서는 상환 부담이 점차 줄어들 수 있습니다. 필요 자금만 유지하며 금리 인하 속도를 관찰하세요.'
+      }
+    },
       '투자': {
         low: {
           'recommended': '저금리 환경에서는 예금 금리가 낮아 상대적으로 주식이나 부동산 등 위험 자산의 매력이 높아집니다. 장기 투자 관점에서 접근하세요.'
@@ -211,7 +391,11 @@ const InterestRateRecommendations: React.FC = () => {
       }
     };
 
-    return explanations[category]?.[rateLevel]?.[status] || '해당 항목에 대한 상세 설명을 준비 중입니다.';
+    const baseExplanation =
+      explanations[category]?.[rateLevel]?.[status] ||
+      '해당 항목에 대한 상세 설명을 준비 중입니다.';
+
+    return trendNarrative ? `${baseExplanation} ${trendNarrative}`.trim() : baseExplanation;
   };
 
   const handleItemPress = (item: RecommendationItem) => {
@@ -231,41 +415,49 @@ const InterestRateRecommendations: React.FC = () => {
   return (
     <View style={styles.outerContainer}>
       <ThemedText style={styles.title}>금리 기반 추천</ThemedText>
+
+      {error ? (
+        <ThemedText style={styles.errorMessage}>{error}</ThemedText>
+      ) : null}
+
       <View style={styles.recommendationsGrid}>
         {recommendations.map((item, index) => (
-          <TouchableOpacity 
-            key={index} 
+          <TouchableOpacity
+            key={index}
             style={styles.recommendationCard}
             onPress={() => handleItemPress(item)}
             activeOpacity={0.7}
           >
             <View style={styles.cardContent}>
               <View style={styles.leftSection}>
-                <MaterialCommunityIcons 
-                  name={item.icon as any} 
-                  size={24} 
-                  color={getStatusColor(item.status)} 
+                <MaterialCommunityIcons
+                  name={item.icon as any}
+                  size={24}
+                  color={getStatusColor(item.status)}
                 />
                 <View style={styles.textSection}>
                   <ThemedText style={styles.categoryText}>{item.category}</ThemedText>
                   <ThemedText style={styles.descriptionText}>{item.description}</ThemedText>
+                  {item.trendNote ? (
+                    <ThemedText style={styles.trendNoteText}>{item.trendNote}</ThemedText>
+                  ) : null}
                 </View>
               </View>
               <View style={styles.rightSection}>
                 <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-                  <MaterialCommunityIcons 
-                    name={getStatusIcon(item.status) as any} 
-                    size={14} 
-                    color="#fff" 
+                  <MaterialCommunityIcons
+                    name={getStatusIcon(item.status) as any}
+                    size={14}
+                    color="#fff"
                   />
                   <ThemedText style={styles.statusBadgeText}>
                     {getStatusText(item.status, item.category)}
                   </ThemedText>
                 </View>
-                <MaterialCommunityIcons 
-                  name="information-outline" 
-                  size={16} 
-                  color="#999" 
+                <MaterialCommunityIcons
+                  name="information-outline"
+                  size={16}
+                  color="#999"
                   style={styles.infoIcon}
                 />
               </View>
@@ -315,11 +507,25 @@ const InterestRateRecommendations: React.FC = () => {
               {selectedItem?.description}
             </ThemedText>
 
+            {selectedItem?.trendNote ? (
+              <View style={styles.modalTrendNote}>
+                <MaterialCommunityIcons
+                  name="lightbulb-on-outline"
+                  size={18}
+                  color="#558b2f"
+                  style={styles.modalTrendIcon}
+                />
+                <ThemedText style={styles.modalTrendNoteText}>
+                  {selectedItem.trendNote}
+                </ThemedText>
+              </View>
+            ) : null}
+
             <View style={styles.modalExplanationSection}>
               <ThemedText style={styles.modalExplanationTitle}>상세 분석</ThemedText>
               <ThemedText style={styles.modalExplanationText}>
                 {selectedItem && currentRate !== null 
-                  ? getDetailedExplanation(selectedItem, currentRate)
+                  ? getDetailedExplanation(selectedItem, currentRate, rateContext)
                   : '상세 설명을 불러오는 중입니다.'
                 }
               </ThemedText>
@@ -342,6 +548,12 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     marginLeft: 2,
     textAlign: 'left',
+  },
+  errorMessage: {
+    fontSize: 13,
+    color: '#d84315',
+    marginBottom: 10,
+    marginLeft: 2,
   },
 
   loadingText: {
@@ -398,6 +610,12 @@ const styles = StyleSheet.create({
   descriptionText: {
     fontSize: 13,
     color: '#6c757d',
+    lineHeight: 16,
+  },
+  trendNoteText: {
+    fontSize: 12,
+    color: '#00796b',
+    marginTop: 6,
     lineHeight: 16,
   },
   statusBadge: {
@@ -474,6 +692,24 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 20,
     lineHeight: 22,
+  },
+  modalTrendNote: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: '#f1f8e9',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 18,
+  },
+  modalTrendIcon: {
+    marginTop: 2,
+  },
+  modalTrendNoteText: {
+    flex: 1,
+    fontSize: 14,
+    color: '#4a6572',
+    lineHeight: 20,
   },
   modalExplanationSection: {
     backgroundColor: '#f8f9fa',

@@ -1014,21 +1014,11 @@ export default function IndicatorsScreen() {
                   <View style={styles.levelItem}>
                     <View style={[styles.levelIndicator, { backgroundColor: '#1565C0' }]} />
                     <View style={styles.levelContent}>
-                      <ThemedText style={styles.levelName}>매우 완화적 (≤ -1.5%p)</ThemedText>
+                      <ThemedText style={styles.levelName}>저금리 (기준금리 &lt; 2.0%)</ThemedText>
                       <ThemedText style={styles.levelDescription}>
-                        • 급격한 금리 인하로 경기 부양에 총력전.{'\n'}
-                        • 유동성 공급 확대와 대규모 재정 정책과 함께 등장하는 경우가 많습니다.
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.levelItem}>
-                    <View style={[styles.levelIndicator, { backgroundColor: '#2E7D32' }]} />
-                    <View style={styles.levelContent}>
-                      <ThemedText style={styles.levelName}>완화적 (-1.5%p ~ 0%p)</ThemedText>
-                      <ThemedText style={styles.levelDescription}>
-                        • 완만한 금리 인하로 경기 회복에 우선순위를 둡니다.{'\n'}
-                        • 통화 완화 효과를 유지하며 향후 추가 대응을 탐색하는 국면입니다.
+                        • 추천 자산: 대출, 주식·부동산 투자, 외화 예금, 리츠, 배당주.{'\n'}
+                        • 주의 자산: 예적금, 원화 채권 (수익 매력 제한).{'\n'}
+                        • 전략 포인트: 낮은 금리를 활용해 고정금리를 확보하고 위험자산 비중을 확대합니다.
                       </ThemedText>
                     </View>
                   </View>
@@ -1036,21 +1026,11 @@ export default function IndicatorsScreen() {
                   <View style={styles.levelItem}>
                     <View style={[styles.levelIndicator, { backgroundColor: '#F9A825' }]} />
                     <View style={styles.levelContent}>
-                      <ThemedText style={styles.levelName}>중립적 (0%p ~ +1%p)</ThemedText>
+                      <ThemedText style={styles.levelName}>보통 금리 (2.0% ~ 3.25%)</ThemedText>
                       <ThemedText style={styles.levelDescription}>
-                        • 기준금리를 동결하거나 소폭 조정하며 상황을 관망합니다.{'\n'}
-                        • 경기·물가 지표를 주시하며 향후 방향성을 결정하는 중립 구간입니다.
-                      </ThemedText>
-                    </View>
-                  </View>
-
-                  <View style={styles.levelItem}>
-                    <View style={[styles.levelIndicator, { backgroundColor: '#EF6C00' }]} />
-                    <View style={styles.levelContent}>
-                      <ThemedText style={styles.levelName}>긴축적 (+1%p ~ +3%p)</ThemedText>
-                      <ThemedText style={styles.levelDescription}>
-                        • 물가 압력을 낮추기 위해 금리를 적극 인상합니다.{'\n'}
-                        • 대출 이자 상승과 소비 둔화가 나타나기 시작하는 단계입니다.
+                        • 전반 자산군: 중립·관망 상태 유지.{'\n'}
+                        • 전략 포인트: 분산 투자를 유지하며 금리 추세를 모니터링합니다.{'\n'}
+                        • 참고: 예적금·채권은 부분 편입으로 유동성과 안전성 균형을 맞춥니다.
                       </ThemedText>
                     </View>
                   </View>
@@ -1058,10 +1038,11 @@ export default function IndicatorsScreen() {
                   <View style={styles.levelItem}>
                     <View style={[styles.levelIndicator, { backgroundColor: '#C62828' }]} />
                     <View style={styles.levelContent}>
-                      <ThemedText style={styles.levelName}>매우 긴축적 (> +3%p)</ThemedText>
+                      <ThemedText style={styles.levelName}>고금리 (기준금리 &gt; 3.25%)</ThemedText>
                       <ThemedText style={styles.levelDescription}>
-                        • 급격한 물가 안정 조치로 강도 높은 금리 인상을 단행합니다.{'\n'}
-                        • 경기 둔화 위험이 커지므로 정책 당국은 부작용을 면밀히 관리합니다.
+                        • 추천 자산: 예적금, 원화 채권, 현금성 자산.{'\n'}
+                        • 주의 자산: 대출, 주식·부동산, 외화 예금, 리츠, 배당주.{'\n'}
+                        • 전략 포인트: 고금리 부담을 줄이고 안전자산 비중을 높여 변동성에 대비합니다.
                       </ThemedText>
                     </View>
                   </View>
