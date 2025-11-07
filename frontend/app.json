@@ -74,6 +74,13 @@
             "usesCleartextTraffic": false
           }
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-6708022673023819~8190636778",
+          "iosAppId": "ca-app-pub-3940256099942544~1458002511"
+        }
       ]
     ],
     "experiments": {
@@ -82,6 +89,16 @@
     "extra": {
       "eas": {
         "projectId": "0b7d9d44-c4a0-48f6-a036-7931e46c5745"
+      },
+      "admob": {
+        "banner": {
+          "android": "ca-app-pub-3940256099942544/6300978111",
+          "ios": "ca-app-pub-3940256099942544/2934735716"
+        },
+        "native": {
+          "android": "ca-app-pub-3940256099942544/2247696110",
+          "ios": "ca-app-pub-3940256099942544/3986624511"
+        }
       }
     }
   }

@@ -15,6 +15,8 @@ import { CPIChart } from '../../components/charts/CPIChart';
 import ExchangeRateRecommendations from '../../components/ExchangeRateRecommendations';
 import InterestRateRecommendations from '../../components/InterestRateRecommendations';
 import CPIRecommendations from '../../components/CPIRecommendations';
+import { BannerAdSlot } from '../../components/ads/BannerAdSlot';
+import { NativeAdCard } from '../../components/ads/NativeAdCard';
 import NotificationSettingsModal from '../../components/NotificationSettingsModal';
 import { economicIndexApi } from '../../services/api';
 import { 
@@ -822,6 +824,11 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
                 
+                <BannerAdSlot 
+                  placement="exchangeRecommendations" 
+                  containerStyle={styles.adSlot}
+                />
+
                 <ExchangeRateRecommendations country={activeCountry} />
 
                 {/* 30일 환율 변동 추이 */}
@@ -1006,6 +1013,11 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
 
+                <BannerAdSlot 
+                  placement="interestRecommendations" 
+                  containerStyle={styles.adSlot}
+                />
+
                 <InterestRateRecommendations />
 
                 <View style={styles.levelsContainer}>
@@ -1095,6 +1107,8 @@ export default function IndicatorsScreen() {
                     </View>
                   )}
                 </View>
+
+                <NativeAdCard />
 
                 <CPIRecommendations />
                 
@@ -1474,6 +1488,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 3.84,
     elevation: 5,
+  },
+  adSlot: {
+    marginTop: 8,
   },
   yearToggleCard: {
     paddingBottom: 12,
