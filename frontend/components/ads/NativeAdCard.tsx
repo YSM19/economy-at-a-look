@@ -2,13 +2,11 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Platform, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import Constants from 'expo-constants';
 import {
-  AdvertiserView,
-  CallToActionView,
-  HeadlineView,
   NativeAd,
-  MediaView,
   NativeAdView,
-  TaglineView,
+  NativeAsset,
+  NativeAssetType,
+  NativeMediaView,
   TestIds,
 } from 'react-native-google-mobile-ads';
 import { useMobileAds } from './useMobileAds';
@@ -191,18 +189,37 @@ export const NativeAdCard: React.FC = () => {
 
   return (
     <View style={styles.wrapper}>
-      <NativeAdView
-        nativeAd={nativeAd}
-        style={styles.container}
-      >
+      <NativeAdView nativeAd={nativeAd} style={styles.container}>
         <View style={styles.content}>
-          <MediaView style={styles.media} />
+          <NativeMediaView style={styles.media} />
           <View style={styles.textContainer}>
-            <HeadlineView style={styles.headline} />
-            {TaglineView ? <TaglineView numberOfLines={2} style={styles.tagline} /> : null}
-            {AdvertiserView ? <AdvertiserView style={styles.advertiser} /> : null}
-            {CallToActionView ? (
-              <CallToActionView style={styles.cta} textStyle={styles.ctaText} />
+            <NativeAsset assetType={NativeAssetType.HEADLINE}>
+              <Text style={styles.headline} numberOfLines={2}>
+                {nativeAd.headline}
+              </Text>
+            </NativeAsset>
+            {nativeAd.body ? (
+              <NativeAsset assetType={NativeAssetType.BODY}>
+                <Text style={styles.tagline} numberOfLines={2}>
+                  {nativeAd.body}
+                </Text>
+              </NativeAsset>
+            ) : null}
+            {nativeAd.advertiser ? (
+              <NativeAsset assetType={NativeAssetType.ADVERTISER}>
+                <Text style={styles.advertiser} numberOfLines={1}>
+                  {nativeAd.advertiser}
+                </Text>
+              </NativeAsset>
+            ) : null}
+            {nativeAd.callToAction ? (
+              <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
+                <TouchableOpacity style={styles.cta} activeOpacity={0.85}>
+                  <Text style={styles.ctaText} numberOfLines={1}>
+                    {nativeAd.callToAction}
+                  </Text>
+                </TouchableOpacity>
+              </NativeAsset>
             ) : null}
           </View>
         </View>
