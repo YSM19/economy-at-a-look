@@ -20,10 +20,11 @@ type NativeAdClass = {
   ) => Promise<NativeAdInstance | null>;
 };
 
-const TEST_NATIVE_IDS = {
-  ios: 'ca-app-pub-3940256099942544/3986624511',
-  android: 'ca-app-pub-3940256099942544/2247696110',
-};
+// 광고 테스트 ID 주석 처리: 코드 내 하드코딩된 테스트 ID 제거
+// const TEST_NATIVE_IDS = {
+//   ios: 'ca-app-pub-3940256099942544/3986624511',
+//   android: 'ca-app-pub-3940256099942544/2247696110',
+// };
 const LOAD_TIMEOUT_MS = 8000;
 
 type PlatformKey = 'ios' | 'android' | 'default';
@@ -62,9 +63,8 @@ export const NativeAdCard: React.FC = () => {
   const extra = useMemo(() => getAdmobExtra(), []);
   const platformKey: PlatformKey =
     Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'default';
-  const fallbackNativeTestId =
-    adsModule?.TestIds?.NATIVE_ADVANCED ||
-    (platformKey === 'ios' ? TEST_NATIVE_IDS.ios : TEST_NATIVE_IDS.android);
+  // 테스트용 기본 ID는 SDK의 내장 TestIds만 사용
+  const fallbackNativeTestId = adsModule?.TestIds?.NATIVE_ADVANCED;
   const NativeAdComponent = adsModule?.NativeAd as NativeAdClass | undefined;
   const NativeAdViewComponent = adsModule?.NativeAdView;
   const NativeAssetComponent = adsModule?.NativeAsset;
@@ -72,7 +72,7 @@ export const NativeAdCard: React.FC = () => {
   const NativeMediaViewComponent = adsModule?.NativeMediaView;
 
   const unitId = useMemo(
-    () => resolveNativeUnitId(extra, platformKey, fallbackNativeTestId),
+    () => resolveNativeUnitId(extra, platformKey, fallbackNativeTestId ?? ''),
     [extra, platformKey, fallbackNativeTestId]
   );
 

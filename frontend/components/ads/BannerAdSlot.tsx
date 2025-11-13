@@ -58,10 +58,11 @@ const resolveBannerId = (
   return fallback;
 };
 
-const TEST_BANNER_IDS = {
-  ios: 'ca-app-pub-3940256099942544/2934735716',
-  android: 'ca-app-pub-3940256099942544/6300978111',
-};
+// 광고 테스트 ID 주석 처리: 실제/테스트 광고 단위 ID를 코드에서 제거합니다.
+// const TEST_BANNER_IDS = {
+//   ios: 'ca-app-pub-3940256099942544/2934735716',
+//   android: 'ca-app-pub-3940256099942544/6300978111',
+// };
 
 export const BannerAdSlot: React.FC<BannerAdSlotProps> = ({
   placement,
@@ -74,13 +75,12 @@ export const BannerAdSlot: React.FC<BannerAdSlotProps> = ({
   const extra = useMemo(() => getAdmobExtra(), []);
   const platformKey: 'ios' | 'android' | 'default' =
     Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'default';
-  const fallbackTestId =
-    adsModule?.TestIds?.BANNER ??
-    (platformKey === 'ios' ? TEST_BANNER_IDS.ios : TEST_BANNER_IDS.android);
+  // 테스트용 기본 ID는 SDK 내장 TestIds만 사용하고, 하드코딩된 값은 제거
+  const fallbackTestId = adsModule?.TestIds?.BANNER;
   const BannerAdComponent = adsModule?.BannerAd;
 
   const adUnitId = useMemo(
-    () => resolveBannerId(extra, placement, platformKey, fallbackTestId),
+    () => resolveBannerId(extra, placement, platformKey, fallbackTestId ?? ''),
     [extra, placement, platformKey, fallbackTestId]
   );
 
@@ -97,6 +97,11 @@ export const BannerAdSlot: React.FC<BannerAdSlotProps> = ({
   }, []);
 
   if (Platform.OS === 'web' || !nativeAvailable || !BannerAdComponent) {
+    return null;
+  }
+
+  // 유효한 광고 단위 ID가 없으면 렌더링하지 않음
+  if (!adUnitId) {
     return null;
   }
 
