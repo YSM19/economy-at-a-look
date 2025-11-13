@@ -1,11 +1,17 @@
 import React, { useMemo, useState, useCallback } from 'react';
 import { Platform, StyleSheet, View, ViewStyle } from 'react-native';
 import Constants from 'expo-constants';
-import { BannerAd, BannerAdSize, TestIds } from 'react-native-google-mobile-ads';
 import { useMobileAds } from './useMobileAds';
 
 type BannerPlacement = 'exchangeRecommendations' | 'interestRecommendations' | 'cpiRecommendations';
-type SupportedBannerSize = keyof typeof BannerAdSize;
+type SupportedBannerSize =
+  | 'BANNER'
+  | 'LARGE_BANNER'
+  | 'MEDIUM_RECTANGLE'
+  | 'FULL_BANNER'
+  | 'LEADERBOARD'
+  | 'SMART_BANNER'
+  | 'ADAPTIVE_BANNER';
 
 interface BannerAdSlotProps {
   placement: BannerPlacement;
@@ -52,18 +58,26 @@ const resolveBannerId = (
   return fallback;
 };
 
+const TEST_BANNER_IDS = {
+  ios: 'ca-app-pub-3940256099942544/2934735716',
+  android: 'ca-app-pub-3940256099942544/6300978111',
+};
+
 export const BannerAdSlot: React.FC<BannerAdSlotProps> = ({
   placement,
   containerStyle,
   bannerSize = 'MEDIUM_RECTANGLE',
 }) => {
-  const { nativeAvailable } = useMobileAds();
+  const { nativeAvailable, adsModule } = useMobileAds();
   const [shouldShow, setShouldShow] = useState(true);
 
   const extra = useMemo(() => getAdmobExtra(), []);
   const platformKey: 'ios' | 'android' | 'default' =
     Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'default';
-  const fallbackTestId = TestIds.BANNER;
+  const fallbackTestId =
+    adsModule?.TestIds?.BANNER ??
+    (platformKey === 'ios' ? TEST_BANNER_IDS.ios : TEST_BANNER_IDS.android);
+  const BannerAdComponent = adsModule?.BannerAd;
 
   const adUnitId = useMemo(
     () => resolveBannerId(extra, placement, platformKey, fallbackTestId),
@@ -82,18 +96,16 @@ export const BannerAdSlot: React.FC<BannerAdSlotProps> = ({
     setShouldShow(true);
   }, []);
 
-  if (Platform.OS === 'web' || !nativeAvailable) {
+  if (Platform.OS === 'web' || !nativeAvailable || !BannerAdComponent) {
     return null;
   }
-
-  const sizeValue = BannerAdSize[bannerSize] ?? BannerAdSize.MEDIUM_RECTANGLE;
 
   return (
     <View style={[styles.container, containerStyle]}>
       {shouldShow ? (
-        <BannerAd
+        <BannerAdComponent
           unitId={adUnitId}
-          size={sizeValue}
+          size={bannerSize}
           requestOptions={{ requestNonPersonalizedAdsOnly: true }}
           onAdFailedToLoad={handleLoadError}
           onAdLoaded={handleAdLoaded}

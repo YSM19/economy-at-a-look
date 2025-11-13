@@ -1,15 +1,24 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Platform, StyleSheet, View, Text, TouchableOpacity } from 'react-native';
 import Constants from 'expo-constants';
-import {
-  NativeAd,
-  NativeAdView,
-  NativeAsset,
-  NativeAssetType,
-  NativeMediaView,
-  TestIds,
-} from 'react-native-google-mobile-ads';
 import { useMobileAds } from './useMobileAds';
+
+type NativeAdInstance = {
+  destroy: () => void;
+  headline?: string | null;
+  advertiser?: string | null;
+  body?: string | null;
+  callToActionText?: string | null;
+  callToAction?: string | null;
+  [key: string]: unknown;
+};
+
+type NativeAdClass = {
+  createForAdRequest: (
+    unitId: string,
+    options?: Record<string, unknown>
+  ) => Promise<NativeAdInstance | null>;
+};
 
 const TEST_NATIVE_IDS = {
   ios: 'ca-app-pub-3940256099942544/3986624511',
@@ -42,20 +51,25 @@ const resolveNativeUnitId = (extra: AdmobExtra | undefined, platformKey: Platfor
 };
 
 export const NativeAdCard: React.FC = () => {
-  const { nativeAvailable } = useMobileAds();
+  const { nativeAvailable, adsModule } = useMobileAds();
   const [hasError, setHasError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [nativeAd, setNativeAd] = useState<NativeAd | null>(null);
+  const [nativeAd, setNativeAd] = useState<NativeAdInstance | null>(null);
   const mountedRef = useRef(true);
-  const nativeAdRef = useRef<NativeAd | null>(null);
+  const nativeAdRef = useRef<NativeAdInstance | null>(null);
   const loadIdRef = useRef(0);
 
   const extra = useMemo(() => getAdmobExtra(), []);
   const platformKey: PlatformKey =
     Platform.OS === 'ios' ? 'ios' : Platform.OS === 'android' ? 'android' : 'default';
   const fallbackNativeTestId =
-    TestIds.NATIVE_ADVANCED ||
+    adsModule?.TestIds?.NATIVE_ADVANCED ||
     (platformKey === 'ios' ? TEST_NATIVE_IDS.ios : TEST_NATIVE_IDS.android);
+  const NativeAdComponent = adsModule?.NativeAd as NativeAdClass | undefined;
+  const NativeAdViewComponent = adsModule?.NativeAdView;
+  const NativeAssetComponent = adsModule?.NativeAsset;
+  const NativeAssetTypeEnum = adsModule?.NativeAssetType as Record<string, string> | undefined;
+  const NativeMediaViewComponent = adsModule?.NativeMediaView;
 
   const unitId = useMemo(
     () => resolveNativeUnitId(extra, platformKey, fallbackNativeTestId),
@@ -69,7 +83,7 @@ export const NativeAdCard: React.FC = () => {
   }, []);
 
   const updateNativeAd = useCallback(
-    (ad: NativeAd | null) => {
+    (ad: NativeAdInstance | null) => {
       if (!mountedRef.current) {
         ad?.destroy();
         return;
@@ -82,7 +96,7 @@ export const NativeAdCard: React.FC = () => {
   );
 
   const loadNativeAd = useCallback(async () => {
-    if (!nativeAvailable || Platform.OS === 'web' || !unitId) {
+    if (!nativeAvailable || Platform.OS === 'web' || !unitId || !NativeAdComponent) {
       cleanupNativeAd();
       return;
     }
@@ -106,7 +120,7 @@ export const NativeAdCard: React.FC = () => {
     }, LOAD_TIMEOUT_MS);
 
     try {
-      const ad = await NativeAd.createForAdRequest(unitId, {
+      const ad = await NativeAdComponent.createForAdRequest(unitId, {
         requestNonPersonalizedAdsOnly: true,
       });
 
@@ -135,7 +149,7 @@ export const NativeAdCard: React.FC = () => {
         setIsLoading(false);
       }
     }
-  }, [cleanupNativeAd, nativeAvailable, unitId, updateNativeAd]);
+  }, [NativeAdComponent, cleanupNativeAd, nativeAvailable, unitId, updateNativeAd]);
 
   useEffect(() => {
     loadNativeAd();
@@ -175,6 +189,19 @@ export const NativeAdCard: React.FC = () => {
     );
   }
 
+  if (
+    !NativeAdComponent ||
+    !NativeAdViewComponent ||
+    !NativeAssetComponent ||
+    !NativeAssetTypeEnum ||
+    !NativeMediaViewComponent
+  ) {
+    return renderFallback(
+      '광고 컴포넌트를 초기화할 수 없습니다.',
+      'Dev Client/빌드 앱 환경에서 다시 시도해주세요.'
+    );
+  }
+
   if (hasError) {
     return renderFallback('광고 로딩에 실패했습니다.', '잠시 후 다시 시도해주세요.', '다시 시도', () => {
       if (!isLoading) {
@@ -189,41 +216,41 @@ export const NativeAdCard: React.FC = () => {
 
   return (
     <View style={styles.wrapper}>
-      <NativeAdView nativeAd={nativeAd} style={styles.container}>
+      <NativeAdViewComponent nativeAd={nativeAd} style={styles.container}>
         <View style={styles.content}>
-          <NativeMediaView style={styles.media} />
+          <NativeMediaViewComponent style={styles.media} />
           <View style={styles.textContainer}>
-            <NativeAsset assetType={NativeAssetType.HEADLINE}>
+            <NativeAssetComponent assetType={NativeAssetTypeEnum.HEADLINE}>
               <Text style={styles.headline} numberOfLines={2}>
                 {nativeAd.headline}
               </Text>
-            </NativeAsset>
+            </NativeAssetComponent>
             {nativeAd.body ? (
-              <NativeAsset assetType={NativeAssetType.BODY}>
+              <NativeAssetComponent assetType={NativeAssetTypeEnum.BODY}>
                 <Text style={styles.tagline} numberOfLines={2}>
                   {nativeAd.body}
                 </Text>
-              </NativeAsset>
+              </NativeAssetComponent>
             ) : null}
             {nativeAd.advertiser ? (
-              <NativeAsset assetType={NativeAssetType.ADVERTISER}>
+              <NativeAssetComponent assetType={NativeAssetTypeEnum.ADVERTISER}>
                 <Text style={styles.advertiser} numberOfLines={1}>
                   {nativeAd.advertiser}
                 </Text>
-              </NativeAsset>
+              </NativeAssetComponent>
             ) : null}
             {nativeAd.callToAction ? (
-              <NativeAsset assetType={NativeAssetType.CALL_TO_ACTION}>
+              <NativeAssetComponent assetType={NativeAssetTypeEnum.CALL_TO_ACTION}>
                 <TouchableOpacity style={styles.cta} activeOpacity={0.85}>
                   <Text style={styles.ctaText} numberOfLines={1}>
                     {nativeAd.callToAction}
                   </Text>
                 </TouchableOpacity>
-              </NativeAsset>
+              </NativeAssetComponent>
             ) : null}
           </View>
         </View>
-      </NativeAdView>
+      </NativeAdViewComponent>
     </View>
   );
 };

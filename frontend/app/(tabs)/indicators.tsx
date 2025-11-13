@@ -15,8 +15,9 @@ import { CPIChart } from '../../components/charts/CPIChart';
 import ExchangeRateRecommendations from '../../components/ExchangeRateRecommendations';
 import InterestRateRecommendations from '../../components/InterestRateRecommendations';
 import CPIRecommendations from '../../components/CPIRecommendations';
-import { BannerAdSlot } from '../../components/ads/BannerAdSlot';
-import { NativeAdCard } from '../../components/ads/NativeAdCard';
+// 광고 일시 비활성화: AdMob 배너/네이티브 컴포넌트 임포트 주석 처리
+// import { BannerAdSlot } from '../../components/ads/BannerAdSlot';
+// import { NativeAdCard } from '../../components/ads/NativeAdCard';
 import NotificationSettingsModal from '../../components/NotificationSettingsModal';
 import { economicIndexApi } from '../../services/api';
 import { 
@@ -824,10 +825,13 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
                 
-                <BannerAdSlot 
-                  placement="exchangeRecommendations" 
-                  containerStyle={styles.adSlot}
-                />
+                {/* 광고 일시 비활성화: 환율 탭 배너 광고 */}
+                {/**
+                 * <BannerAdSlot
+                 *   placement="exchangeRecommendations"
+                 *   containerStyle={styles.adSlot}
+                 * />
+                 */}
 
                 <ExchangeRateRecommendations country={activeCountry} />
 
@@ -1013,10 +1017,13 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
 
-                <BannerAdSlot 
-                  placement="interestRecommendations" 
-                  containerStyle={styles.adSlot}
-                />
+                {/* 광고 일시 비활성화: 금리 탭 배너 광고 */}
+                {/**
+                 * <BannerAdSlot
+                 *   placement="interestRecommendations"
+                 *   containerStyle={styles.adSlot}
+                 * />
+                 */}
 
                 <InterestRateRecommendations />
 
@@ -1108,7 +1115,8 @@ export default function IndicatorsScreen() {
                   )}
                 </View>
 
-                <NativeAdCard />
+                {/* 광고 일시 비활성화: CPI 탭 네이티브 광고 */}
+                {/** <NativeAdCard /> */}
 
                 <CPIRecommendations />
                 

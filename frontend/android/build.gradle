@@ -1,14 +1,38 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
+  
   repositories {
     google()
     mavenCentral()
   }
   dependencies {
-    classpath('com.android.tools.build:gradle')
+    // Use literals here to avoid property resolution issues in EAS build environment
+    classpath("com.android.tools.build:gradle:8.8.2")
     classpath('com.facebook.react:react-native-gradle-plugin')
-    classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
+    classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:2.0.21")
+  }
+
+  configurations.all { config ->
+    config.resolutionStrategy.eachDependency { details ->
+      if (details.requested.group == "com.android.tools.build" &&
+          details.requested.name == "gradle") {
+        details.useVersion('8.8.2')
+        details.because("React Native libraries inside node_modules must align with AGP 8.8.2.")
+      }
+    }
+  }
+}
+
+def enforceAgpVersion = { configurationContainer ->
+  configurationContainer?.all { config ->
+    config.resolutionStrategy.eachDependency { details ->
+      if (details.requested.group == "com.android.tools.build" &&
+          details.requested.name == "gradle") {
+        details.useVersion('8.8.2')
+        details.because("React Native libraries inside node_modules must align with AGP 8.8.2.")
+      }
+    }
   }
 }
 
@@ -35,3 +59,13 @@ allprojects {
 
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"
+
+subprojects { subproject ->
+  subproject.buildscript {
+    repositories {
+      google()
+      mavenCentral()
+    }
+    enforceAgpVersion(configurations)
+  }
+}

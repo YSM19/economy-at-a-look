@@ -22,12 +22,16 @@ plugins {
   id("expo-autolinking-settings")
 }
 
+// Ensure autolinking config is regenerated in CI (avoid using stale Windows paths)
+def autolinkCache = new File(rootDir, "build/generated/autolinking/autolinking.json")
+if (autolinkCache.exists()) {
+  println("[settings.gradle] Deleting stale autolinking cache: " + autolinkCache)
+  autolinkCache.delete()
+}
+
 extensions.configure(com.facebook.react.ReactSettingsExtension) { ex ->
-  if (System.getenv('EXPO_USE_COMMUNITY_AUTOLINKING') == '1') {
-    ex.autolinkLibrariesFromCommand()
-  } else {
-    ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
-  }
+  // Use Expo's rnConfigCommand to generate a complete autolinking.json (includes project.android.packageName)
+  ex.autolinkLibrariesFromCommand(expoAutolinking.rnConfigCommand)
 }
 expoAutolinking.useExpoModules()
 

@@ -27,57 +27,58 @@ function AppContent() {
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const appState = useRef(AppState.currentState);
 
-  useEffect(() => {
-    if (Platform.OS === 'web') {
-      return;
-    }
-
-    const nativeModules = NativeModules as Record<string, unknown>;
-    if (!nativeModules?.RNGoogleMobileAdsModule) {
-      console.warn('[AdMob] RNGoogleMobileAdsModule이 없어 광고 초기화를 건너뜁니다.');
-      return;
-    }
-
-    let adsModule: any;
-    try {
-      // eslint-disable-next-line @typescript-eslint/no-var-requires
-      adsModule = require('react-native-google-mobile-ads');
-    } catch (error) {
-      console.warn('[AdMob] google-mobile-ads 모듈 로드 실패:', error);
-      return;
-    }
-
-    const mobileAdsFactory =
-      typeof adsModule.default === 'function'
-        ? adsModule.default
-        : typeof adsModule.MobileAds === 'function'
-          ? adsModule.MobileAds
-          : null;
-
-    if (!mobileAdsFactory) {
-      console.warn('[AdMob] mobileAds 인스턴스를 가져오지 못했습니다.');
-      return;
-    }
-
-    const mobileAdsInstance = mobileAdsFactory();
-    const MaxAdContentRating = adsModule.MaxAdContentRating;
-
-    mobileAdsInstance
-      .setRequestConfiguration({
-        maxAdContentRating:
-          MaxAdContentRating?.PG ?? MaxAdContentRating?.T ?? MaxAdContentRating?.G ?? undefined,
-      })
-      .catch((error: unknown) => {
-        console.warn('[AdMob] 광고 요청 설정 실패:', error);
-      })
-      .finally(() => {
-        mobileAdsInstance
-          .initialize()
-          .catch((error: unknown) => {
-            console.warn('[AdMob] 모바일 광고 초기화 실패:', error);
-          });
-      });
-  }, []);
+  // 광고 일시 비활성화: 애드몹 초기화 useEffect 전체 주석 처리
+  // useEffect(() => {
+  //   if (Platform.OS === 'web') {
+  //     return;
+  //   }
+  //
+  //   const nativeModules = NativeModules as Record<string, unknown>;
+  //   if (!nativeModules?.RNGoogleMobileAdsModule) {
+  //     console.warn('[AdMob] RNGoogleMobileAdsModule이 없어 광고 초기화를 건너뜁니다.');
+  //     return;
+  //   }
+  //
+  //   let adsModule: any;
+  //   try {
+  //     // eslint-disable-next-line @typescript-eslint/no-var-requires
+  //     adsModule = require('react-native-google-mobile-ads');
+  //   } catch (error) {
+  //     console.warn('[AdMob] google-mobile-ads 모듈 로드 실패:', error);
+  //     return;
+  //   }
+  //
+  //   const mobileAdsFactory =
+  //     typeof adsModule.default === 'function'
+  //       ? adsModule.default
+  //       : typeof adsModule.MobileAds === 'function'
+  //         ? adsModule.MobileAds
+  //         : null;
+  //
+  //   if (!mobileAdsFactory) {
+  //     console.warn('[AdMob] mobileAds 인스턴스를 가져오지 못했습니다.');
+  //     return;
+  //   }
+  //
+  //   const mobileAdsInstance = mobileAdsFactory();
+  //   const MaxAdContentRating = adsModule.MaxAdContentRating;
+  //
+  //   mobileAdsInstance
+  //     .setRequestConfiguration({
+  //       maxAdContentRating:
+  //         MaxAdContentRating?.PG ?? MaxAdContentRating?.T ?? MaxAdContentRating?.G ?? undefined,
+  //     })
+  //     .catch((error: unknown) => {
+  //       console.warn('[AdMob] 광고 요청 설정 실패:', error);
+  //     })
+  //     .finally(() => {
+  //       mobileAdsInstance
+  //         .initialize()
+  //         .catch((error: unknown) => {
+  //           console.warn('[AdMob] 모바일 광고 초기화 실패:', error);
+  //         });
+  //     });
+  // }, []);
 
   // 앱 상태 변경 감지 및 토큰 유효성 검증
   useEffect(() => {

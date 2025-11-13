@@ -7,6 +7,9 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
+      "env": {
+        "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
+      },
       "android": {
         "gradleCommand": ":app:assembleDebug",
         "image": "latest"
@@ -17,6 +20,9 @@
     },
     "preview": {
       "distribution": "internal",
+      "env": {
+        "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
+      },
       "android": {
         "buildType": "apk",
         "image": "latest"
@@ -27,6 +33,9 @@
     },
     "production": {
       "autoIncrement": true,
+      "env": {
+        "EXPO_USE_COMMUNITY_AUTOLINKING": "1"
+      },
       "android": {
         "buildType": "app-bundle",
         "gradleCommand": ":app:bundleRelease",

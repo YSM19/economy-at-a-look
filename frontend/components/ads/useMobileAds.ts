@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from 'react';
+import type { ComponentType } from 'react';
 import { NativeModules, Platform } from 'react-native';
 
 type MobileAdsModule = {
@@ -11,6 +12,19 @@ type MobileAdsModule = {
     setRequestConfiguration: (config: { maxAdContentRating?: string }) => Promise<unknown>;
   };
   MaxAdContentRating?: Record<string, string>;
+  NativeAd?: {
+    createForAdRequest: (
+      unitId: string,
+      options?: Record<string, unknown>
+    ) => Promise<{ destroy: () => void } | null>;
+  };
+  NativeAdView?: ComponentType<any>;
+  NativeAsset?: ComponentType<any>;
+  NativeMediaView?: ComponentType<any>;
+  NativeAssetType?: Record<string, unknown>;
+  TestIds?: Record<string, string>;
+  BannerAd?: ComponentType<any>;
+  BannerAdSize?: Record<string, string>;
 };
 
 export const useMobileAds = () => {
