@@ -81,6 +81,27 @@ def enableProguardInReleaseBuilds = (findProperty('android.enableProguardInRelea
  */
 def jscFlavor = 'io.github.react-native-community:jsc-android:2026004.+'
 
+def resolveSigningValue = { String key ->
+    def prop = findProperty(key)
+    if (prop != null && prop.toString().trim()) {
+        return prop.toString().trim()
+    }
+    def env = System.getenv(key)
+    if (env != null && env.trim()) {
+        return env.trim()
+    }
+    return null
+}
+
+def releaseSigning = [
+    storeFile    : resolveSigningValue("MYAPP_UPLOAD_STORE_FILE"),
+    storePassword: resolveSigningValue("MYAPP_UPLOAD_STORE_PASSWORD"),
+    keyAlias     : resolveSigningValue("MYAPP_UPLOAD_KEY_ALIAS"),
+    keyPassword  : resolveSigningValue("MYAPP_UPLOAD_KEY_PASSWORD")
+]
+
+def hasReleaseSigning = releaseSigning.storeFile && releaseSigning.storePassword && releaseSigning.keyAlias && releaseSigning.keyPassword
+
 android {
     ndkVersion rootProject.ext.ndkVersion
 
@@ -102,15 +123,26 @@ android {
             keyAlias 'androiddebugkey'
             keyPassword 'android'
         }
+        release {
+            if (hasReleaseSigning) {
+                // 릴리스 빌드 시 실제 키스토어 정보로 서명한다.
+                storeFile file(releaseSigning.storeFile)
+                storePassword releaseSigning.storePassword
+                keyAlias releaseSigning.keyAlias
+                keyPassword releaseSigning.keyPassword
+            } else {
+                // 아직 키스토어 정보가 준비되지 않았다면 디버그 키로 대체한다.
+                initWith(signingConfigs.debug)
+            }
+        }
     }
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
         }
         release {
-            // Caution! In production, you need to generate your own keystore file.
-            // see https://reactnative.dev/docs/signed-apk-android.
-            signingConfig signingConfigs.debug
+            // 프로덕션에서는 release 서명 구성을 사용한다.
+            signingConfig signingConfigs.release
             shrinkResources (findProperty('android.enableShrinkResourcesInReleaseBuilds')?.toBoolean() ?: false)
             minifyEnabled enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android.txt"), "proguard-rules.pro"
